@@ -1,0 +1,17 @@
+{
+  "name": "@posts-auto/visuals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Visuels des posts : modèles (zones nommées), rendu PNG côté serveur, contrôle de lisibilité, générateurs d'images.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@napi-rs/canvas": "^1.1.1"
+  }
+}

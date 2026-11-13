@@ -17,6 +17,9 @@ export default defineConfig({
         test: { name: 'ai', include: ['packages/ai/src/**/*.test.ts'], env },
       },
       {
+        test: { name: 'visuals', include: ['packages/visuals/src/**/*.test.ts'], env, testTimeout: 20_000 },
+      },
+      {
         test: {
           name: 'db',
           include: ['packages/db/src/**/*.test.ts'],
