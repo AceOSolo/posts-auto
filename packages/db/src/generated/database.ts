@@ -252,16 +252,22 @@ export interface MediaAssets {
   ai_generated: Generated<boolean>;
   bytes: number | null;
   created_at: Generated<Timestamp>;
+  folder: string | null;
   generator: string | null;
   height: number | null;
   id: Generated<string>;
+  in_library: Generated<boolean>;
   kind: string;
+  label: string | null;
   mime: string;
   prompt: string | null;
+  render_content: Json | null;
+  source_asset_id: string | null;
   storage_key: string;
   tags: Generated<string[]>;
   template_id: string | null;
   updated_at: Generated<Timestamp>;
+  uploaded_by: string | null;
   width: number | null;
   workspace_id: string;
 }
@@ -547,6 +553,21 @@ export interface SubjectBank {
   workspace_id: string;
 }
 
+export interface Templates {
+  account_id: string | null;
+  archived_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  definition: Json;
+  format: string;
+  gallery_key: string | null;
+  has_photo: Generated<boolean | null>;
+  id: Generated<string>;
+  name: string;
+  updated_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
 export interface Users {
   created_at: Generated<Timestamp>;
   email: string;
@@ -555,6 +576,20 @@ export interface Users {
   last_login_at: Timestamp | null;
   locale: Generated<string>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface VisualTasks {
+  attempts: Generated<number>;
+  created_at: Generated<Timestamp>;
+  error: string | null;
+  failed_at: Timestamp | null;
+  instruction: string | null;
+  lease_until: Timestamp | null;
+  new_photo: Generated<boolean>;
+  post_id: string;
+  reason: string;
+  requested_by: string | null;
+  workspace_id: string;
 }
 
 export interface WorkspaceMembers {
@@ -573,6 +608,7 @@ export interface Workspaces {
   generation_requested_at: Timestamp | null;
   holidays_calendar: Generated<string>;
   id: Generated<string>;
+  image_budget_monthly: Generated<number>;
   max_posts_per_account_per_day: Generated<number>;
   max_posts_per_slot: Generated<number>;
   min_gap_minutes: Generated<number>;
@@ -625,7 +661,9 @@ export interface DB {
   social_tokens: SocialTokens;
   source_items: SourceItems;
   subject_bank: SubjectBank;
+  templates: Templates;
   users: Users;
+  visual_tasks: VisualTasks;
   workspace_members: WorkspaceMembers;
   workspaces: Workspaces;
 }
