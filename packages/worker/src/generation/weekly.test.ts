@@ -153,6 +153,26 @@ describe('relance de la rédaction (REC-04, GEN-03)', () => {
   });
 });
 
+describe('banque de sujets et planning (PLA-03)', () => {
+  it('un sujet de la banque placé dans le planning n’est rédigé qu’une fois, par sa case', async () => {
+    const ws = (await createOrganization(db)).workspaceIds[0] as string;
+    const account = await createAccount(db, ws, { display_name: 'Page' });
+    await asSystem(db, async (trx) => {
+      await trx.insertInto('account_profiles').values({ account_id: account, workspace_id: ws, posts_per_week: 2 }).execute();
+      const subject = await trx.insertInto('subject_bank').values({ workspace_id: ws, account_id: account, subject: 'Les 5 erreurs du document unique' }).returning('id').executeTakeFirstOrThrow();
+      await trx
+        .insertInto('planning_cells')
+        .values({ workspace_id: ws, row_kind: 'account', account_id: account, week_start: '2026-11-23', content: 'Les 5 erreurs du document unique', subject_id: subject.id })
+        .execute();
+    });
+    await runWeeklyGeneration({ db, model: new FakeModel(), clock: () => RUN_1 }, ws);
+    const created = await asSystem(db, (trx) => trx.selectFrom('posts').select(['origin', 'source_note', 'planning_cell_id', 'subject_id']).where('workspace_id', '=', ws).execute());
+    const onSubject = created.filter((p) => p.source_note === 'Les 5 erreurs du document unique');
+    expect(onSubject).toHaveLength(1);
+    expect(onSubject[0]).toMatchObject({ origin: 'planning', planning_cell_id: expect.any(String), subject_id: expect.any(String) });
+  });
+});
+
 describe('une rédaction à la fois', () => {
   it('une rédaction en cours bloque la suivante ; un bail expiré est repris', async () => {
     const ws = (await createOrganization(db)).workspaceIds[0] as string;

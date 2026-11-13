@@ -307,6 +307,8 @@ export async function loadGenerationData(trx: Tx, workspaceId: string, now: Date
     .where('b.published', '=', false)
     .where((eb) => eb.or([eb('b.account_id', 'is', null), eb('b.account_id', 'in', ids)]))
     .where((eb) => eb.not(handled('subject_id', 'b.id')))
+    // Un sujet placé dans le planning (PLA-03) est rédigé par sa case, jamais en plus par la banque.
+    .where(sql<boolean>`not exists (select 1 from planning_cells c where c.subject_id = b.id)`)
     .orderBy('b.position')
     .orderBy('b.created_at')
     .execute();

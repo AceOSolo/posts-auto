@@ -16,8 +16,8 @@ Périmètre et critères : cahier des charges v1.1, sections 5.4 à 5.7 et 11. C
 | 6 | Paquet IA : modèle réel et simulé, consignes, vérification, garde contre les consignes cachées, coûts | GEN-04, GEN-05, GEN-11, GEN-13, IDE-04 | Fait : paquet `@posts-auto/ai` (modèle Anthropic et modèle simulé) |
 | 7 | Tâches de fond : génération hebdomadaire, demandes, reprises | GEN-01, GEN-03, GEN-06, GEN-07, IDE-06 | Fait : tâches « redaction », « demandes » et « reprises » |
 | 8 | Transparence : mentions, page « Comment fonctionne la rédaction », signalement | GEN-12, GEN-05, GEN-06, GEN-11 | Fait : origine et mention IA sur chaque post, « Signaler un contenu », page publique « Comment fonctionne la rédaction », pages « Rédaction » (lancer, programmer, coût du mois, rapports) |
-| 10 | Sources de veille (flux RSS et Atom), avec protection du réseau interne | GEN-09 | Fait : section « Sources de veille » de la ligne éditoriale, tâche « veille » |
 | 9 | Reprise des idées et des demandes de l'outil actuel | Lot 1b | Fait : API d'échange, POST /idees et POST /demandes (docs/api-echange.md) |
+| 10 | Sources de veille (flux RSS et Atom), avec protection du réseau interne | GEN-09 | Fait : section « Sources de veille » de la ligne éditoriale, tâche « veille » |
 
 ## Critères de recette de l'incrément 1b
 

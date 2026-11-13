@@ -51,6 +51,8 @@ function slot(daysFromToday: number, time: string): Date {
   return at;
 }
 const weekStartOf = (at: Date) => localDate(isoWeekBounds(at, calendar).start, calendar);
+/** Sujet de la banque placé dans le planning de la page (PLA-03). */
+const bankSubjectTitle = () => 'Les 5 erreurs les plus fréquentes dans un document unique';
 
 await asSystem(db, async (trx) => {
   await trx.deleteFrom('organizations').where('name', '=', ORG_NAME).execute();
@@ -100,6 +102,89 @@ await asSystem(db, async (trx) => {
   const claireProfile = await account('Claire Durand', 'profile', users['claire'] as string);
   // ROL-01 : la com' valide la page à la place du dirigeant.
   await trx.insertInto('account_delegates').values({ account_id: pageSecutop, workspace_id: ws.id, user_id: users['alexis'] as string }).execute();
+
+  // Incrément 1b : fiches des comptes (EDI-04), ligne éditoriale (EDI-01), état de l'offre (EDI-03),
+  // exemples (EDI-05), banque de sujets (PLA-03), planning (PLA-01), événement (PLA-04), idée (IDE-01).
+  const slots = (...list: [number, string][]) => JSON.stringify(list.map(([weekday, time]) => ({ weekday, time })));
+  await trx
+    .insertInto('account_profiles')
+    .values([
+      { account_id: jpProfile, workspace_id: ws.id, voice: 'je', tenor: 'Dirigeant de terrain, direct, sans jargon', posts_per_week: 1, usual_slots: slots([2, '12:00']) },
+      { account_id: pageSecutop, workspace_id: ws.id, voice: 'nous', tenor: 'Pédagogique et rassurant', posts_per_week: 2, optional_per_week: 1, usual_slots: slots([3, '09:30'], [4, '12:00']) },
+      { account_id: claireProfile, workspace_id: ws.id, voice: 'je', tenor: 'Formatrice, concrète, proche des stagiaires', posts_per_week: 1, usual_slots: slots([4, '17:30']) },
+    ])
+    .execute();
+  await trx
+    .insertInto('editorial_lines')
+    .values({
+      workspace_id: ws.id,
+      version: 1,
+      positioning: 'Organisme de formation et de conseil en santé et sécurité au travail pour les PME et ETI.',
+      offers: 'Formations SST, incendie, gestes et postures ; accompagnement au document unique ; webinaires de prévention.',
+      audiences: 'Dirigeants de PME, responsables RH et QHSE, salariés désignés compétents en prévention.',
+      allowed_proofs: 'Plus de 20 ans d’expérience ; organisme certifié Qualiopi.',
+      tone: 'Concret, bienveillant, jamais alarmiste.',
+      banned_phrases: ['leader du marché', 'n°1'],
+      rules: JSON.stringify({}),
+      created_by: users['alexis'] as string,
+    })
+    .execute();
+  await trx
+    .insertInto('offer_items')
+    .values([
+      { workspace_id: ws.id, position: 1, name: 'Formation SST (sauveteur secouriste du travail)', status: 'available', pricing: 'paid' },
+      { workspace_id: ws.id, position: 2, name: 'Accompagnement au document unique', status: 'available', pricing: 'paid' },
+      { workspace_id: ws.id, position: 3, name: 'Webinaires de prévention', status: 'available', pricing: 'free' },
+      { workspace_id: ws.id, position: 4, name: 'Application mobile d’auto-diagnostic', description: 'En cours de développement', status: 'planned' },
+    ])
+    .execute();
+  await trx
+    .insertInto('reference_posts')
+    .values({
+      workspace_id: ws.id,
+      account_id: jpProfile,
+      label: 'imiter',
+      body: 'Hier, un client m’a dit : « la sécurité, c’est de la paperasse ». Je lui ai montré son propre registre d’accidents.\n\nDeux ans, zéro arrêt depuis qu’ils ont revu leurs postes de travail.\n\nLa prévention, ce n’est pas un classeur. C’est une habitude.',
+      note: 'Bon ton : une anecdote, un chiffre du client, une phrase qui reste',
+      created_by: users['jp'] as string,
+    })
+    .execute();
+  await trx.insertInto('learned_preferences').values({ account_id: jpProfile, workspace_id: ws.id, summary: 'Phrases courtes. Pas de jargon juridique. Toujours un exemple concret de terrain.' }).execute();
+  const bankSubject = await trx
+    .insertInto('subject_bank')
+    .values([
+      { workspace_id: ws.id, account_id: pageSecutop, position: 1, subject: 'Les 5 erreurs les plus fréquentes dans un document unique', theme: 'DUERP', angle: 'Liste pratique' },
+      { workspace_id: ws.id, account_id: pageSecutop, position: 2, subject: 'Pourquoi recycler sa formation SST tous les deux ans', theme: 'SST' },
+      { workspace_id: ws.id, account_id: jpProfile, position: 3, subject: 'Ce que vingt ans de prévention m’ont appris sur les PME', theme: 'Témoignage' },
+      { workspace_id: ws.id, account_id: null, position: 4, subject: 'Le rôle du salarié désigné compétent en prévention', theme: 'Réglementation' },
+    ])
+    .returning('id')
+    .execute();
+  const nextMonday = localDate(new Date(isoWeekBounds(now, calendar).start.getTime() + 7 * 86_400_000), calendar);
+  await trx
+    .insertInto('planning_cells')
+    .values([
+      { workspace_id: ws.id, row_kind: 'account', account_id: jpProfile, week_start: nextMonday, position: 1, content: 'Retour d’expérience : un audit du document unique chez un client industriel', created_by: users['alexis'] as string },
+      { workspace_id: ws.id, row_kind: 'account', account_id: pageSecutop, week_start: nextMonday, position: 1, content: bankSubjectTitle(), subject_id: bankSubject[0]?.id ?? null, created_by: users['alexis'] as string },
+      { workspace_id: ws.id, row_kind: 'event', row_label: 'Salons', week_start: nextMonday, position: 1, content: 'Préparation du salon Preventica', created_by: users['alexis'] as string },
+    ])
+    .execute();
+  const salon = await trx
+    .insertInto('events')
+    .values({ workspace_id: ws.id, title: 'Salon Preventica', starts_on: localDate(slot(16, '09:00'), calendar), link: 'https://www.preventica.com', details: 'Stand Secutop, démonstrations de premiers secours.', created_by: users['alexis'] as string })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  await trx
+    .insertInto('event_accounts')
+    .values([
+      { event_id: salon.id, account_id: pageSecutop, workspace_id: ws.id },
+      { event_id: salon.id, account_id: jpProfile, workspace_id: ws.id },
+    ])
+    .execute();
+  await trx
+    .insertInto('ideas')
+    .values({ workspace_id: ws.id, title: 'Notre nouvelle salle de formation à Lyon', details: 'Ouverte en novembre, 40 m², mannequins de secourisme neufs.', origin: 'team', all_accounts: true, created_by: users['claire'] as string })
+    .execute();
 
   const post = async (
     accountId: string,
