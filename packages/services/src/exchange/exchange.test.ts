@@ -83,11 +83,11 @@ describe('dépôt de posts', () => {
 
   it('renvoyer la même référence ne crée rien de plus (REC-13), même en parallèle', async () => {
     const data = input();
-    const [first, second] = await Promise.all([submitPost(db, ctxA, media, data, NOW), submitPost(db, ctxA, media, data, NOW)]);
-    expect([first.created, second.created].sort()).toEqual([false, true]);
-    expect(first.post.id).toBe(second.post.id);
+    const results = await Promise.all(Array.from({ length: 5 }, () => submitPost(db, ctxA, media, data, NOW)));
+    expect(results.filter((r) => r.created)).toHaveLength(1);
+    expect(new Set(results.map((r) => r.post.id)).size).toBe(1);
     const again = await submitPost(db, ctxA, media, data, NOW);
-    expect(again).toMatchObject({ created: false, post: { id: first.post.id } });
+    expect(again).toMatchObject({ created: false, post: { id: results[0]?.post.id } });
   });
 
   it('stocke les images dans l’ordre, nettoyées, avec la mention IA', async () => {

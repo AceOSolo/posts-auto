@@ -10,7 +10,7 @@
 import { type Database, type Tx, asSystem } from '@posts-auto/db';
 import { cleanLines, cleanText } from '../audit.ts';
 import { ForbiddenError, RefusedError } from '../errors.ts';
-import type { ApiKeyContext } from './api-keys.ts';
+import { type ApiKeyContext, lockReference } from './api-keys.ts';
 
 const REFERENCE = /^[\w.:-]{1,100}$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -71,6 +71,7 @@ export async function importIdea(db: Database, ctx: ApiKeyContext, input: Import
     followup: cleanText(input.followup, 2000),
   };
   return asSystem(db, async (trx) => {
+    await lockReference(trx, ctx.workspaceId, 'idee', input.reference);
     const existing = await trx.selectFrom('ideas').select('id').where('workspace_id', '=', ctx.workspaceId).where('external_ref', '=', input.reference).executeTakeFirst();
     if (existing !== undefined) return { created: false, id: existing.id };
     await requireAccounts(trx, ctx.workspaceId, accountIds);
@@ -114,6 +115,7 @@ export async function importPostRequest(db: Database, ctx: ApiKeyContext, input:
   const status = input.status === undefined ? 'new' : IMPORTED_REQUEST_STATUSES[input.status];
   if (status === undefined) throw new RefusedError('statut_invalide', `statut : ${Object.keys(IMPORTED_REQUEST_STATUSES).join(', ')}.`);
   return asSystem(db, async (trx) => {
+    await lockReference(trx, ctx.workspaceId, 'demande', input.reference);
     const existing = await trx.selectFrom('post_requests').select('id').where('workspace_id', '=', ctx.workspaceId).where('external_ref', '=', input.reference).executeTakeFirst();
     if (existing !== undefined) return { created: false, id: existing.id };
     await requireAccounts(trx, ctx.workspaceId, accountIds);

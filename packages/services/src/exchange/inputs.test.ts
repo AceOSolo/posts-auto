@@ -47,6 +47,12 @@ describe('reprise des idées de l’outil actuel', () => {
     expect(idea).toMatchObject({ title: 'Salon Preventica', eventOn: '2026-12-08', accountIds: [jp], status: 'kept', followup: 'À relayer' });
   });
 
+  it('envois simultanés de la même référence : une seule idée', async () => {
+    const results = await Promise.all(Array.from({ length: 5 }, () => importIdea(db, ctx, { reference: 'idee-simultanee', title: 'Même idée' })));
+    expect(results.filter((r) => r.created)).toHaveLength(1);
+    expect(new Set(results.map((r) => r.id)).size).toBe(1);
+  });
+
   it('contrôles : droit de la clé, compte étranger, date, référence ; une clé ne touche que son espace', async () => {
     await expect(importIdea(db, postsOnly, { reference: 'x', title: 'x' })).rejects.toBeInstanceOf(ForbiddenError);
     await expect(importIdea(db, ctx, { reference: 'x1', title: 'x', accountIds: ['00000000-0000-0000-0000-000000000000'] })).rejects.toMatchObject({ code: 'unknown_account' });

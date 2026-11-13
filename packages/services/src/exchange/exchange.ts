@@ -21,7 +21,7 @@ import {
 import { type Database, type Tx, asSystem, calendarOf, slotRulesOf, weekStartOf } from '@posts-auto/db';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 import { type ImageMime, checkImage } from '../media/image-check.ts';
-import type { ApiKeyContext, ApiScope } from './api-keys.ts';
+import { type ApiKeyContext, type ApiScope, lockReference } from './api-keys.ts';
 
 /** Ce dont le service a besoin du stockage des médias. */
 export interface MediaWriter {
@@ -214,6 +214,7 @@ export async function submitPost(
   });
 
   const outcome = await asSystem(db, async (trx) => {
+    await lockReference(trx, ctx.workspaceId, 'post', input.reference);
     const existing = await postsQuery(trx, ctx.workspaceId).where('p.external_ref', '=', input.reference).executeTakeFirst();
     if (existing !== undefined) return { created: false as const, postId: existing.id };
 

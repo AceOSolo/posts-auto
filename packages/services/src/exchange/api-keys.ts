@@ -4,7 +4,8 @@
  * reconnaître une clé dans l'interface sans la révéler.
  */
 import { randomBytes } from 'node:crypto';
-import { type Database, asSystem } from '@posts-auto/db';
+import { type Database, type Tx, asSystem } from '@posts-auto/db';
+import { sql } from 'kysely';
 import { hashToken } from '../auth/auth.ts';
 
 export const API_SCOPES = ['posts:read', 'posts:write', 'inputs:write'] as const;
@@ -67,4 +68,14 @@ export async function authenticateApiKey(db: Database, presented: string, now: D
 
 export async function revokeApiKey(db: Database, keyId: string, now: Date): Promise<void> {
   await asSystem(db, (trx) => trx.updateTable('api_keys').set({ revoked_at: now }).where('id', '=', keyId).execute());
+}
+
+/**
+ * Sérialise, jusqu'à la fin de la transaction, les envois d'une même référence dans un
+ * espace (REC-13). Sans ce verrou, deux envois simultanés pouvaient se heurter sur une autre
+ * contrainte d'unicité (même créneau) avant de voir la référence : le second échouait au
+ * lieu de renvoyer le post du premier.
+ */
+export async function lockReference(trx: Tx, workspaceId: string, kind: string, reference: string): Promise<void> {
+  await sql`select pg_advisory_xact_lock(hashtextextended(${`${workspaceId}:${kind}:${reference}`}, 0))`.execute(trx);
 }
