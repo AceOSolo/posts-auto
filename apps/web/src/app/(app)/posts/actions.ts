@@ -6,16 +6,19 @@ import {
   ForbiddenError,
   NotFoundError,
   RefusedError,
+  addPostPhotos,
   decidePost,
   editPostText,
   getPostDetail,
+  movePostPhoto,
+  removePostPhoto,
   reschedulePost,
   retryPublication,
   withdrawPost,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database } from '../../../server/context.ts';
+import { database, mediaStore } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -101,6 +104,32 @@ export async function rescheduleAction(postId: string, formData: FormData): Prom
     if (at === null) return 'date_invalide'; // heure inexistante (passage à l'heure d'été)
     const outcome = await reschedulePost(database(), userId, postId, at, now);
     return outcome.outsideAllowedHours ? 'replanifie-hors-plage' : 'replanifie';
+  });
+}
+
+/** VIS-13, REC-11 : ajout de photos depuis le téléphone ou l'ordinateur. */
+export async function addPhotosAction(postId: string, formData: FormData): Promise<void> {
+  const files = formData.getAll('photos').filter((value): value is File => value instanceof File && value.size > 0);
+  await run(postId, formData, async (userId, now) => {
+    const photos = await Promise.all(files.map(async (file) => ({ bytes: new Uint8Array(await file.arrayBuffer()), mime: file.type })));
+    await addPostPhotos(database(), mediaStore(), userId, postId, photos, now);
+    return 'photos-ajoutees';
+  });
+}
+
+export async function removePhotoAction(postId: string, assetId: string, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    if (!UUID.test(assetId)) throw new NotFoundError('Photo');
+    await removePostPhoto(database(), userId, postId, assetId, now);
+    return 'photo-retiree';
+  });
+}
+
+export async function movePhotoAction(postId: string, assetId: string, direction: 'up' | 'down', formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    if (!UUID.test(assetId)) throw new NotFoundError('Photo');
+    await movePostPhoto(database(), userId, postId, assetId, direction, now);
+    return 'photos-reordonnees';
   });
 }
 

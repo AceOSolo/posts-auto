@@ -85,6 +85,15 @@ try {
   check('détail : marqueur surligné (VAL-03)', detail.status === 200 && detailHtml.includes('class="marker"'));
   check('détail : validation bloquée tant que le marqueur reste', /<button[^>]*disabled[^>]*>Valider/.test(detailHtml));
 
+  // Ajout d'une photo depuis le formulaire (REC-11, VIS-13), comme depuis un téléphone.
+  const photoForm = [...detailHtml.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].find((m) => (m[1] ?? '').includes('name="photos"'));
+  const photoFields = new FormData();
+  for (const input of (photoForm?.[1] ?? '').matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) photoFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+  photoFields.append('photos', new Blob([Buffer.from('GIF89a-photo-de-telephone')], { type: 'image/gif' }), 'photo.gif');
+  const uploaded = await fetch(`${BASE}/posts/${withMarker.id}`, { method: 'POST', body: photoFields, redirect: 'manual', headers: { cookie: `session=${jp}; __Host-session=${jp}`, origin: BASE } });
+  const photoCount = await asSystem(db, (trx) => trx.selectFrom('post_media').select('id').where('post_id', '=', withMarker.id).execute());
+  check('ajout d’une photo par le formulaire (REC-11)', (uploaded.headers.get('location') ?? '').includes('photos-ajoutees') && photoCount.length === 1, `HTTP ${uploaded.status}`);
+
   const alexis = await sessionFor('alexis@demo.example.test');
   const team = await get(`/equipe/${withMarker.workspace_id}`, alexis);
   check('vue équipe (VAL-07)', team.status === 200 && (await team.text()).includes('Vue équipe'));

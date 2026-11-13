@@ -9,8 +9,11 @@ import { STATUS_LABELS, StatusBadge } from '../../../../components/status-badge.
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
 import {
+  addPhotosAction,
   editTextAction,
+  movePhotoAction,
   refuseAction,
+  removePhotoAction,
   requestChangesAction,
   rescheduleAction,
   retryAction,
@@ -87,6 +90,45 @@ export default async function PostPage({
 
       <PostPreview accountName={post.accountName} accountKind={post.accountKind} body={post.body} media={post.media} expanded />
       <p className="ai-note">Texte préparé avec l’aide de l’IA : vérifiez les faits, chiffres et noms avant de valider.</p>
+
+      {post.actions.canEdit && (
+        <details className="photos">
+          <summary>Photos ({post.media.length}/9)</summary>
+          {post.media.length > 0 && (
+            <ol className="photo-list">
+              {post.media.map((item, index) => (
+                <li key={item.assetId}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- images privées servies par /media */}
+                  <img src={`/media/${item.assetId}`} alt={item.altText ?? `Photo ${index + 1}`} width={72} height={72} />
+                  <span>{index === 0 ? 'Couverture' : `Photo ${index + 1}`}</span>
+                  <form action={movePhotoAction.bind(null, post.id, item.assetId, 'up')}>
+                    <button type="submit" disabled={index === 0} aria-label={`Avancer la photo ${index + 1}`}>
+                      ↑
+                    </button>
+                  </form>
+                  <form action={movePhotoAction.bind(null, post.id, item.assetId, 'down')}>
+                    <button type="submit" disabled={index === post.media.length - 1} aria-label={`Reculer la photo ${index + 1}`}>
+                      ↓
+                    </button>
+                  </form>
+                  <form action={removePhotoAction.bind(null, post.id, item.assetId)}>
+                    <button type="submit" aria-label={`Retirer la photo ${index + 1}`}>
+                      Retirer
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ol>
+          )}
+          {post.media.length < 9 && (
+            <form action={addPhotosAction.bind(null, post.id)} className="stack">
+              <label htmlFor="photos">Ajouter des photos (JPG, PNG ou GIF, 10 Mo au plus chacune)</label>
+              <input id="photos" name="photos" type="file" accept="image/jpeg,image/png,image/gif" multiple required />
+              <button type="submit">Ajouter</button>
+            </form>
+          )}
+        </details>
+      )}
 
       <section className="decide" aria-label="Décision">
         {can.has('validate') && (

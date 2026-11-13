@@ -97,6 +97,15 @@ fieldset { border: 1px solid var(--border); border-radius: var(--radius); paddin
 legend { font-weight: 600; padding: 0 4px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+details.photos { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-top: 12px; }
+details.photos summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.photo-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 8px; }
+.photo-list li { display: flex; align-items: center; gap: 8px; }
+.photo-list img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; }
+.photo-list span { flex: 1; }
+.photo-list form { display: contents; }
+.photo-list button { min-width: 44px; padding: 8px 10px; }
+
 /* Messages */
 .flash { padding: 10px 14px; border-radius: var(--radius); margin: 12px 0; }
 .flash.success { background: var(--success-bg); color: var(--success-text); }

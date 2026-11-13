@@ -6,6 +6,8 @@ const config: NextConfig = {
   // Pilote PostgreSQL : chargé tel quel côté serveur, jamais empaqueté.
   serverExternalPackages: ['pg'],
   poweredByHeader: false,
+  // Ajout de photos depuis le téléphone (REC-11) : plusieurs images de 10 Mo au plus chacune.
+  experimental: { serverActions: { bodySizeLimit: '25mb' } },
   // SEC-06 : en-têtes de sécurité sur toutes les pages.
   async headers() {
     return [
