@@ -33,6 +33,7 @@ export class FakeModel implements TextModel {
   #demo(request: ModelCall<unknown>): unknown {
     if (request.purpose === 'verify') return { issues: [] };
     if (request.purpose === 'interpret') return demoInterpretation(request.task);
+    if (request.purpose === 'visual') return demoVisual(request.task);
     this.#drafts += 1;
     if (request.task.startsWith('Propose trois accroches')) {
       return { hooks: [1, 2, 3].map((n) => `Accroche de démonstration n°${n} (sans IA)`) };
@@ -58,6 +59,28 @@ export function demoDraft(context: string, task: string, counter: number): unkno
     summary: title,
     sourcesUsed: [],
     missingInformation: [],
+    ignoredInstructions: [],
+  };
+}
+
+/**
+ * Visuel de démonstration : titre tiré de la première ligne du post ; photo de la
+ * médiathèque si son nom ou ses mots-clés reprennent un mot du post, sinon une scène.
+ */
+function demoVisual(task: string): unknown {
+  const post = /<document type="post"[^>]*>\n([\s\S]*?)\n<\/document>/.exec(task)?.[1] ?? '';
+  const title = (post.split('\n')[0] ?? '').replace(/^Démonstration : /, '').trim();
+  const words = new Set((post.toLowerCase().match(/\p{L}{4,}/gu) ?? []).filter((w) => w !== 'démonstration'));
+  const photos = [...task.matchAll(/^- ([0-9a-f-]{36}) : (.*)$/gm)].map((m) => ({ id: m[1] as string, words: (m[2] as string).toLowerCase().match(/\p{L}{4,}/gu) ?? [] }));
+  const wantPhoto = task.startsWith('Une photo est demandée');
+  const match = wantPhoto ? photos.find((p) => p.words.some((w) => words.has(w))) : undefined;
+  return {
+    title: title || 'Visuel de démonstration',
+    subtitle: '',
+    bullets: ['Premier point à retenir', 'Deuxième point à retenir', 'Troisième point à retenir'],
+    libraryPhotoId: match?.id ?? '',
+    imageSubject: wantPhoto && match === undefined ? 'Bureau lumineux, dossiers et casque de chantier posés sur une table, lumière du matin' : '',
+    altText: `Visuel : ${title || 'démonstration'}`,
     ignoredInstructions: [],
   };
 }

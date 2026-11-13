@@ -8,7 +8,7 @@
 import type { z } from 'zod';
 
 /** Objet de l'appel : sert au coût (GEN-11) et au rapport de génération. */
-export type Purpose = 'write' | 'verify' | 'rewrite' | 'rework' | 'interpret' | 'learn';
+export type Purpose = 'write' | 'verify' | 'rewrite' | 'rework' | 'interpret' | 'learn' | 'visual';
 
 export interface ModelCall<T> {
   readonly purpose: Purpose;

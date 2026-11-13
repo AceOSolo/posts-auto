@@ -22,6 +22,7 @@ export const DEFAULT_EFFORT: Readonly<Record<Purpose, Effort>> = {
   verify: 'medium',
   interpret: 'low',
   learn: 'low',
+  visual: 'low',
 };
 
 export interface AnthropicModelOptions {
