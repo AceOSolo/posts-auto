@@ -160,7 +160,7 @@ describe('visuels à préparer (VIS-13)', () => {
   it('une seule tâche par post, supprimée avec le post', async () => {
     const postId = await createPost(db, wsA(), accountA);
     await asUser(db, alice, (trx) =>
-      trx.insertInto('visual_tasks').values({ post_id: postId, workspace_id: wsA(), reason: 'redo', instruction: 'Photo plus lumineuse', new_photo: true, requested_by: alice }).execute(),
+      trx.insertInto('visual_tasks').values({ post_id: postId, workspace_id: wsA(), reason: 'redo', instruction: 'Photo plus lumineuse', photo_mode: 'new', requested_by: alice }).execute(),
     );
     await expect(
       asUser(db, alice, (trx) => trx.insertInto('visual_tasks').values({ post_id: postId, workspace_id: wsA(), reason: 'new' }).execute()),

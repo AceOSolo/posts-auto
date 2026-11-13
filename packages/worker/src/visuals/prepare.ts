@@ -189,10 +189,18 @@ export interface VisualRequest {
   /** VIS-13 : « refaire le visuel ». */
   readonly instruction?: string | null;
   readonly previous?: PreviousVisual | null;
-  /** Refaire avec une autre photo ; sinon la photo du visuel précédent est gardée. */
+  /**
+   * La photo du visuel précédent n'est pas reprise : nouvelle photo si `withPhoto`, sinon
+   * visuel sans photo. Par défaut, elle est gardée.
+   */
   readonly newPhoto?: boolean;
   /** Images déjà générées pour ce post (RÈG-19). */
   readonly imagesForPost?: number;
+  /**
+   * IA indisponible : titre repris du sujet (rédaction, par défaut), ou erreur pour que
+   * l'appelant réessaie plus tard (« refaire le visuel », où la consigne compte).
+   */
+  readonly fallbackOnModelError?: boolean;
 }
 
 export type PhotoSource = 'generated' | 'library' | 'kept';
@@ -278,7 +286,7 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
     fill = result.fill;
     calls.push(result.call);
   } catch (error) {
-    if (!(error instanceof ModelError)) throw error;
+    if (!(error instanceof ModelError) || request.fallbackOnModelError === false) throw error;
     notes.push('Textes du visuel repris du sujet du post : l’IA n’a pas répondu.');
     fill = { title: firstWords(request.summary), subtitle: null, bullets: [], libraryPhotoId: null, imageSubject: null, altText: '', suspiciousInstructions: [] };
   }
@@ -403,7 +411,7 @@ export interface VisualTarget {
  * coût (RÈG-19 : chaque image compte), visuel rendu et sa recette, place n°1 du post
  * (ou celle du visuel remplacé), coût du remplissage.
  */
-export async function storeVisual(trx: Tx, prepared: PreparedVisual, target: VisualTarget, now: Date): Promise<void> {
+export async function storeVisual(trx: Tx, prepared: PreparedVisual, target: VisualTarget, now: Date): Promise<number> {
   const { generated } = prepared;
   if (generated !== null) {
     await trx
@@ -475,5 +483,10 @@ export async function storeVisual(trx: Tx, prepared: PreparedVisual, target: Vis
     .insertInto('post_media')
     .values({ workspace_id: target.workspaceId, post_id: target.postId, asset_id: prepared.assetId, position, alt_text: prepared.altText })
     .execute();
-  await recordUsage(trx, { workspaceId: target.workspaceId, accountId: target.accountId, runId: target.runId, postId: target.postId, calls: prepared.calls, usdToEur: target.usdToEur, countsInQuota: false }, now);
+  const textUsd = await recordUsage(
+    trx,
+    { workspaceId: target.workspaceId, accountId: target.accountId, runId: target.runId, postId: target.postId, calls: prepared.calls, usdToEur: target.usdToEur, countsInQuota: false },
+    now,
+  );
+  return textUsd + (generated?.costUsd ?? 0);
 }

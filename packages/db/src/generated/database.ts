@@ -585,7 +585,7 @@ export interface VisualTasks {
   failed_at: Timestamp | null;
   instruction: string | null;
   lease_until: Timestamp | null;
-  new_photo: Generated<boolean>;
+  photo_mode: Generated<string>;
   post_id: string;
   reason: string;
   requested_by: string | null;

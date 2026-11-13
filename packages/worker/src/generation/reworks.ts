@@ -26,6 +26,8 @@ import {
 import { type Tx, asSystem, weekStartOf } from '@posts-auto/db';
 import { currentEditorialLine, offerItems } from '@posts-auto/services';
 import { notify } from '../notifications/recipients.ts';
+import { storeVisual } from '../visuals/prepare.ts';
+import { loadPreviousVisual, openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
 import { type SubjectInfo, loadAccounts, loadGenerationData, loadOccupied, loadOtherPosts, loadSettings, subjectKey } from './load.ts';
 import { type PostSource, accountContext, insertGeneratedPost, recordUsage, slotLabel } from './store.ts';
 import type { GenerationDeps } from './weekly.ts';
@@ -287,6 +289,20 @@ async function reworkPost(deps: GenerationDeps, postId: string, clock: () => Dat
       externalContents: [...documents.map((d) => d.content), ...(post.status === 'modif' ? [post.decision_note ?? ''] : [])],
       otherPosts,
     });
+    // 1c : reprise « à modifier » → le visuel reprend les nouveaux mots, avec sa photo et son
+    // modèle (aucune nouvelle image) ; reprise après refus → autre sujet, nouveau visuel.
+    const previous = post.status === 'modif' ? await asSystem(db, (trx) => loadPreviousVisual(trx, post.id)) : null;
+    const visuals = post.status === 'modif' && previous === null ? null : await openVisualSession(deps, workspaceId, [post.account_id], now);
+    const visual =
+      visuals === null
+        ? null
+        : await tryPrepareVisual(visuals, {
+            accountId: post.account_id,
+            postText: outcome.body,
+            summary,
+            withPhoto: previous !== null ? previous.photo !== null : (photoPlan(visuals, [{ accountId: post.account_id, at }]).values().next().value ?? false),
+            previous,
+          });
     const newId = await asSystem(db, async (trx) => {
       const run = await trx
         .insertInto('generation_runs')
@@ -331,6 +347,9 @@ async function reworkPost(deps: GenerationDeps, postId: string, clock: () => Dat
         for (const m of media) await trx.insertInto('post_media').values({ workspace_id: workspaceId, post_id: id, asset_id: m.asset_id, position: m.position, alt_text: m.alt_text }).execute();
       }
       await recordUsage(trx, { workspaceId, accountId: post.account_id, runId: run.id, postId: id, calls: outcome.calls, usdToEur: deps.usdToEur ?? 0.86, countsInQuota: false }, clock());
+      if (visual?.prepared) {
+        await storeVisual(trx, visual.prepared, { workspaceId, accountId: post.account_id, postId: id, runId: run.id, usdToEur: deps.usdToEur ?? 0.86, replacesAssetId: previous?.assetId ?? null }, clock());
+      }
       const delegates = await trx.selectFrom('account_delegates').select('user_id').where('account_id', '=', post.account_id).execute();
       const people = [...new Set([account.holderUserId, ...delegates.map((d) => d.user_id)].filter((p): p is string => p !== null))];
       await notify(trx, people, workspaceId, 'nouvelle_version', { postId: id, accountName, scheduledAt: at.toISOString(), refused: refusal !== null }, ['email', 'in_app']);

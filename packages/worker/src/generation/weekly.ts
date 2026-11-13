@@ -13,7 +13,11 @@
 import { ModelError, PROMPT_VERSION, type PostBrief, type TextModel, renderBrief, writePost } from '@posts-auto/ai';
 import { type Assignment, type Subject, allocateSubjects, isoWeekNumber, lastCronOccurrence, parseCron } from '@posts-auto/core';
 import { type Database, type Tx, asSystem, weekStartOf } from '@posts-auto/db';
+import type { ImageGenerator } from '@posts-auto/visuals';
+import type { MediaStore } from '../media/media-store.ts';
 import { notify } from '../notifications/recipients.ts';
+import { storeVisual } from '../visuals/prepare.ts';
+import { type VisualSummary, openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
 import { type AccountData, type GenerationData, loadGenerationData, subjectKey } from './load.ts';
 import { materializeRecurringEvents } from './recurring-events.ts';
 import { accountContext, dayLabel, insertGeneratedPost, recordUsage, slotLabel } from './store.ts';
@@ -26,6 +30,10 @@ export interface GenerationDeps {
   readonly usdToEur?: number;
   /** Rédactions de posts menées en parallèle dans un espace. */
   readonly concurrency?: number;
+  /** Stockage des images : sans lui, les posts sont déposés sans visuel (1c). */
+  readonly media?: MediaStore;
+  /** Générateur d'images (VIS-05) ; sans lui, photo de la médiathèque ou visuel texte. */
+  readonly images?: ImageGenerator | null;
 }
 
 /** Durée du bail d'une rédaction, prolongé à chaque post. */
@@ -45,6 +53,8 @@ export interface PostReport {
   readonly remaining: readonly string[];
   readonly warnings: readonly string[];
   readonly suspiciousInstructions: readonly string[];
+  /** Visuel du post (1c) ; absent quand les visuels ne sont pas activés. */
+  readonly visual?: VisualSummary;
 }
 
 export interface RunReport {
@@ -263,6 +273,9 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
   let costUsd = 0;
   let consecutiveProviderErrors = 0;
   let aborted: string | null = null;
+  // 1c : visuels préparés avec chaque post ; alternance photo / texte décidée d'avance, compte par compte.
+  const visuals = await openVisualSession(deps, workspaceId, [...new Set(allocation.assignments.map((a) => a.accountId))], now);
+  const withPhoto = visuals === null ? new Map<Assignment, boolean>() : photoPlan(visuals, allocation.assignments);
   // GEN-09 : chaque créneau laissé au choix de l'IA reçoit un article de veille différent, qu'elle peut reprendre.
   const freeSlots = allocation.assignments.filter((a) => a.subject === null);
   const articleFor = new Map(freeSlots.flatMap((a, i) => (data.articles[i] ? [[a, data.articles[i]] as const] : [])));
@@ -315,6 +328,10 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
       const usedArticle = article !== null && outcome.report.sourcesUsed.includes(articleDocId as string) ? article : null;
       const origin = usedArticle === null ? assignment.origin : 'external_source';
       const summary = usedArticle?.title ?? info?.title ?? outcome.summary;
+      const visual =
+        visuals === null
+          ? null
+          : await tryPrepareVisual(visuals, { accountId: assignment.accountId, postText: outcome.body, summary, withPhoto: withPhoto.get(assignment) ?? false });
       const stored = await asSystem(db, async (trx) => {
         if (assignment.replacesPostId !== null && !(await replacePost(trx, assignment.replacesPostId, assignment.accountId, now))) return null;
         const postId = await insertGeneratedPost(
@@ -343,7 +360,10 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
             .where('id', '=', assignment.subject.id)
             .execute();
         }
-        const cost = await recordUsage(trx, { workspaceId, accountId: assignment.accountId, runId, postId, calls: outcome.calls, usdToEur: deps.usdToEur ?? 0.86, countsInQuota: true }, now);
+        let cost = await recordUsage(trx, { workspaceId, accountId: assignment.accountId, runId, postId, calls: outcome.calls, usdToEur: deps.usdToEur ?? 0.86, countsInQuota: true }, now);
+        if (visual?.prepared) {
+          cost += await storeVisual(trx, visual.prepared, { workspaceId, accountId: assignment.accountId, postId, runId, usdToEur: deps.usdToEur ?? 0.86 }, now);
+        }
         return { postId, cost };
       });
       if (stored === null) {
@@ -364,6 +384,7 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
         remaining: outcome.report.remaining,
         warnings: outcome.report.warnings,
         suspiciousInstructions: outcome.report.suspiciousInstructions,
+        ...(visual !== null && { visual: visual.summary }),
       });
       await heartbeat(db, runId, clock());
     } catch (error) {

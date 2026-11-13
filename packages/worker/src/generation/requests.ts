@@ -13,6 +13,8 @@ import { addMinutes, firstFreeSlot, isSlotFree } from '@posts-auto/core';
 import { asSystem, weekStartOf } from '@posts-auto/db';
 import { currentEditorialLine, offerItems } from '@posts-auto/services';
 import { notify } from '../notifications/recipients.ts';
+import { storeVisual } from '../visuals/prepare.ts';
+import { openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
 import { loadAccounts, loadOccupied, loadOtherPosts, loadSettings } from './load.ts';
 import { accountContext, insertGeneratedPost, recordUsage, slotLabel } from './store.ts';
 import type { GenerationDeps } from './weekly.ts';
@@ -120,6 +122,8 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
       .executeTakeFirstOrThrow(),
   );
   const reportPosts: Record<string, unknown>[] = [];
+  // Les photos de la demande font le visuel ; sans photo, un visuel est préparé (1c).
+  const visuals = request.photos.length > 0 ? null : await openVisualSession(deps, workspaceId, accounts.map((a) => a.profile.accountId), now);
   try {
     for (const account of accounts) {
       const accountId = account.profile.accountId;
@@ -161,6 +165,15 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
         externalContents: [text],
         otherPosts,
       });
+      const visual =
+        visuals === null
+          ? null
+          : await tryPrepareVisual(visuals, {
+              accountId,
+              postText: outcome.body,
+              summary: subject,
+              withPhoto: photoPlan(visuals, [{ accountId, at: at as Date }]).values().next().value ?? false,
+            });
       const postId = await asSystem(db, async (trx) => {
         const id = await insertGeneratedPost(
           trx,
@@ -184,13 +197,21 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
           await trx.insertInto('post_media').values({ workspace_id: workspaceId, post_id: id, asset_id: assetId, position: index + 1 }).execute();
         }
         await recordUsage(trx, { workspaceId, accountId, runId: run.id, postId: id, calls: outcome.calls, usdToEur: deps.usdToEur ?? 0.86, countsInQuota: true }, clock());
+        if (visual?.prepared) await storeVisual(trx, visual.prepared, { workspaceId, accountId, postId: id, runId: run.id, usdToEur: deps.usdToEur ?? 0.86 }, clock());
         const people = [account.holderUserId, ...(await trx.selectFrom('account_delegates').select('user_id').where('account_id', '=', accountId).execute()).map((d) => d.user_id)];
         await notify(trx, [...new Set(people.filter((p): p is string => p !== null))], workspaceId, 'posts_prets', { workspaceId, count: 1 }, ['in_app']);
         return id;
       });
       otherPosts.push({ postId, text: outcome.body });
       followups.push(`Post rédigé pour ${name}, ${label}${wished !== null && !wishedKept ? ' (le créneau souhaité était pris : prochain créneau libre)' : ''}. Il attend la validation de son titulaire.`);
-      reportPosts.push({ postId, accountId, at: at.toISOString(), remaining: outcome.report.remaining, suspiciousInstructions: outcome.report.suspiciousInstructions });
+      reportPosts.push({
+        postId,
+        accountId,
+        at: at.toISOString(),
+        remaining: outcome.report.remaining,
+        suspiciousInstructions: outcome.report.suspiciousInstructions,
+        ...(visual !== null && { visual: visual.summary }),
+      });
     }
     await asSystem(db, (trx) =>
       trx.updateTable('generation_runs').set({ status: 'done', finished_at: clock(), lease_until: null, report: JSON.stringify({ requestId, posts: reportPosts }) }).where('id', '=', run.id).execute(),

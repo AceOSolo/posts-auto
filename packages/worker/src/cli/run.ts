@@ -12,12 +12,15 @@
  * - Veille : toutes les heures, nouveaux articles des flux RSS des espaces (GEN-09).
  * - Apprentissage : chaque jour, préférences des titulaires tirées de leurs corrections (EDI-06).
  * - Rendez-vous récurrents : chaque jour, occurrences des 60 prochains jours (EDI-08).
+ * - Visuels à refaire : toutes les minutes (VIS-13). Les visuels des nouveaux posts sont
+ *   préparés avec eux par la rédaction, les demandes et les reprises (VIS-03).
  *
  * Variables d'environnement :
  * - DATABASE_URL, MEDIA_ROOT, TOKEN_ENCRYPTION_KEYS, TOKEN_ENCRYPTION_KEY_ID ;
  * - LINKEDIN_MODE : « api » (par défaut) ou « fake » (développement : rien ne part chez LinkedIn) ;
  * - LINKEDIN_API_VERSION : version AAAAMM de l'API LinkedIn (par défaut 202610) ;
- * - AI_MODE (« anthropic » ou « fake »), ANTHROPIC_API_KEY, AI_MODEL, AI_USD_TO_EUR.
+ * - AI_MODE (« anthropic » ou « fake »), ANTHROPIC_API_KEY, AI_MODEL, AI_USD_TO_EUR ;
+ * - IMAGE_MODE : « fake » (images simulées) ; absent, pas d'image générée.
  *
  * Journal : une ligne JSON par événement, sur la sortie standard.
  */
@@ -34,6 +37,7 @@ import {
   type LinkedInPublisher,
 } from '@posts-auto/linkedin';
 import { mailerFromEnv } from '@posts-auto/services';
+import { imageGeneratorFromEnv } from '@posts-auto/visuals';
 import { runTokenCheck } from '../accounts/token-check.ts';
 import { runRequestTick } from '../generation/requests.ts';
 import { runLearningTick } from '../generation/learning.ts';
@@ -48,6 +52,7 @@ import { runPublicationTick } from '../publication/publication.ts';
 import { startScheduler } from '../runner/scheduler.ts';
 import { runRescheduleTick } from '../scheduling/reschedule-job.ts';
 import { TokenCipher } from '../secrets/token-cipher.ts';
+import { runVisualTick } from '../visuals/visual-job.ts';
 
 const env = process.env;
 const log = (level: 'info' | 'error', event: string, details: Record<string, unknown> = {}) =>
@@ -64,13 +69,21 @@ const redirectUri = `${appUrl}/comptes/connecter/retour`;
 const mailer = mailerFromEnv(env);
 const model = modelFromEnv(env);
 const usdToEur = Number.parseFloat(env['AI_USD_TO_EUR'] ?? '0.86');
+const images = imageGeneratorFromEnv(env);
+// Rédaction avec visuels (1c) : les posts sont déposés avec leur visuel.
+const writing = { db, model, usdToEur, media, images };
 const oauth: LinkedInOAuth | null = fake
   ? new FakeLinkedInOAuth(redirectUri)
   : env['LINKEDIN_CLIENT_ID'] && env['LINKEDIN_CLIENT_SECRET']
     ? new LinkedInOAuthClient({ clientId: env['LINKEDIN_CLIENT_ID'], clientSecret: env['LINKEDIN_CLIENT_SECRET'], redirectUri })
     : null;
 
-log('info', 'demarrage', { linkedin: env['LINKEDIN_MODE'] === 'fake' ? 'faux (développement)' : 'API', ia: model.provider === 'simulation' ? 'simulée (développement)' : model.model, cle: cipher.currentKeyId });
+log('info', 'demarrage', {
+  linkedin: env['LINKEDIN_MODE'] === 'fake' ? 'faux (développement)' : 'API',
+  ia: model.provider === 'simulation' ? 'simulée (développement)' : model.model,
+  images: images === null ? 'aucune image générée' : images.provider,
+  cle: cipher.currentKeyId,
+});
 
 const scheduler = startScheduler(
   [
@@ -79,9 +92,10 @@ const scheduler = startScheduler(
     { name: 'connexions', intervalMs: 24 * 3_600_000, run: () => runTokenCheck({ db, oauth, cipher }) },
     { name: 'rappels', intervalMs: 15 * 60_000, run: () => runValidationReminders({ db }) },
     { name: 'e-mails', intervalMs: 60_000, run: () => runEmailDispatch({ db, mailer, appUrl }) },
-    { name: 'redaction', intervalMs: 5 * 60_000, run: () => runGenerationTick({ db, model, usdToEur }) },
-    { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick({ db, model, usdToEur }) },
-    { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick({ db, model, usdToEur }) },
+    { name: 'redaction', intervalMs: 5 * 60_000, run: () => runGenerationTick(writing) },
+    { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick(writing) },
+    { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick(writing) },
+    { name: 'visuels', intervalMs: 60_000, run: () => runVisualTick(writing) },
     { name: 'veille', intervalMs: 60 * 60_000, run: () => runSourcesTick({ db }) },
     { name: 'apprentissage', intervalMs: 24 * 3_600_000, run: () => runLearningTick({ db, model, usdToEur }) },
     { name: 'evenements', intervalMs: 24 * 3_600_000, run: async () => ({ crees: await materializeRecurringEvents(db, new Date()) }) },
