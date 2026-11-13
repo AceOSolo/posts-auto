@@ -7,6 +7,7 @@ import { Flash } from '../../../../components/flash.tsx';
 import { PostPreview } from '../../../../components/post-preview.tsx';
 import { STATUS_LABELS, StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
+import { logDeniedAccess } from '../../../../server/security-log.ts';
 import { requireUserId } from '../../../../server/session.ts';
 import {
   addPhotosAction,
@@ -64,7 +65,10 @@ export default async function PostPage({
   try {
     post = await getPostDetail(database(), userId, id, new Date());
   } catch (error) {
-    if (error instanceof NotFoundError) notFound();
+    if (error instanceof NotFoundError) {
+      logDeniedAccess({ userId, resource: 'post', id });
+      notFound();
+    }
     throw error;
   }
   const can = new Set(post.actions.commands);

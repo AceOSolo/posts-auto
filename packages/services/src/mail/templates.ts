@@ -85,7 +85,9 @@ export function notificationMail(kind: string, payload: Record<string, unknown>,
   const account = str(payload['accountName'], 'votre compte LinkedIn');
   const footer = notificationFooter(ctx);
   const postAction = { label: 'Voir le post', url: `${ctx.appUrl}/posts/${encodeURIComponent(str(payload['postId']))}` };
-  const accountsAction = { label: 'Reconnecter le compte', url: `${ctx.appUrl}/` };
+  // REC-09 : lien direct vers la page des comptes de l'espace, où se trouve « Reconnecter ».
+  const workspaceId = str(payload['workspaceId']);
+  const accountsAction = { label: 'Reconnecter le compte', url: workspaceId ? `${ctx.appUrl}/comptes/${encodeURIComponent(workspaceId)}` : `${ctx.appUrl}/` };
 
   switch (kind) {
     case 'rappel_validation': {

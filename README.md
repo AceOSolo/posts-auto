@@ -7,6 +7,7 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 - [Cahier des charges v1.1](./Cahier%20des%20charges%20–%20SaaS%20de%20posts%20LinkedIn%20assistés%20par%20IA.md) : la référence fonctionnelle.
 - [Revue du cadrage](./docs/cadrage/01-revue-cdc-v1.md) : règles LinkedIn vérifiées, contradictions corrigées, décisions.
 - [Décisions techniques](./docs/decisions/) : un fichier par décision.
+- [Avancement de l'incrément 1a](./docs/avancement-1a.md) : critères de recette, preuves, ce qui reste à brancher.
 - [API d'échange](./docs/api-echange.md) : comment la tâche Claude actuelle dépose ses posts et lit les décisions (incrément 1a).
 
 ## Structure

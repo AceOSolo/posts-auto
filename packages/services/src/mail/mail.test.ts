@@ -21,6 +21,11 @@ describe('modèles d’e-mail', () => {
     expect(escapeHtml(`"'&`)).toBe('&quot;&#39;&amp;');
   });
 
+  it('connexion qui expire : lien direct vers la page des comptes de l’espace (REC-09)', () => {
+    const mail = notificationMail('connexion_expire_bientot', { accountName: 'JP', daysLeft: 14, workspaceId: 'ws-1' }, ctx);
+    expect(mail?.text).toContain('Reconnecter le compte : https://app.example/comptes/ws-1');
+  });
+
   it('accorde le récapitulatif au nombre de posts', () => {
     expect(notificationMail('recap_hebdo', { count: 1 }, ctx)?.subject).toBe('1 post à valider cette semaine');
     expect(notificationMail('recap_hebdo', { count: 3 }, ctx)?.subject).toBe('3 posts à valider cette semaine');

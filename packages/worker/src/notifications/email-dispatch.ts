@@ -52,7 +52,7 @@ export async function runEmailDispatch(deps: EmailDispatchDeps): Promise<EmailDi
         .selectFrom('notifications as n')
         .innerJoin('users as u', 'u.id', 'n.user_id')
         .leftJoin('workspaces as w', 'w.id', 'n.workspace_id')
-        .select(['n.id', 'n.user_id', 'n.kind', 'n.payload', 'n.delivery_attempts', 'u.email', 'u.full_name', 'w.timezone'])
+        .select(['n.id', 'n.user_id', 'n.kind', 'n.payload', 'n.delivery_attempts', 'n.workspace_id', 'u.email', 'u.full_name', 'w.timezone'])
         .where('n.channel', '=', 'email')
         .where('n.delivery_status', 'is', null)
         .orderBy('n.created_at')
@@ -71,7 +71,8 @@ export async function runEmailDispatch(deps: EmailDispatchDeps): Promise<EmailDi
         .where('user_id', '=', row.user_id)
         .where('kind', '=', row.kind)
         .executeTakeFirst();
-      const payload = (row.payload ?? {}) as Record<string, unknown>;
+      // L'espace de la notification sert aux liens (ex. page des comptes pour reconnecter, REC-09).
+      const payload = { ...((row.payload ?? {}) as Record<string, unknown>), ...(row.workspace_id ? { workspaceId: row.workspace_id } : {}) };
       const mail =
         pref?.email === false ? null : notificationMail(row.kind, payload, { appUrl: deps.appUrl, recipientName: row.full_name, timeZone: row.timezone ?? 'Europe/Paris' });
       if (mail === null) {
