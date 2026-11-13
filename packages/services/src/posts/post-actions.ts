@@ -22,8 +22,8 @@ import {
 } from '@posts-auto/core';
 import { type DB, type Database, type Tx, asUser, calendarOf, slotRulesOf, weekStartOf } from '@posts-auto/db';
 import type { Updateable } from 'kysely';
-import { type Access, canEditPost, canReschedulePost, loadAccess } from '../access.js';
-import { ForbiddenError, NotFoundError, RefusedError } from '../errors.js';
+import { type Access, canEditPost, canReschedulePost, loadAccess } from '../access.ts';
+import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 
 const MAX_BODY_LENGTH = 3000;
 

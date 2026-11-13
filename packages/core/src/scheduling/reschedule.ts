@@ -25,8 +25,8 @@ import {
   isWithinAllowedHours,
   sameIsoWeek,
   toLocal,
-} from '../calendar/workspace-calendar.js';
-import { type SchedulablePost, type SlotContext, isSlotFree } from './slots.js';
+} from '../calendar/workspace-calendar.ts';
+import { type SchedulablePost, type SlotContext, isSlotFree } from './slots.ts';
 
 /** RÈG-10 : au-delà de 5 replanifications, le post est abandonné. */
 export const MAX_AUTO_RESCHEDULES = 5;

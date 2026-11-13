@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_WORKSPACE_CALENDAR } from '../calendar/workspace-calendar.js';
-import { DEFAULT_SLOT_RULES, type OccupiedSlot, type SlotContext } from './slots.js';
-import { type MissedPost, rescheduleMissedPost } from './reschedule.js';
+import { DEFAULT_WORKSPACE_CALENDAR } from '../calendar/workspace-calendar.ts';
+import { DEFAULT_SLOT_RULES, type OccupiedSlot, type SlotContext } from './slots.ts';
+import { type MissedPost, rescheduleMissedPost } from './reschedule.ts';
 
 const utc = (iso: string) => new Date(iso);
 const ctx = (occupied: OccupiedSlot[] = []): SlotContext => ({

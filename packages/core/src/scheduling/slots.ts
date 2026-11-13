@@ -12,7 +12,7 @@ import {
   isWithinAllowedHours,
   localDate,
   sameIsoWeek,
-} from '../calendar/workspace-calendar.js';
+} from '../calendar/workspace-calendar.ts';
 
 export interface SlotRules {
   /** PUB-06 : au plus N posts par compte et par jour (jour local de l'espace). */

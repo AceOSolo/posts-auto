@@ -9,7 +9,7 @@ import {
   applyPostCommand,
   availableCommands,
   onTextEdited,
-} from './status.js';
+} from './status.ts';
 
 const at = new Date('2026-11-17T11:00:00Z');
 const system: Actor = { kind: 'system' };

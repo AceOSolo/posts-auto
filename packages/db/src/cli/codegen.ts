@@ -8,7 +8,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createMigratedTempDatabase } from '../testing/temp-database.js';
+import { createMigratedTempDatabase } from '../testing/temp-database.ts';
 
 const outFile = fileURLToPath(new URL('../generated/database.ts', import.meta.url));
 // Réglages (types des statuts, colonnes calculées) : kysely-codegen.json.

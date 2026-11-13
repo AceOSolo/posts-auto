@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { easterSunday, holidaysOf, isHoliday } from './holidays.js';
+import { easterSunday, holidaysOf, isHoliday } from './holidays.ts';
 
 describe('date de Pâques', () => {
   it.each([

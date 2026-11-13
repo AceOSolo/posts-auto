@@ -1,5 +1,5 @@
-﻿export * from './client.js';
-export * from './context.js';
-export * from './migrator.js';
-export * from './workspace-settings.js';
-export type * from './schema.js';
+﻿export * from './client.ts';
+export * from './context.ts';
+export * from './migrator.ts';
+export * from './workspace-settings.ts';
+export type * from './schema.ts';

@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { FileMediaStore, MemoryMediaStore, assertStorageKey } from './media-store.js';
+import { FileMediaStore, MemoryMediaStore, assertStorageKey } from './media-store.ts';
 
 describe('clés de stockage', () => {
   it.each(['ws-1/posts/p1/1.png', 'a', 'ws_1/x-y.z.jpeg'])('accepte %s', (key) => {

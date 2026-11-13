@@ -1,5 +1,5 @@
-import './provided-context.js';
+import './provided-context.ts';
 
-export * from './fixtures.js';
-export * from './temp-database.js';
-export * from './test-database.js';
+export * from './fixtures.ts';
+export * from './temp-database.ts';
+export * from './test-database.ts';

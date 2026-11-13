@@ -1,0 +1,26 @@
+{
+  "name": "@posts-auto/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Application web : connexion, « Mes posts », validation sur mobile, vue équipe.",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@posts-auto/core": "*",
+    "@posts-auto/db": "*",
+    "@posts-auto/services": "*",
+    "@posts-auto/worker": "*",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
+  }
+}

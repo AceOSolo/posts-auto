@@ -12,8 +12,8 @@ import {
   type MarkerSpan,
 } from '@posts-auto/core';
 import { type Database, type Tx, asUser } from '@posts-auto/db';
-import { canEditPost, canReschedulePost, loadAccess } from '../access.js';
-import { NotFoundError } from '../errors.js';
+import { canEditPost, canReschedulePost, loadAccess } from '../access.ts';
+import { NotFoundError } from '../errors.ts';
 
 export interface PostMedia {
   readonly assetId: string;

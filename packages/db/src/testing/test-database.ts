@@ -8,9 +8,9 @@
  *   afterAll(() => closeTestDatabase(db));
  */
 import { inject } from 'vitest';
-import { type Database, createDatabase } from '../client.js';
-import './provided-context.js';
-import { cloneTempDatabase } from './temp-database.js';
+import { type Database, createDatabase } from '../client.ts';
+import './provided-context.ts';
+import { cloneTempDatabase } from './temp-database.ts';
 
 const drops = new WeakMap<Database, () => Promise<void>>();
 

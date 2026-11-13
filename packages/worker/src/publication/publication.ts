@@ -29,8 +29,8 @@ import {
   LinkedInError,
   describeForUser,
 } from '@posts-auto/linkedin';
-import type { MediaStore } from '../media/media-store.js';
-import type { TokenCipher } from '../secrets/token-cipher.js';
+import type { MediaStore } from '../media/media-store.ts';
+import type { TokenCipher } from '../secrets/token-cipher.ts';
 
 /** PUB-04 : 3 nouvelles tentatives, à 1, 5 puis 15 minutes. */
 export const RETRY_DELAYS_MINUTES = [1, 5, 15] as const;

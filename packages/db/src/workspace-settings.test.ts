@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type WorkspaceSettingsRow, calendarOf, slotRulesOf, weekStartOf } from './workspace-settings.js';
+import { type WorkspaceSettingsRow, calendarOf, slotRulesOf, weekStartOf } from './workspace-settings.ts';
 
 const row = (overrides: Partial<WorkspaceSettingsRow> = {}): WorkspaceSettingsRow => ({
   timezone: 'Europe/Paris',

@@ -4,7 +4,8 @@
   "type": "module",
   "description": "SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publiés automatiquement.",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "engines": {
     "node": ">=24"

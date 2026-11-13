@@ -8,7 +8,7 @@
  * Rien ici ne dépend du fuseau de la machine qui exécute le code.
  */
 import { DateTime } from 'luxon';
-import { type HolidayCalendarId, isHoliday } from './holidays.js';
+import { type HolidayCalendarId, isHoliday } from './holidays.ts';
 
 /** 1 = lundi … 7 = dimanche (norme ISO 8601). */
 export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;

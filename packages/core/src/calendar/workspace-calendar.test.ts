@@ -10,7 +10,7 @@ import {
   minutesOfDay,
   sameIsoWeek,
   usualSlotsInWeek,
-} from './workspace-calendar.js';
+} from './workspace-calendar.ts';
 
 const utc = (iso: string) => new Date(iso);
 const iso = (dates: Date[]) => dates.map((d) => d.toISOString());

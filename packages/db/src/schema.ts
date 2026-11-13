@@ -13,7 +13,7 @@ import type {
   PostStatusHistory as GeneratedPostStatusHistory,
   PostVersions as GeneratedPostVersions,
   Posts as GeneratedPosts,
-} from './generated/database.js';
+} from './generated/database.ts';
 
 export interface Posts extends Omit<GeneratedPosts, 'status'> {
   status: ColumnType<PostStatus, PostStatus | undefined, PostStatus>;

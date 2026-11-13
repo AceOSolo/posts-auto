@@ -2,11 +2,11 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type Database, createDatabase } from './client.js';
-import { asUser } from './context.js';
-import { migrateToLatest } from './migrator.js';
-import { createEmptyTempDatabase } from './testing/temp-database.js';
-import { closeTestDatabase, openTestDatabase } from './testing/test-database.js';
+import { type Database, createDatabase } from './client.ts';
+import { asUser } from './context.ts';
+import { migrateToLatest } from './migrator.ts';
+import { createEmptyTempDatabase } from './testing/temp-database.ts';
+import { closeTestDatabase, openTestDatabase } from './testing/test-database.ts';
 
 let db: Database;
 const cleanups: (() => Promise<void>)[] = [];

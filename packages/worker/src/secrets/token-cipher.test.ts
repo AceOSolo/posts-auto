@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { TokenCipher } from './token-cipher.js';
+import { TokenCipher } from './token-cipher.ts';
 
 const key = () => randomBytes(32);
 

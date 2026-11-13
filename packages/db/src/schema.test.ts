@@ -5,10 +5,10 @@ import { POST_STATUSES, hasBlockingMarkers } from '@posts-auto/core';
 import { BLOCKING_MARKER_SAMPLES } from '@posts-auto/core/testing';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Database } from './client.js';
-import { asSystem } from './context.js';
-import { closeTestDatabase, openTestDatabase } from './testing/test-database.js';
-import { type OrgSetup, createAccount, createOrganization, createPost } from './testing/fixtures.js';
+import type { Database } from './client.ts';
+import { asSystem } from './context.ts';
+import { closeTestDatabase, openTestDatabase } from './testing/test-database.ts';
+import { type OrgSetup, createAccount, createOrganization, createPost } from './testing/fixtures.ts';
 
 let db: Database;
 let org: OrgSetup;

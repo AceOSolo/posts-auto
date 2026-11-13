@@ -3,6 +3,11 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+.next/
+next-env.d.ts
+
+# Médias stockés en local pendant le développement
+.media/
 
 # Secrets et environnements locaux
 .env

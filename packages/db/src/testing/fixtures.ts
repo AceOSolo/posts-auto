@@ -5,9 +5,9 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Insertable } from 'kysely';
-import { asSystem } from '../context.js';
-import type { Database } from '../client.js';
-import type { DB } from '../schema.js';
+import { asSystem } from '../context.ts';
+import type { Database } from '../client.ts';
+import type { DB } from '../schema.ts';
 
 const unique = () => randomUUID().slice(0, 8);
 

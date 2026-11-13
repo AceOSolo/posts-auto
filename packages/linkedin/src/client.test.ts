@@ -3,8 +3,8 @@
  * requêtes, et classification des pannes selon que le post a pu être créé ou non.
  */
 import { describe, expect, it } from 'vitest';
-import { type PublishRequest, LinkedInHttpClient } from './client.js';
-import { LinkedInError, describeForUser } from './errors.js';
+import { type PublishRequest, LinkedInHttpClient } from './client.ts';
+import { LinkedInError, describeForUser } from './errors.ts';
 
 interface Recorded {
   url: string;

@@ -5,8 +5,8 @@
  * - https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api
  * - https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/multiimage-post-api
  */
-import { LinkedInError, type LinkedInPhase, errorFromNetwork, errorFromResponse } from './errors.js';
-import { type LittleTextOptions, toLittleText } from './little-text.js';
+import { LinkedInError, type LinkedInPhase, errorFromNetwork, errorFromResponse } from './errors.ts';
+import { type LittleTextOptions, toLittleText } from './little-text.ts';
 
 /** Formats acceptés par l'API Images. */
 export type LinkedInImageMime = 'image/png' | 'image/jpeg' | 'image/gif';

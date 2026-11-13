@@ -10,8 +10,8 @@
  * rendue au pool ne garde aucun contexte.
  */
 import { type Transaction, sql } from 'kysely';
-import type { Database } from './client.js';
-import type { DB } from './schema.js';
+import type { Database } from './client.ts';
+import type { DB } from './schema.ts';
 
 export type Tx = Transaction<DB>;
 

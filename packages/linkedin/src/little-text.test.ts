@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeLittleText, toLittleText } from './little-text.js';
+import { escapeLittleText, toLittleText } from './little-text.ts';
 
 describe('format little (champ commentary)', () => {
   it('échappe chaque caractère réservé', () => {

@@ -9,8 +9,8 @@ import {
   openTestDatabase,
 } from '@posts-auto/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ForbiddenError, NotFoundError, RefusedError } from '../errors.js';
-import { decidePost, editPostText, reschedulePost, retryPublication, withdrawPost } from './post-actions.js';
+import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
+import { decidePost, editPostText, reschedulePost, retryPublication, withdrawPost } from './post-actions.ts';
 
 let db: Database;
 let workspaceId: string;

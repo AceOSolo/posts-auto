@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { departureSentence } from './departure.js';
+import { departureSentence } from './departure.ts';
 
 const TZ = 'Europe/Paris';
 // Lundi 16 novembre 2026, 10h00 à Paris.

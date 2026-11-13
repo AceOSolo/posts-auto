@@ -9,8 +9,8 @@ import {
   openTestDatabase,
 } from '@posts-auto/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { NotFoundError } from '../errors.js';
-import { getPostDetail, listMyPosts, listMyWorkspaces, teamWeek } from './post-queries.js';
+import { NotFoundError } from '../errors.ts';
+import { getPostDetail, listMyPosts, listMyWorkspaces, teamWeek } from './post-queries.ts';
 
 let db: Database;
 let workspaceId: string;

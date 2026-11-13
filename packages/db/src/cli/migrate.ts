@@ -1,6 +1,6 @@
 /** Applique les migrations en attente : npm run migrate -w @posts-auto/db */
-import { DEFAULT_DATABASE_URL, createDatabase } from '../client.js';
-import { migrateToLatest } from '../migrator.js';
+import { DEFAULT_DATABASE_URL, createDatabase } from '../client.ts';
+import { migrateToLatest } from '../migrator.ts';
 
 const url = process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL;
 const db = createDatabase(url, { maxConnections: 1 });

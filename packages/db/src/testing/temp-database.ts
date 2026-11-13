@@ -4,8 +4,8 @@
  */
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
-import { createDatabase } from '../client.js';
-import { migrateToLatest } from '../migrator.js';
+import { createDatabase } from '../client.ts';
+import { migrateToLatest } from '../migrator.ts';
 
 /** Connexion d'administration du serveur local (compose.yaml), sur la base « postgres ». */
 export const DEFAULT_ADMIN_URL = 'postgres://postgres:postgres@127.0.0.1:15432/postgres';

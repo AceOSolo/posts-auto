@@ -4,7 +4,7 @@
  * « Replanifié : créneau de mardi manqué ».
  */
 import { DateTime } from 'luxon';
-import type { PostStatus } from './status.js';
+import type { PostStatus } from './status.ts';
 
 export interface DepartureInput {
   readonly status: PostStatus;

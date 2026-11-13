@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BLOCKING_MARKER_SAMPLES } from '../testing.js';
-import { findBlockingMarkers, hasBlockingMarkers } from './markers.js';
+import { BLOCKING_MARKER_SAMPLES } from '../testing.ts';
+import { findBlockingMarkers, hasBlockingMarkers } from './markers.ts';
 
 describe('marqueurs bloquants (VAL-03)', () => {
   it.each(BLOCKING_MARKER_SAMPLES)('%j → %s', (text, blocking) => {

@@ -9,7 +9,7 @@ import {
   resolveSession,
   revokeAllSessions,
   revokeSession,
-} from './auth.js';
+} from './auth.ts';
 
 let db: Database;
 let email: string;

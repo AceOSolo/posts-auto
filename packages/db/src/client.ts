@@ -1,6 +1,6 @@
 ﻿import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
-import type { DB } from './schema.js';
+import type { DB } from './schema.ts';
 
 export type Database = Kysely<DB>;
 

@@ -8,7 +8,7 @@ import {
   openTestDatabase,
 } from '@posts-auto/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { describeSlot, runRescheduleTick } from './reschedule-job.js';
+import { describeSlot, runRescheduleTick } from './reschedule-job.ts';
 
 let db: Database;
 beforeAll(async () => {

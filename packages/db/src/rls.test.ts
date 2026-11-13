@@ -4,9 +4,9 @@
  */
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Database } from './client.js';
-import { asSystem, asUser } from './context.js';
-import { closeTestDatabase, openTestDatabase } from './testing/test-database.js';
+import type { Database } from './client.ts';
+import { asSystem, asUser } from './context.ts';
+import { closeTestDatabase, openTestDatabase } from './testing/test-database.ts';
 import {
   type OrgSetup,
   addMember,
@@ -14,7 +14,7 @@ import {
   createOrganization,
   createPost,
   createUser,
-} from './testing/fixtures.js';
+} from './testing/fixtures.ts';
 
 let db: Database;
 let orgA: OrgSetup;

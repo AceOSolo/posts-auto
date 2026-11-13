@@ -3,8 +3,8 @@
  * « publiés » et permet d'injecter des pannes, y compris la pire : le post est créé
  * mais la réponse se perd (issue incertaine).
  */
-import { type PublishRequest, type PublishedPost, type LinkedInPublisher, postUrl } from './client.js';
-import { LinkedInError } from './errors.js';
+import { type PublishRequest, type PublishedPost, type LinkedInPublisher, postUrl } from './client.ts';
+import { LinkedInError } from './errors.ts';
 
 export interface FakePublishedPost extends PublishedPost {
   readonly accessToken: string;

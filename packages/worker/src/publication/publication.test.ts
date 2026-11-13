@@ -16,9 +16,9 @@ import {
 import { FakeLinkedIn, linkedInFailures } from '@posts-auto/linkedin';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { MemoryMediaStore } from '../media/media-store.js';
-import { TokenCipher } from '../secrets/token-cipher.js';
-import { type PublicationDeps, runPublicationTick } from './publication.js';
+import { MemoryMediaStore } from '../media/media-store.ts';
+import { TokenCipher } from '../secrets/token-cipher.ts';
+import { type PublicationDeps, runPublicationTick } from './publication.ts';
 
 let db: Database;
 const cipher = new TokenCipher(new Map([['k1', randomBytes(32)]]), 'k1');
