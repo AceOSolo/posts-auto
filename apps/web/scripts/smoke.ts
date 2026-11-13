@@ -50,7 +50,14 @@ try {
   check('en-têtes de sécurité présents', anonymous.headers.get('x-frame-options') === 'DENY');
 
   const loginPage = await get('/connexion');
-  check('page de connexion', loginPage.status === 200 && (await loginPage.text()).includes('Recevoir mon lien'));
+  const loginHtml = await loginPage.text();
+  check('page de connexion', loginPage.status === 200 && loginHtml.includes('Recevoir mon lien'));
+  const loginForm = /<form[^>]*>([\s\S]*?)<\/form>/.exec(loginHtml)?.[1] ?? '';
+  const loginFields = new FormData();
+  for (const input of loginForm.matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) loginFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+  loginFields.append('email', 'direction@demo.example.test');
+  const linkRequested = await fetch(`${BASE}/connexion`, { method: 'POST', body: loginFields, redirect: 'manual', headers: { origin: BASE } });
+  check('demande de lien par le formulaire : même message, adresse connue ou non', (linkRequested.headers.get('location') ?? '').includes('message=envoye'), `HTTP ${linkRequested.status}`);
 
   const jp = await sessionFor('jp@demo.example.test');
   const home = await get('/', jp);

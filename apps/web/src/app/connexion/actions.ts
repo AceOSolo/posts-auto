@@ -1,6 +1,6 @@
 'use server';
 
-import { consumeLoginLink, requestLoginLink, revokeSession } from '@posts-auto/services';
+import { consumeLoginLink, loginLinkMail, requestLoginLink, revokeSession } from '@posts-auto/services';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { appUrl, database, mailer } from '../../server/context.ts';
@@ -19,7 +19,7 @@ export async function requestLink(formData: FormData): Promise<void> {
   if (result.kind === 'rate_limited') redirect('/connexion?message=trop');
   if (result.kind === 'send') {
     const url = `${appUrl()}/connexion/lien?jeton=${encodeURIComponent(result.token)}`;
-    await mailer().sendLoginLink(result.email, url, result.expiresAt);
+    await mailer().send({ to: { email: result.email }, ...loginLinkMail({ appUrl: appUrl(), recipientName: null }, url), tag: 'connexion' });
   }
   redirect('/connexion?message=envoye');
 }

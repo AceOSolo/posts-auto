@@ -15,7 +15,7 @@
 import { type DB, type Database, asSystem } from '@posts-auto/db';
 import { LinkedInError, type LinkedInOAuth } from '@posts-auto/linkedin';
 import type { Updateable } from 'kysely';
-import { alertRecipients, notify } from '../notifications.ts';
+import { alertRecipients, notify } from '../notifications/recipients.ts';
 import type { TokenCipher } from '../secrets/token-cipher.ts';
 
 const DAY = 86_400_000;

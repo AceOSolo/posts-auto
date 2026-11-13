@@ -30,7 +30,7 @@ import {
   describeForUser,
 } from '@posts-auto/linkedin';
 import type { MediaStore } from '../media/media-store.ts';
-import { alertRecipients, notify } from '../notifications.ts';
+import { alertRecipients, notify } from '../notifications/recipients.ts';
 import type { TokenCipher } from '../secrets/token-cipher.ts';
 
 /** PUB-04 : 3 nouvelles tentatives, à 1, 5 puis 15 minutes. */

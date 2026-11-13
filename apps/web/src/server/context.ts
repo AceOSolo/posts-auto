@@ -6,7 +6,7 @@ import path from 'node:path';
 import { DEFAULT_DATABASE_URL, type Database, createDatabase } from '@posts-auto/db';
 import { FakeLinkedInOAuth, type LinkedInOAuth, LinkedInOAuthClient } from '@posts-auto/linkedin';
 import { FileMediaStore, type MediaStore, TokenCipher } from '@posts-auto/worker';
-import { ConsoleMailer, type Mailer } from './mailer.ts';
+import { type Mailer, mailerFromEnv } from '@posts-auto/services';
 
 interface ServerResources {
   db?: Database;
@@ -28,7 +28,8 @@ export function mediaStore(): MediaStore {
 }
 
 export function mailer(): Mailer {
-  resources.mailer ??= new ConsoleMailer();
+  // Brevo si BREVO_API_KEY et MAIL_FROM sont définis, sinon la console.
+  resources.mailer ??= mailerFromEnv(process.env);
   return resources.mailer;
 }
 

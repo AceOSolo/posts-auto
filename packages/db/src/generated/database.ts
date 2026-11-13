@@ -139,8 +139,11 @@ export interface NotificationPrefs {
 export interface Notifications {
   channel: string;
   created_at: Generated<Timestamp>;
+  delivery_attempts: Generated<number>;
+  delivery_status: string | null;
   id: Generated<Int8>;
   kind: string;
+  last_error: string | null;
   payload: Generated<Json>;
   read_at: Timestamp | null;
   sent_at: Timestamp | null;
@@ -201,6 +204,7 @@ export interface Posts {
   publish_lease_until: Timestamp | null;
   publish_retries_left: Generated<number>;
   published_at: Timestamp | null;
+  reminders_sent: Generated<string[]>;
   replaces_post_id: string | null;
   request_id: string | null;
   reschedule_count: Generated<number>;

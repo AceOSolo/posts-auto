@@ -30,7 +30,10 @@ docker compose up -d --wait        # PostgreSQL 16 sur 127.0.0.1:15432
 npm run migrate -w @posts-auto/db  # applique les migrations à la base de développement
 npm run seed -w @posts-auto/web    # données de démonstration (espace « Démo Secutop »)
 npm run dev -w @posts-auto/web     # http://localhost:3000
+npm run start -w @posts-auto/worker  # tâches de fond : publication, replanification, connexions, rappels, e-mails
 ```
+
+En développement, `LINKEDIN_MODE=fake` simule LinkedIn (connexion et publication) ; les tâches de fond exigent `TOKEN_ENCRYPTION_KEYS` et `TOKEN_ENCRYPTION_KEY_ID` (voir `.env.example`).
 
 Connexion : saisir `jp@demo.example.test` (titulaire), `alexis@…` (communication, déléguée sur la page), `claire@…` (formatrice) ou `direction@…` (lecture seule). Le lien de connexion s'affiche dans la console du serveur.
 
