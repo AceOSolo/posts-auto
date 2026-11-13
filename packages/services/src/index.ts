@@ -18,3 +18,5 @@ export * from './workspaces/members.ts';
 export * from './audit.ts';
 export * from './editorial/editorial-line.ts';
 export * from './editorial/account-profiles.ts';
+export * from './planning/planning.ts';
+export * from './planning/subjects-events.ts';

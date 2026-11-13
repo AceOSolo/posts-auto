@@ -283,6 +283,38 @@ try {
   const example = await submitForm(fichePath, claire, '>Ajouter<', { texte: 'Un post de référence collé par la titulaire.', etiquette: 'imiter' });
   check('fiche : exemple « à imiter » ajouté par le titulaire (EDI-05)', (example.headers.get('location') ?? '').includes('exemple-ajoute'), `HTTP ${example.status}`);
 
+  // PLA-01 à PLA-05, PLA-08 : planning, case, import, événements, inventaire.
+  const today = new Date();
+  const monday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - ((today.getUTCDay() + 6) % 7)));
+  const thisWeek = monday.toISOString().slice(0, 10);
+  const nextWeek = new Date(monday.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+  const grid = await get(`/planning/${workspaceId}`, alexis);
+  check('planning : grille comptes × semaines (PLA-01)', grid.status === 200 && (await grid.text()).includes('class="planning"'), `HTTP ${grid.status}`);
+  const jpRowKey = `compte:${(await asSystem(db, (trx) => trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspaceId).where('display_name', '=', 'Jean-Pierre Martin').executeTakeFirstOrThrow())).id}`;
+  const cellPath = `/planning/${workspaceId}/case?ligne=${encodeURIComponent(jpRowKey)}&semaine=${nextWeek}`;
+  const subject = `Sujet ajouté par le test de fumée ${Date.now()}`;
+  const added = await submitForm(cellPath, alexis, '>Ajouter<', { sujet: subject });
+  const addedRow = await asSystem(db, (trx) => trx.selectFrom('planning_cells').select('id').where('content', '=', subject).executeTakeFirst());
+  check('planning : sujet ajouté à une case (PLA-02)', (added.headers.get('location') ?? '').includes('sujet-ajoute') && addedRow !== undefined, `HTTP ${added.status}`);
+  check('planning : une contributrice voit la grille sans pouvoir la modifier', !(await (await get(`/planning/${workspaceId}`, claire)).text()).includes('Ajouter un sujet'));
+
+  const csv = `PAM test,,\nLigne,${thisWeek},${nextWeek}\nJean-Pierre,Sujet importé A ${Date.now()},"Sujet importé B\nSujet importé C"\nNotes,,à ignorer\n`;
+  const preview = await submitForm(`/planning/${workspaceId}/import`, alexis, 'Voir l’aperçu', { type: 'planning', contenu: csv, annee: String(today.getUTCFullYear()) });
+  const previewLocation = preview.headers.get('location') ?? '';
+  // React sépare les morceaux de texte voisins par « <!-- --> » dans le HTML.
+  const previewPage = previewLocation === '' ? '' : (await (await get(previewLocation, alexis)).text()).replace(/<!-- -->/g, '');
+  check('import : aperçu avec 2 semaines reconnues et le compte proposé (PLA-05)', previewPage.includes('2 semaines reconnues') && previewPage.includes('selected=""'), `→ ${previewLocation}`);
+  const imported = await submitForm(previewLocation, alexis, '>Importer<', { 'ligne-0': jpRowKey.slice('compte:'.length), 'ligne-1': 'ignorer' });
+  const importedCount = await asSystem(db, (trx) => trx.selectFrom('planning_cells').select('id').where('workspace_id', '=', workspaceId).where('content', 'like', 'Sujet importé%').execute());
+  check('import : 3 sujets créés, ligne « Notes » ignorée', (imported.headers.get('location') ?? '').includes('import-termine') && importedCount.length >= 3, `HTTP ${imported.status}`);
+
+  const eventTitle = `Salon de test ${Date.now()}`;
+  const savedEvent = await submitForm(`/planning/${workspaceId}/evenements`, alexis, '>Ajouter<', { titre: eventTitle, debut: nextWeek, comptes: jpRowKey.slice('compte:'.length) });
+  const eventRow = await asSystem(db, (trx) => trx.selectFrom('events').select('id').where('title', '=', eventTitle).executeTakeFirst());
+  check('événement enregistré avec le compte qui le relaie (PLA-04)', (savedEvent.headers.get('location') ?? '').includes('evenement-enregistre') && eventRow !== undefined, `HTTP ${savedEvent.status}`);
+  const inventoryPage = await get(`/planning/${workspaceId}/inventaire`, claire);
+  check('inventaire de la semaine visible par une contributrice (PLA-08)', inventoryPage.status === 200 && (await inventoryPage.text()).includes(subject));
+
   // REC-14, VAL-06 : validation depuis l'e-mail.
   const replanned = posts.find((p) => p.body.includes('sessions de formation incendie'));
   if (replanned) {
