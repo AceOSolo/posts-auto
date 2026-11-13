@@ -6,6 +6,7 @@
   "description": "Base de données : migrations SQL, cloisonnement par espace (RLS), accès typé avec Kysely.",
   "exports": {
     ".": "./src/index.ts",
+    "./migrator": "./src/migrator.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {

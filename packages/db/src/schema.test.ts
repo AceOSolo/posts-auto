@@ -147,6 +147,50 @@ describe('règles portées par les contraintes', () => {
     expect(row.week_start).toBe('2026-11-16');
   });
 
+  it('supprimer une organisation efface toutes ses données, images comprises (RGPD 10.2)', async () => {
+    const doomed = await createOrganization(db);
+    const wsId = doomed.workspaceIds[0] as string;
+    const accountId = await createAccount(db, wsId);
+    const first = await createPost(db, wsId, accountId, { scheduled_at: new Date('2026-12-01T11:00:00Z'), status: 'remplace' });
+    const second = await createPost(db, wsId, accountId, { scheduled_at: new Date('2026-12-01T11:00:00Z'), replaces_post_id: first });
+    await asSystem(db, async (trx) => {
+      const asset = await trx
+        .insertInto('media_assets')
+        .values({ workspace_id: wsId, kind: 'upload', storage_key: `test/${second}/a.png`, mime: 'image/png' })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      await trx.insertInto('post_media').values({ workspace_id: wsId, post_id: second, asset_id: asset.id, position: 1 }).execute();
+      await trx
+        .insertInto('post_status_history')
+        .values({ workspace_id: wsId, post_id: second, from_status: 'a_valider', to_status: 'valide', actor_kind: 'system' })
+        .execute();
+    });
+
+    await asSystem(db, (trx) => trx.deleteFrom('organizations').where('id', '=', doomed.orgId).execute());
+
+    const left = await asSystem(db, async (trx) => ({
+      posts: await trx.selectFrom('posts').select('id').where('workspace_id', '=', wsId).execute(),
+      media: await trx.selectFrom('media_assets').select('id').where('workspace_id', '=', wsId).execute(),
+      accounts: await trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', wsId).execute(),
+    }));
+    expect(left).toEqual({ posts: [], media: [], accounts: [] });
+  });
+
+  it('une image utilisée par un post ne peut pas être supprimée seule', async () => {
+    const accountId = await createAccount(db, ws());
+    const postId = await createPost(db, ws(), accountId, { scheduled_at: new Date('2026-12-02T11:00:00Z') });
+    const attempt = asSystem(db, async (trx) => {
+      const asset = await trx
+        .insertInto('media_assets')
+        .values({ workspace_id: ws(), kind: 'upload', storage_key: `test/${postId}/b.png`, mime: 'image/png' })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      await trx.insertInto('post_media').values({ workspace_id: ws(), post_id: postId, asset_id: asset.id, position: 1 }).execute();
+      await trx.deleteFrom('media_assets').where('id', '=', asset.id).execute();
+    });
+    await expect(attempt).rejects.toThrow(/post_media_asset_id_workspace_id_fkey/);
+  });
+
   it('un texte de post ne dépasse pas 3 000 caractères (limite LinkedIn)', async () => {
     const accountId = await createAccount(db, ws());
     await expect(
