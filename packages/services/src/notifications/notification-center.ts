@@ -16,6 +16,11 @@ export const NOTIFICATION_KINDS = {
   post_publie: 'Post publié',
   connexion_expire_bientot: 'Connexion LinkedIn qui expire bientôt',
   connexion_expiree: 'Connexion LinkedIn expirée',
+  posts_prets: 'Nouveaux posts à valider (après une rédaction)',
+  nouvelle_version: 'Nouvelle version d’un post après votre demande de modification ou votre refus',
+  demande_traitee: 'Demande de post traitée',
+  generation_terminee: 'Rédaction de la semaine terminée (équipe de rédaction)',
+  reprise_manuelle: 'Post à reprendre à la main après 3 reprises (équipe de rédaction)',
 } as const;
 export type NotificationKind = keyof typeof NOTIFICATION_KINDS;
 
@@ -50,6 +55,22 @@ export function describeNotification(kind: string, payload: Record<string, unkno
       return { title: `La connexion LinkedIn de ${account} expire dans ${String(payload['daysLeft'])} jour(s)`, href: null };
     case 'connexion_expiree':
       return { title: `La connexion LinkedIn de ${account} a expiré`, href: null };
+    case 'posts_prets':
+      return { title: `${String(payload['count'])} nouveau(x) post(s) à valider`, href: '/' };
+    case 'nouvelle_version':
+      return { title: `Nouvelle version d’un post de ${account}, à valider`, href: post };
+    case 'demande_traitee':
+      return {
+        title: payload['impossible'] === true ? 'Votre demande de post n’a pas pu être traitée' : 'Votre demande de post est rédigée',
+        href: str(payload['workspaceId']) ? `/demandes/${encodeURIComponent(str(payload['workspaceId']))}` : null,
+      };
+    case 'generation_terminee':
+      return {
+        title: `Rédaction terminée : ${String(payload['created'])} post(s) rédigé(s)`,
+        href: str(payload['workspaceId']) && str(payload['runId']) ? `/planning/${encodeURIComponent(str(payload['workspaceId']))}/redactions/${encodeURIComponent(str(payload['runId']))}` : null,
+      };
+    case 'reprise_manuelle':
+      return { title: `Un post de ${account} doit être repris à la main (3 reprises déjà faites)`, href: post };
     default:
       return { title: 'Notification', href: null };
   }

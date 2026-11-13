@@ -6,16 +6,19 @@
  * - Connexions LinkedIn : chaque jour (LNK-04 : renouvellement, vérification, alertes).
  * - Rappels de validation et récapitulatif du lundi : toutes les 15 minutes (VAL-05).
  * - Envoi des e-mails : toutes les minutes (Brevo si BREVO_API_KEY et MAIL_FROM, sinon console).
+ * - Rédaction : toutes les 5 minutes, les espaces dont la rédaction est due (GEN-01, décision 0005).
  *
  * Variables d'environnement :
  * - DATABASE_URL, MEDIA_ROOT, TOKEN_ENCRYPTION_KEYS, TOKEN_ENCRYPTION_KEY_ID ;
  * - LINKEDIN_MODE : « api » (par défaut) ou « fake » (développement : rien ne part chez LinkedIn) ;
- * - LINKEDIN_API_VERSION : version AAAAMM de l'API LinkedIn (par défaut 202610).
+ * - LINKEDIN_API_VERSION : version AAAAMM de l'API LinkedIn (par défaut 202610) ;
+ * - AI_MODE (« anthropic » ou « fake »), ANTHROPIC_API_KEY, AI_MODEL, AI_USD_TO_EUR.
  *
  * Journal : une ligne JSON par événement, sur la sortie standard.
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { modelFromEnv } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, createDatabase } from '@posts-auto/db';
 import {
   FakeLinkedIn,
@@ -27,6 +30,7 @@ import {
 } from '@posts-auto/linkedin';
 import { mailerFromEnv } from '@posts-auto/services';
 import { runTokenCheck } from '../accounts/token-check.ts';
+import { runGenerationTick } from '../generation/weekly.ts';
 import { runEmailDispatch } from '../notifications/email-dispatch.ts';
 import { runValidationReminders } from '../notifications/reminders.ts';
 import { FileMediaStore } from '../media/media-store.ts';
@@ -48,13 +52,15 @@ const linkedin: LinkedInPublisher = fake ? new FakeLinkedIn() : new LinkedInHttp
 const appUrl = (env['APP_URL'] ?? 'http://localhost:3000').replace(/\/$/, '');
 const redirectUri = `${appUrl}/comptes/connecter/retour`;
 const mailer = mailerFromEnv(env);
+const model = modelFromEnv(env);
+const usdToEur = Number.parseFloat(env['AI_USD_TO_EUR'] ?? '0.86');
 const oauth: LinkedInOAuth | null = fake
   ? new FakeLinkedInOAuth(redirectUri)
   : env['LINKEDIN_CLIENT_ID'] && env['LINKEDIN_CLIENT_SECRET']
     ? new LinkedInOAuthClient({ clientId: env['LINKEDIN_CLIENT_ID'], clientSecret: env['LINKEDIN_CLIENT_SECRET'], redirectUri })
     : null;
 
-log('info', 'demarrage', { linkedin: env['LINKEDIN_MODE'] === 'fake' ? 'faux (développement)' : 'API', cle: cipher.currentKeyId });
+log('info', 'demarrage', { linkedin: env['LINKEDIN_MODE'] === 'fake' ? 'faux (développement)' : 'API', ia: model.provider === 'simulation' ? 'simulée (développement)' : model.model, cle: cipher.currentKeyId });
 
 const scheduler = startScheduler(
   [
@@ -63,6 +69,7 @@ const scheduler = startScheduler(
     { name: 'connexions', intervalMs: 24 * 3_600_000, run: () => runTokenCheck({ db, oauth, cipher }) },
     { name: 'rappels', intervalMs: 15 * 60_000, run: () => runValidationReminders({ db }) },
     { name: 'e-mails', intervalMs: 60_000, run: () => runEmailDispatch({ db, mailer, appUrl }) },
+    { name: 'redaction', intervalMs: 5 * 60_000, run: () => runGenerationTick({ db, model, usdToEur }) },
   ],
   { info: (event, details) => log('info', event, details), error: (event, details) => log('error', event, details) },
 );

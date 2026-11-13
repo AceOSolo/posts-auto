@@ -378,6 +378,8 @@ export interface Posts {
   replaces_post_id: string | null;
   request_id: string | null;
   reschedule_count: Generated<number>;
+  rework_attempts: Generated<number>;
+  rework_lease_until: Timestamp | null;
   scheduled_at: Timestamp;
   source_note: string | null;
   status: Generated<string>;
@@ -531,9 +533,11 @@ export interface WorkspaceMembers {
 
 export interface Workspaces {
   allowed_hours: Generated<Json>;
+  auto_generation: Generated<boolean>;
   branding: Json | null;
   created_at: Generated<Timestamp>;
   generation_cron: Generated<string>;
+  generation_requested_at: Timestamp | null;
   holidays_calendar: Generated<string>;
   id: Generated<string>;
   max_posts_per_account_per_day: Generated<number>;

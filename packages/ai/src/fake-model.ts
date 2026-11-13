@@ -46,7 +46,8 @@ export function demoDraft(context: string, task: string, counter: number): unkno
   const min = Number(range?.[1] ?? 600);
   const links = [...task.matchAll(/^- (https?:\/\/\S+)$/gm)].map((m) => m[1] as string);
   const head = `Démonstration : ${title}\n\n(Texte provisoire, sans IA.)\n\n`;
-  const tail = `\n\nEt vous, qu’en pensez-vous ?${links.length > 0 ? `\n\n${links.join('\n')}` : ''}`;
+  // Question courte : une phrase de 6 mots ou plus répétée d'un post à l'autre serait refusée (RÈG-17).
+  const tail = `\n\nVotre avis ?${links.length > 0 ? `\n\n${links.join('\n')}` : ''}`;
   let filler = '';
   while ([...head, ...filler, ...tail].length < min) filler += 'Texte provisoire de démonstration. ';
   return {

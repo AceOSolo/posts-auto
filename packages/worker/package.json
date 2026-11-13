@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Tâches de fond : file de publication, chiffrement des jetons, stockage des médias.",
+  "description": "Tâches de fond : rédaction par l’IA, file de publication, chiffrement des jetons, stockage des médias.",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -12,6 +12,7 @@
     "start": "tsx src/cli/run.ts"
   },
   "dependencies": {
+    "@posts-auto/ai": "*",
     "@posts-auto/core": "*",
     "@posts-auto/db": "*",
     "@posts-auto/linkedin": "*",

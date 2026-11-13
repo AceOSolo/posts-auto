@@ -142,6 +142,37 @@ export function notificationMail(kind: string, payload: Record<string, unknown>,
         accountsAction,
         footer,
       );
+    case 'nouvelle_version':
+      return compose(
+        ctx,
+        `Nouvelle version d’un post de ${account}`,
+        [
+          payload['refused'] === true
+            ? 'Suite à votre refus, un autre sujet a été rédigé pour ce créneau.'
+            : 'Votre demande de modification a été appliquée : la nouvelle version attend votre validation.',
+          `Départ prévu le ${when(payload['scheduledAt'], ctx.timeZone)}.`,
+        ],
+        postAction,
+        footer,
+      );
+    case 'generation_terminee': {
+      const created = Number(payload['created']);
+      const lines = [`${plural(created, 'post')} rédigé${created > 1 ? 's' : ''} et proposé${created > 1 ? 's' : ''} à la validation des titulaires.`];
+      if (Number(payload['withMarkers']) > 0) lines.push(`${plural(Number(payload['withMarkers']), 'post')} porte${Number(payload['withMarkers']) > 1 ? 'nt' : ''} un marqueur à traiter avant publication.`);
+      if (Number(payload['unplaced']) > 0) lines.push(`${plural(Number(payload['unplaced']), 'sujet daté')} n’a pas trouvé de créneau.`);
+      if (Number(payload['suspicious']) > 0) lines.push('Des consignes cachées ont été repérées dans des contenus externes et ignorées.');
+      if (Number(payload['errors']) > 0) lines.push(`${plural(Number(payload['errors']), 'post')} n’a pas pu être rédigé : voir le rapport.`);
+      const runUrl = `${ctx.appUrl}/planning/${encodeURIComponent(workspaceId)}/redactions/${encodeURIComponent(str(payload['runId']))}`;
+      return compose(ctx, 'Rédaction de la semaine terminée', lines, { label: 'Voir le rapport', url: runUrl }, footer);
+    }
+    case 'reprise_manuelle':
+      return compose(
+        ctx,
+        `Un post de ${account} est à reprendre à la main`,
+        ['Ce post a déjà été repris 3 fois sans être validé : il sort du circuit automatique et attend une reprise par l’équipe.'],
+        postAction,
+        footer,
+      );
     default:
       return null; // ex. « post_publie », « post_replanifie » : notifications dans l'application seulement
   }
