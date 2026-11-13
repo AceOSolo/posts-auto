@@ -28,6 +28,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               <Link href={`/planning/${workspace.id}`}>Planning</Link>
               <Link href={`/idees/${workspace.id}`}>Idées et demandes</Link>
               <Link href={`/ligne/${workspace.id}`}>Ligne éditoriale</Link>
+              <Link href={`/visuels/${workspace.id}`}>Visuels</Link>
               <Link href={`/espace/${workspace.id}`}>Réglages</Link>
             </span>
           ))}

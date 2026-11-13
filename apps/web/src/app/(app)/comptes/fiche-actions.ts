@@ -61,6 +61,7 @@ export async function saveProfileAction(workspaceId: string, accountId: string, 
         ...(form.has('rythme') && { postsPerWeek: Number.parseInt(text(form, 'rythme'), 10) }),
         ...(form.has('options') && { optionalPerWeek: Number.parseInt(text(form, 'options'), 10) }),
         ...(form.has('jour-0') && { usualSlots: slots }),
+        ...(form.has('part-photos') && { aiImageRatio: Number(text(form, 'part-photos')) }),
       });
     }
     await saveAccountProfile(database(), userId, accountId, input, now);

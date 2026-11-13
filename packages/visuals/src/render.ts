@@ -5,7 +5,6 @@
  * - un contraste insuffisant entre le texte et son fond est signalé ;
  * - une zone de texte ou de photo restée vide est signalée.
  */
-import { createRequire } from 'node:module';
 import { type Image, GlobalFonts, type SKRSContext2D, createCanvas, loadImage } from '@napi-rs/canvas';
 import { contrastRatio } from './contrast.ts';
 import { FORMAT_SIZES, type FontWeight, IMAGE_KINDS, type TemplateContent, type TemplateDefinition, type TextStyle, type Zone } from './template.ts';
@@ -13,12 +12,20 @@ import { FORMAT_SIZES, type FontWeight, IMAGE_KINDS, type TemplateContent, type 
 const FONT = 'Inter';
 let fontsReady = false;
 
-/** Police Inter (licence OFL), embarquée : le rendu ne dépend pas des polices du serveur. */
+/**
+ * Police Inter (licence OFL), embarquée : le rendu ne dépend pas des polices du serveur.
+ *
+ * Le chemin des fichiers est résolu à l'exécution, par Node : `createRequire` est obtenu par
+ * `process.getBuiltinModule` pour que l'empaqueteur de Next.js ne remplace pas
+ * `require.resolve(…)` par un identifiant de module (un nombre, refusé par le moteur).
+ */
 function registerFonts(): void {
   if (fontsReady) return;
-  const require = createRequire(import.meta.url);
+  const { createRequire } = process.getBuiltinModule('node:module');
+  const resolve = createRequire(import.meta.url).resolve;
   for (const weight of [400, 600, 700, 800] as FontWeight[]) {
-    GlobalFonts.registerFromPath(require.resolve(`@fontsource/inter/files/inter-latin-${weight}-normal.woff2`), FONT);
+    const file = resolve(['@fontsource', 'inter', 'files', `inter-latin-${weight}-normal.woff2`].join('/'));
+    GlobalFonts.registerFromPath(file, FONT);
   }
   fontsReady = true;
 }

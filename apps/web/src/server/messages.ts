@@ -142,6 +142,23 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   'visuel-demande': { tone: 'success', text: 'Nouveau visuel demandé : il sera prêt dans une à deux minutes, cette page se met à jour seule.' },
   trop_de_visuels: { tone: 'error', text: 'Trop de visuels demandés : réessayez dans une heure.' },
   photo_mode: { tone: 'error', text: 'Choisissez ce qu’il faut faire de la photo.' },
+  'modele-enregistre': { tone: 'success', text: 'Modèle enregistré : il sert aux prochains visuels.' },
+  'zone-ajoutee': { tone: 'success', text: 'Zone ajoutée en bas de la liste : ajustez sa position et sa taille.' },
+  'modele-copie': { tone: 'success', text: 'Copie créée : modifiez-la, puis enregistrez.' },
+  'modele-archive': { tone: 'success', text: 'Modèle archivé : il n’est plus proposé à l’IA.' },
+  'modele-restaure': { tone: 'success', text: 'Modèle remis en service.' },
+  modele_invalide: { tone: 'error', text: 'Le modèle n’a pas été enregistré : une valeur est hors des limites.' },
+  nom_modele_requis: { tone: 'error', text: 'Donnez un nom au modèle.' },
+  'charte-enregistree': { tone: 'success', text: 'Charte enregistrée.' },
+  couleur_invalide: { tone: 'error', text: 'Couleur invalide.' },
+  budget_invalide: { tone: 'error', text: 'Budget d’images : un nombre entre 0 et 1000.' },
+  'modeles-recolores': { tone: 'success', text: 'Modèles de départ remis aux couleurs de la charte.' },
+  'photos-mediatheque': { tone: 'success', text: 'Photos ajoutées à la médiathèque.' },
+  'photo-mediatheque': { tone: 'success', text: 'Photo ajoutée à la médiathèque.' },
+  'photo-classee': { tone: 'success', text: 'Photo classée.' },
+  'photo-retiree-mediatheque': { tone: 'success', text: 'Photo retirée de la médiathèque.' },
+  trop_de_photos: { tone: 'error', text: 'Au plus 20 photos à la fois.' },
+  part_photos_invalide: { tone: 'error', text: 'Part des visuels avec photo inconnue.' },
 };
 
 export function messageFor(code: string | string[] | undefined): { tone: 'success' | 'error'; text: string } | null {

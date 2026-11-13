@@ -7,12 +7,16 @@
  */
 import { FakeModel } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, asSystem, createDatabase } from '@posts-auto/db';
-import { runGenerationTick } from '@posts-auto/worker';
+import { FakeImageGenerator } from '@posts-auto/visuals';
+import { FileMediaStore, runGenerationTick, runVisualTick } from '@posts-auto/worker';
 import { writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink } from '@posts-auto/services';
 
 const BASE = process.env['APP_URL'] ?? 'http://localhost:3000';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
+// Même dossier de médias que l'application (server/context.ts) : les visuels préparés ici y sont servis.
+const media = new FileMediaStore(process.env['MEDIA_ROOT'] ?? path.resolve(process.cwd(), '../../.media'));
 let failures = 0;
 
 function check(label: string, ok: boolean, detail = ''): void {
@@ -367,8 +371,8 @@ try {
   // GEN-01, GEN-05, GEN-06, GEN-12 : rédaction de bout en bout (modèle simulé), rapport, origine, signalement.
   const launched = await submitForm(`/planning/${workspaceId}/redactions`, alexis, 'Lancer la rédaction maintenant', {});
   check('rédaction demandée depuis l’application (GEN-01)', (launched.headers.get('location') ?? '').includes('redaction-demandee'), `HTTP ${launched.status}`);
-  // La tâche de fond, exécutée ici comme le ferait le processus des tâches.
-  const tick = await runGenerationTick({ db, model: new FakeModel() });
+  // La tâche de fond, exécutée ici comme le ferait le processus des tâches, avec les visuels (1c).
+  const tick = await runGenerationTick({ db, model: new FakeModel(), media, images: new FakeImageGenerator() });
   const runId = tick.runs.find((r) => r.workspaceId === workspaceId)?.runId ?? null;
   check('la tâche de fond rédige les posts de l’espace', runId !== null && (tick.runs.find((r) => r.workspaceId === workspaceId)?.created ?? 0) > 0, JSON.stringify(tick.runs));
   if (runId !== null) {
@@ -394,6 +398,83 @@ try {
   }
   const howItWorks = await get('/comment-fonctionne-la-redaction');
   check('page « Comment fonctionne la rédaction » publique (GEN-12)', howItWorks.status === 200 && (await howItWorks.text()).includes('L’IA peut se tromper'));
+
+  // 1c — REC-18 : post rédigé avec une image générée placée dans un modèle.
+  if (runId !== null) {
+    const visuals = await asSystem(db, (trx) =>
+      trx
+        .selectFrom('post_media as pm')
+        .innerJoin('media_assets as m', 'm.id', 'pm.asset_id')
+        .innerJoin('posts as p', 'p.id', 'pm.post_id')
+        .select(['p.id as post_id', 'm.id', 'm.ai_generated', 'm.width', 'pm.alt_text', 'pm.position'])
+        .where('p.generation_run_id', '=', runId)
+        .where('m.kind', '=', 'rendered')
+        .execute(),
+    );
+    const withImage = visuals.find((v) => v.ai_generated);
+    check(
+      'REC-18 : visuel rendu en PNG avec image générée, mention « générée par IA » enregistrée',
+      withImage !== undefined && withImage.position === 1 && (withImage.alt_text ?? '').endsWith('Illustration générée par IA.') && visuals.some((v) => !v.ai_generated),
+      JSON.stringify(visuals.map((v) => [v.ai_generated, v.alt_text])),
+    );
+    if (withImage) {
+      const png = await get(`/media/${withImage.id}`, alexis);
+      check('visuel servi en PNG 1080 px de large', png.status === 200 && png.headers.get('content-type') === 'image/png' && withImage.width === 1080);
+      const visualPage = (await (await get(`/posts/${withImage.post_id}`, alexis)).text()).replace(/<!-- -->/g, '');
+      check('page du post : section Visuel, badge « Image générée par IA », « Refaire le visuel » (VIS-12, VIS-13)', visualPage.includes('id="visuel"') && visualPage.includes('Image générée par IA') && visualPage.includes('Refaire le visuel'));
+      const redo = await submitForm(`/posts/${withImage.post_id}`, alexis, '>Refaire le visuel<', { consigne: 'Un titre plus court', photo: 'none' });
+      const pendingPage = (await (await get(`/posts/${withImage.post_id}`, alexis)).text()).replace(/<!-- -->/g, '');
+      check('« Refaire le visuel » : demande enregistrée, préparation affichée', (redo.headers.get('location') ?? '').includes('visuel-demande') && pendingPage.includes('Nouveau visuel en préparation'), `HTTP ${redo.status}`);
+      const visualTick = await runVisualTick({ db, model: new FakeModel(), media });
+      const redone = await asSystem(db, (trx) =>
+        trx.selectFrom('post_media as pm').innerJoin('media_assets as m', 'm.id', 'pm.asset_id').select(['m.id', 'm.render_content']).where('pm.post_id', '=', withImage.post_id).where('m.kind', '=', 'rendered').execute(),
+      );
+      check(
+        'tâche « visuels » : nouveau visuel sans photo à la place de l’ancien (VIS-13)',
+        visualTick.done.includes(withImage.post_id) && redone.length === 1 && redone[0]?.id !== withImage.id && (redone[0]?.render_content as { photo: unknown } | null)?.photo === null,
+        JSON.stringify(visualTick),
+      );
+    }
+  }
+
+  // VIS-01, VIS-02 : bibliothèque de modèles, aperçu, éditeur.
+  const visualsPage = (await (await get(`/visuels/${workspaceId}`, alexis)).text()).replace(/<!-- -->/g, '');
+  const templateIds = [...visualsPage.matchAll(/\/visuels\/[0-9a-f-]{36}\/modeles\/([0-9a-f-]{36})\/apercu/g)].map((m) => m[1] as string);
+  check('bibliothèque de modèles : modèles de départ avec aperçu (VIS-01)', templateIds.length >= 4 && visualsPage.includes('Charte visuelle'), `${templateIds.length} modèle(s)`);
+  const firstTemplate = templateIds[0] as string;
+  const previewPng = await get(`/visuels/${workspaceId}/modeles/${firstTemplate}/apercu`, alexis);
+  check('aperçu d’un modèle en PNG', previewPng.status === 200 && previewPng.headers.get('content-type') === 'image/png');
+  check('aperçu refusé sans session', (await get(`/visuels/${workspaceId}/modeles/${firstTemplate}/apercu`)).status === 404);
+  const editorPage = await get(`/visuels/${workspaceId}/modeles/${firstTemplate}`, alexis);
+  check('éditeur de modèle (VIS-02)', editorPage.status === 200 && (await editorPage.text()).includes('Enregistrer le modèle'));
+  const draft = new FormData();
+  for (const [name, value] of Object.entries({ format: 'square', fond: 'bleu', zones: '1', 'zone-0-type': 'title', 'zone-0-cle': 'titre', 'zone-0-x': '0', 'zone-0-y': '0', 'zone-0-l': '500', 'zone-0-h': '200', 'zone-0-couleur': '#000000', 'zone-0-taille-max': '60' })) {
+    draft.append(name, value);
+  }
+  const draftPreview = await fetch(`${BASE}/visuels/${workspaceId}/modeles/${firstTemplate}/apercu`, { method: 'POST', body: draft, headers: { cookie: `session=${alexis}; __Host-session=${alexis}` } });
+  check('aperçu en direct : brouillon invalide expliqué, rien d’enregistré', draftPreview.status === 422 && (await draftPreview.text()).includes('couleur'), `HTTP ${draftPreview.status}`);
+  const copied = await submitForm(`/visuels/${workspaceId}`, alexis, 'Créer une copie', { modele: firstTemplate });
+  check('nouveau modèle par copie, ouvert dans l’éditeur', /\/visuels\/[0-9a-f-]{36}\/modeles\/[0-9a-f-]{36}\?message=modele-copie/.test(copied.headers.get('location') ?? ''), `HTTP ${copied.status}`);
+  check('modèles en lecture seule pour une contributrice', !(await (await get(`/visuels/${workspaceId}`, claire)).text()).includes('Enregistrer la charte'));
+
+  // ONB-05, VIS-05 : charte et budget d'images.
+  const savedBrand = await submitForm(`/visuels/${workspaceId}`, alexis, 'Enregistrer la charte', { principale: '#123456', accent: '#f0a500', claire: '#f5f7fa', sombre: '#1a1a1a', budget: '40' });
+  const brandRow = await asSystem(db, (trx) => trx.selectFrom('workspaces').select(['branding', 'image_budget_monthly']).where('id', '=', workspaceId).executeTakeFirstOrThrow());
+  check(
+    'charte et budget d’images enregistrés (ONB-05, VIS-05)',
+    (savedBrand.headers.get('location') ?? '').includes('charte-enregistree') && (brandRow.branding as { primary?: string } | null)?.primary === '#123456' && brandRow.image_budget_monthly === 40,
+    `HTTP ${savedBrand.status}`,
+  );
+
+  // VIS-08 : médiathèque.
+  const photoBytes = (await new FakeImageGenerator().generate({ subject: 'chantier', width: 640, height: 480 })).bytes;
+  const libraryAdd = await submitForm(`/visuels/${workspaceId}/photos`, claire, 'Ajouter à la médiathèque', {
+    photos: new File([photoBytes], 'chantier-echafaudage.png', { type: 'image/png' }),
+    dossier: 'Chantiers',
+    'mots-cles': 'échafaudage, casque',
+  });
+  const libraryPage = (await (await get(`/visuels/${workspaceId}/photos?mot=${encodeURIComponent('échafaudage')}`, claire)).text()).replace(/<!-- -->/g, '');
+  check('médiathèque : photo ajoutée par une contributrice, retrouvée par mot-clé (VIS-08)', (libraryAdd.headers.get('location') ?? '').includes('photo-mediatheque') && libraryPage.includes('chantier echafaudage'), `HTTP ${libraryAdd.status}`);
 
   // REC-14, VAL-06 : validation depuis l'e-mail.
   const replanned = posts.find((p) => p.body.includes('sessions de formation incendie'));

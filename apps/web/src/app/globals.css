@@ -102,6 +102,28 @@ section.visual h2 { font-size: 1.05rem; margin-bottom: 4px; }
 section.visual details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
 section.visual summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
 section.visual .flash ul { margin: 4px 0 0; padding-left: 20px; }
+
+/* Visuels : bibliothèque de modèles, éditeur, médiathèque (VIS-01, VIS-02, VIS-08). */
+.template-grid, .library-grid { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.template-grid li, .library-grid li { display: flex; flex-direction: column; gap: 4px; }
+.template-grid img, .library-grid img { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.library-grid img { aspect-ratio: 4 / 3; object-fit: cover; }
+.editor { display: grid; gap: 24px; align-items: start; }
+@media (min-width: 900px) {
+  .editor { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .editor .template-preview { position: sticky; top: 12px; order: 2; }
+}
+.template-preview { margin: 0; }
+.template-preview img { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; }
+.template-preview figcaption { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+.grid4 { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); align-items: end; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-weight: normal; font-size: 0.9rem; }
+input[type='color'] { width: 100%; min-height: 40px; padding: 2px; }
+fieldset.zone { background: var(--surface); }
+.badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: var(--border); vertical-align: middle; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0; }
+.filters a[aria-current='page'] { font-weight: 700; text-decoration: none; }
+.logo-preview { display: block; max-width: 200px; height: 60px; object-fit: contain; margin-bottom: 6px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 details.photos { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-top: 12px; }

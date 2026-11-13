@@ -157,7 +157,7 @@ export interface TemplateInput {
 /** Enregistre un modèle après validation complète de sa définition ; renvoie son identifiant. */
 export async function saveTemplate(db: Database, userId: string, workspaceId: string, input: TemplateInput, now: Date): Promise<string> {
   const name = cleanText(input.name, 80);
-  if (name === null) throw new RefusedError('nom_requis', 'Donnez un nom au modèle.');
+  if (name === null) throw new RefusedError('nom_modele_requis', 'Donnez un nom au modèle.');
   let definition: TemplateDefinition;
   try {
     definition = parseTemplate(input.definition);

@@ -1,4 +1,4 @@
-import { NotFoundError, getAccountProfile, getLearnedPreferences, listReferencePosts } from '@posts-auto/services';
+import { IMAGE_RATIOS, NotFoundError, getAccountProfile, getLearnedPreferences, listReferencePosts } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -78,6 +78,17 @@ export default async function AccountProfilePage({
               <input id="rythme" name="rythme" type="number" min={0} max={14} defaultValue={profile.postsPerWeek} />
               <label htmlFor="options">Posts en option par semaine</label>
               <input id="options" name="options" type="number" min={0} max={14} defaultValue={profile.optionalPerWeek} />
+              <label htmlFor="part-photos">Visuels avec photo (VIS-04)</label>
+              <select id="part-photos" name="part-photos" defaultValue={String(profile.aiImageRatio)} aria-describedby="part-photos-aide">
+                {IMAGE_RATIOS.map((ratio) => (
+                  <option key={ratio.value} value={String(ratio.value)}>
+                    {ratio.label}
+                  </option>
+                ))}
+              </select>
+              <p id="part-photos-aide" className="hint">
+                Les autres visuels sont des visuels texte. La photo vient de la médiathèque quand l’une convient, sinon elle est générée par IA (dans la limite du budget de l’espace).
+              </p>
             </div>
           </fieldset>
           <fieldset disabled={lockAll}>
