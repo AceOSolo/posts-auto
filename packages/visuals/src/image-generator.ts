@@ -40,17 +40,6 @@ export function imagePrompt(subject: string): string {
 }
 
 /**
- * Générateur selon l'environnement (IMAGE_MODE) :
- * - « fake » : générateur simulé (développement, démonstration) ;
- * - absent ou « none » : pas d'image générée ; les visuels prennent une photo de la
- *   médiathèque ou deviennent des visuels texte.
- * Le connecteur Higgsfield (section 8.3) s'ajoutera ici quand son accès API sera ouvert.
- */
-export function imageGeneratorFromEnv(env: Readonly<Record<string, string | undefined>> = process.env): ImageGenerator | null {
-  return env['IMAGE_MODE'] === 'fake' ? new FakeImageGenerator() : null;
-}
-
-/**
  * Générateur simulé (développement, tests) : une image abstraite, en dégradé, déterministe
  * pour un même sujet. Elle est traitée comme une image générée.
  */

@@ -1,5 +1,7 @@
 export * from './contrast.ts';
 export * from './gallery.ts';
+export * from './generators.ts';
+export * from './higgsfield.ts';
 export * from './image-generator.ts';
 export * from './preview.ts';
 export * from './render.ts';
