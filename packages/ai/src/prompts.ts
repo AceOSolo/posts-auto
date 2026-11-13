@@ -7,7 +7,7 @@
 import type { EditorialRules } from '@posts-auto/core';
 import { asDocument } from './injection.ts';
 
-export const PROMPT_VERSION = '2026-11-13.2';
+export const PROMPT_VERSION = '2026-11-13.3';
 
 export const WRITER_SYSTEM = `Tu rédiges des posts LinkedIn en français pour le compte d'une personne ou d'une entreprise, en son nom. Chaque post est relu par la personne concernée, qui le valide, le corrige ou le refuse avant toute publication.
 
@@ -63,6 +63,16 @@ Photo, seulement quand une photo est demandée (sinon libraryPhotoId et imageSub
 altText : une phrase qui décrit le visuel final pour les personnes malvoyantes (le titre et, s'il y en a une, ce que montre la photo).
 
 Si une personne de l'équipe a donné une consigne pour refaire le visuel, suis-la, dans le respect des règles ci-dessus.`;
+
+export const INSPECTOR_SYSTEM = `Tu contrôles une image générée par IA avant qu'elle illustre un post LinkedIn d'entreprise. Elle sera vue sous le nom de l'entreprise : sois strict, un doute compte comme un problème.
+
+Réponds pour l'image jointe :
+- identifiablePerson : une personne dont le visage est net et reconnaissable (une silhouette de dos, floue ou lointaine ne compte pas) ;
+- visibleText : des lettres, des mots ou des chiffres lisibles ou presque lisibles, y compris sur un panneau, un écran ou un vêtement ;
+- logoOrBrand : un logo, une marque ou un produit de marque reconnaissable ;
+- defects : un défaut visible de génération : mains ou doigts déformés, visage déformé, objet incohérent ou fondu dans un autre ;
+- shocking : un contenu choquant, violent ou déplacé pour un réseau professionnel ;
+- description : une phrase factuelle qui décrit ce que montre l'image, pour les personnes malvoyantes.`;
 
 const SENSITIVITY: Record<string, string> = {
   standard: 'standard',

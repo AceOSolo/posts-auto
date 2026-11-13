@@ -4,6 +4,7 @@ import type { TextModel } from './model.ts';
 
 export * from './anthropic-model.ts';
 export * from './fake-model.ts';
+export * from './image-inspection.ts';
 export * from './injection.ts';
 export * from './interpreter.ts';
 export * from './model.ts';

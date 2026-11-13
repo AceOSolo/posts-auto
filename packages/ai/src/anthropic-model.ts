@@ -59,6 +59,10 @@ export class AnthropicModel implements TextModel {
             role: 'user',
             content: [
               { type: 'text', text: request.context, cache_control: { type: 'ephemeral' } },
+              ...(request.images ?? []).map((image) => ({
+                type: 'image' as const,
+                source: { type: 'base64' as const, media_type: image.mime, data: Buffer.from(image.data).toString('base64') },
+              })),
               { type: 'text', text: request.task },
             ],
           },

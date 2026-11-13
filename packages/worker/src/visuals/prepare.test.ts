@@ -84,10 +84,14 @@ describe('préparation d’un visuel (VIS-03, VIS-04, VIS-05, VIS-12)', () => {
     const rows = await postMedia(postId);
     expect(rows).toEqual([expect.objectContaining({ position: 1, kind: 'rendered', ai_generated: true, source_asset_id: visual.photoAssetId, template_id: visual.templateId })]);
     const usage = await asSystem(db, (trx) => trx.selectFrom('ai_usage').select(['purpose', 'kind', 'units', 'counted_in_quota']).where('post_id', '=', postId).orderBy('purpose').execute());
+    // Remplissage du modèle et contrôle de l'image (VIS-11) : deux appels à l'IA.
     expect(usage).toEqual([
       { purpose: 'image', kind: 'image', units: 1, counted_in_quota: true },
       { purpose: 'visual', kind: 'text', units: 0, counted_in_quota: false },
+      { purpose: 'visual', kind: 'text', units: 0, counted_in_quota: false },
     ]);
+    // Le texte alternatif dit ce que montre vraiment l'image, relevé au contrôle.
+    expect(visual.altText).toBe('la sécurité sur les chantiers. Image abstraite en dégradé de couleurs (démonstration). Illustration générée par IA.');
     const photo = await asSystem(db, (trx) => trx.selectFrom('media_assets').select(['kind', 'ai_generated', 'generator', 'prompt', 'in_library']).where('id', '=', visual.photoAssetId as string).executeTakeFirstOrThrow());
     expect(photo).toMatchObject({ kind: 'generated', ai_generated: true, generator: 'simulation/simulation', in_library: false });
     expect(photo.prompt).toMatch(/Aucune personne identifiable/);
@@ -169,6 +173,69 @@ describe('préparation d’un visuel (VIS-03, VIS-04, VIS-05, VIS-12)', () => {
     );
     const prepared = await prepareVisual(deps(), await context(), await account(), { accountId, postText: POST, summary: 'S', withPhoto: true });
     expect(prepared?.templateId).toBe(own.id);
+  });
+});
+
+describe('contrôle des images générées (VIS-11)', () => {
+  /** Modèle simulé : remplissage par défaut, et le contrôle répond tour à tour par `verdicts` (null : l'IA ne répond pas). */
+  const inspecting = (verdicts: readonly (Record<string, boolean> | null)[]) => {
+    let checks = 0;
+    return new FakeModel((request, index) => {
+      if ((request.images?.length ?? 0) === 0) return demoFill(request.task);
+      const verdict = verdicts[Math.min(checks, verdicts.length - 1)];
+      checks += 1;
+      if (verdict === null) throw new ModelError('unavailable', `panne ${index}`);
+      return { identifiablePerson: false, visibleText: false, logoOrBrand: false, defects: false, shocking: false, description: 'Un atelier vu de loin', ...verdict };
+    });
+  };
+  const demoFill = (task: string) => ({
+    title: 'Sécurité sur les chantiers',
+    subtitle: '',
+    bullets: [],
+    libraryPhotoId: '',
+    imageSubject: task.startsWith('Une photo est demandée') ? 'Chantier au lever du jour' : '',
+    altText: 'Visuel',
+    ignoredInstructions: [],
+  });
+  const usageOf = (postId: string) =>
+    asSystem(db, (trx) => trx.selectFrom('ai_usage').select(['purpose', 'units']).where('post_id', '=', postId).where('kind', '=', 'image').execute());
+
+  it('une image écartée est refaite une fois, en précisant ce qu’il faut éviter ; les deux comptent', async () => {
+    const ctx = await context();
+    const prepared = await prepareVisual(deps({ model: inspecting([{ identifiablePerson: true }, {}]) }), ctx, await account(), { accountId, postText: POST, summary: 'S', withPhoto: true });
+    expect(images.requests.map((r) => r.subject)).toEqual(['Chantier au lever du jour', 'Chantier au lever du jour Éviter absolument : personne identifiable.']);
+    expect(prepared).toMatchObject({ aiGenerated: true, content: { photo: 'generated', notes: ['Image écartée au contrôle : personne identifiable.'] } });
+    expect(prepared?.imageCosts).toHaveLength(2);
+    expect(ctx.imagesLeft).toBe(28);
+    const postId = await createPost(db, workspaceId, accountId);
+    await store(prepared as NonNullable<typeof prepared>, postId);
+    expect(await usageOf(postId)).toEqual([
+      { purpose: 'image', units: 1 },
+      { purpose: 'image', units: 1 },
+    ]);
+  });
+
+  it('deux images écartées : visuel texte, sans troisième essai (RÈG-19)', async () => {
+    const prepared = await prepareVisual(deps({ model: inspecting([{ visibleText: true }, { logoOrBrand: true }]) }), await context(), await account(), {
+      accountId,
+      postText: POST,
+      summary: 'S',
+      withPhoto: true,
+    });
+    expect(images.requests).toHaveLength(2);
+    expect(prepared).toMatchObject({ aiGenerated: false, photoAssetId: null, generated: null, content: { photo: null } });
+    expect(prepared?.content.notes).toEqual([
+      'Image écartée au contrôle : texte ou chiffres visibles.',
+      'Image écartée au contrôle : logo ou marque.',
+      expect.stringMatching(/Déjà 2 images générées/),
+    ]);
+    expect(prepared?.imageCosts).toHaveLength(2);
+  });
+
+  it('contrôle impossible (IA indisponible) : image gardée, à vérifier', async () => {
+    const prepared = await prepareVisual(deps({ model: inspecting([null]) }), await context(), await account(), { accountId, postText: POST, summary: 'S', withPhoto: true });
+    expect(prepared).toMatchObject({ aiGenerated: true, content: { photo: 'generated', notes: [expect.stringMatching(/Image non contrôlée/)] } });
+    expect(images.requests).toHaveLength(1);
   });
 });
 

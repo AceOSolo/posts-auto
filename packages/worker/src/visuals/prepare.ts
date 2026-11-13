@@ -12,7 +12,7 @@
  * Les appels lents (IA, générateur d'images, rendu) se font hors de toute transaction.
  */
 import { randomUUID } from 'node:crypto';
-import { type LibraryPhoto, ModelError, type TextModel, type UsageRecord, type VisualFill, VISUAL_LIMITS, fillVisual } from '@posts-auto/ai';
+import { type LibraryPhoto, ModelError, type TextModel, type UsageRecord, type VisualFill, VISUAL_LIMITS, fillVisual, inspectImage } from '@posts-auto/ai';
 import { startOfLocalMonth } from '@posts-auto/core';
 import type { Tx } from '@posts-auto/db';
 import { type Branding, ensureGalleryTemplates, loadBranding } from '@posts-auto/services';
@@ -22,6 +22,8 @@ import {
   type RenderResult,
   type TemplateCandidate,
   hasZone,
+  downscaleJpeg,
+  type GeneratedImage,
   imageSize,
   parseTemplate,
   photoBox,
@@ -229,6 +231,12 @@ interface GeneratedPhoto {
   readonly provider: string;
   readonly model: string;
   readonly prompt: string;
+}
+
+/** Une image générée, gardée ou écartée au contrôle : elle compte et coûte (RÈG-19, GEN-11). */
+export interface ImageCost {
+  readonly provider: string;
+  readonly model: string;
   readonly costUsd: number;
 }
 
@@ -243,6 +251,7 @@ export interface PreparedVisual {
   readonly aiGenerated: boolean;
   readonly photoAssetId: string | null;
   readonly generated: GeneratedPhoto | null;
+  readonly imageCosts: readonly ImageCost[];
   readonly content: RenderContent;
   readonly altText: string;
   readonly issues: readonly RenderIssue[];
@@ -301,6 +310,9 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
   // 2. La photo : gardée, prise dans la médiathèque, ou générée.
   let photo: { source: PhotoSource; assetId: string; bytes: Uint8Array; aiGenerated: boolean } | null = null;
   let generated: GeneratedPhoto | null = null;
+  const imageCosts: ImageCost[] = [];
+  /** Ce que montre l'image générée, relevé au contrôle (texte alternatif). */
+  let photoDescription: string | null = null;
   if (keptPhoto !== null) {
     const bytes = await deps.media.read(keptPhoto.storageKey).catch(() => null);
     if (bytes === null) notes.push('Photo du visuel précédent introuvable : visuel sans photo.');
@@ -313,13 +325,49 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
   } else if (choosePhoto && fill.imageSubject !== null) {
     const box = photoBox((rank(true)[0] as VisualTemplate).definition) ?? { width: 1080, height: 1080 };
     if (deps.images === null) notes.push('Aucun générateur d’images n’est configuré : visuel sans photo.');
-    else if ((request.imagesForPost ?? 0) >= MAX_IMAGES_PER_POST) notes.push(`Déjà ${MAX_IMAGES_PER_POST} images générées pour ce post (RÈG-19) : visuel sans nouvelle photo.`);
-    else if (ctx.imagesLeft <= 0) notes.push('Budget d’images générées du mois atteint (VIS-05) : visuel sans photo.');
     else {
-      // Décompté avant l'appel : les visuels préparés en parallèle voient le même budget.
-      ctx.imagesLeft -= 1;
-      try {
-        const image = await deps.images.generate({ subject: fill.imageSubject, width: box.width, height: box.height });
+      // VIS-11 : chaque image est contrôlée ; une image écartée est refaite une fois, en
+      // précisant ce qu'il faut éviter, dans la limite de 2 images par post et du budget.
+      let subject = fill.imageSubject;
+      let used = request.imagesForPost ?? 0;
+      while (photo === null) {
+        if (used >= MAX_IMAGES_PER_POST) {
+          notes.push(`Déjà ${MAX_IMAGES_PER_POST} images générées pour ce post (RÈG-19) : visuel sans nouvelle photo.`);
+          break;
+        }
+        if (ctx.imagesLeft <= 0) {
+          notes.push('Budget d’images générées du mois atteint (VIS-05) : visuel sans photo.');
+          break;
+        }
+        // Décompté avant l'appel : les visuels préparés en parallèle voient le même budget.
+        ctx.imagesLeft -= 1;
+        let image: GeneratedImage;
+        try {
+          image = await deps.images.generate({ subject, width: box.width, height: box.height });
+        } catch (error) {
+          ctx.imagesLeft += 1;
+          notes.push(`Image non générée (${error instanceof Error ? error.message : String(error)}) : visuel sans photo.`);
+          break;
+        }
+        used += 1;
+        // Toute image générée est comptée (RÈG-19), même écartée au contrôle.
+        imageCosts.push({ provider: image.provider, model: image.model, costUsd: image.costUsd ?? 0 });
+        let problems: readonly string[] = [];
+        try {
+          const checked = await inspectImage(deps.model, { mime: 'image/jpeg', data: await downscaleJpeg(image.bytes) });
+          calls.push(checked.call);
+          problems = checked.inspection.problems;
+          photoDescription = checked.inspection.description || null;
+        } catch (error) {
+          if (!(error instanceof ModelError)) throw error;
+          notes.push('Image non contrôlée (IA indisponible) : vérifiez qu’elle ne montre ni personne identifiable, ni texte, ni logo.');
+        }
+        if (problems.length > 0) {
+          notes.push(`Image écartée au contrôle : ${problems.join(', ')}.`);
+          photoDescription = null;
+          subject = `${fill.imageSubject} Éviter absolument : ${problems.join(', ')}.`;
+          continue;
+        }
         const size = await imageSize(image.bytes);
         const assetId = randomUUID();
         const storageKey = `${ctx.workspaceId}/visuels/${assetId}.${image.mime === 'image/png' ? 'png' : 'jpg'}`;
@@ -334,12 +382,8 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
           provider: image.provider,
           model: image.model,
           prompt: image.prompt,
-          costUsd: image.costUsd ?? 0,
         };
         photo = { source: 'generated', assetId, bytes: image.bytes, aiGenerated: true };
-      } catch (error) {
-        ctx.imagesLeft += 1;
-        notes.push(`Image non générée (${error instanceof Error ? error.message : String(error)}) : visuel sans photo.`);
       }
     }
   }
@@ -367,7 +411,8 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
   const storageKey = `${ctx.workspaceId}/visuels/${assetId}.png`;
   await deps.media.write(storageKey, best.result.png);
   const aiGenerated = photo?.aiGenerated ?? false;
-  const description = (fill.altText || fill.title).replace(/[.\s]+$/, '');
+  // Texte alternatif : ce que montre vraiment l'image générée quand le contrôle l'a décrite.
+  const description = (photoDescription === null ? fill.altText || fill.title : `${fill.title.replace(/[.\s]+$/, '')}. ${photoDescription}`).replace(/[.\s]+$/, '');
   return {
     assetId,
     storageKey,
@@ -378,6 +423,7 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
     aiGenerated,
     photoAssetId: photo?.assetId ?? null,
     generated,
+    imageCosts,
     altText: `${description}.${aiGenerated ? ' Illustration générée par IA.' : ''}`,
     issues: best.result.issues,
     calls,
@@ -407,9 +453,10 @@ export interface VisualTarget {
 }
 
 /**
- * Enregistre le visuel préparé, dans la transaction de l'appelant : image générée et son
- * coût (RÈG-19 : chaque image compte), visuel rendu et sa recette, place n°1 du post
- * (ou celle du visuel remplacé), coût du remplissage.
+ * Enregistre le visuel préparé, dans la transaction de l'appelant : coût de chaque image
+ * générée, gardée ou écartée au contrôle (RÈG-19 : chaque image compte), image gardée,
+ * visuel rendu et sa recette, place n°1 du post (ou celle du visuel remplacé), coût du
+ * remplissage et du contrôle.
  */
 export async function storeVisual(trx: Tx, prepared: PreparedVisual, target: VisualTarget, now: Date): Promise<number> {
   const { generated } = prepared;
@@ -431,23 +478,27 @@ export async function storeVisual(trx: Tx, prepared: PreparedVisual, target: Vis
         created_at: now,
       })
       .execute();
+  }
+  if (prepared.imageCosts.length > 0) {
     await trx
       .insertInto('ai_usage')
-      .values({
-        workspace_id: target.workspaceId,
-        account_id: target.accountId,
-        run_id: target.runId,
-        post_id: target.postId,
-        provider: generated.provider,
-        model: generated.model,
-        purpose: 'image',
-        kind: 'image',
-        units: 1,
-        cost_usd: generated.costUsd.toFixed(6),
-        cost_eur: (generated.costUsd * target.usdToEur).toFixed(6),
-        counted_in_quota: true,
-        at: now,
-      })
+      .values(
+        prepared.imageCosts.map((image) => ({
+          workspace_id: target.workspaceId,
+          account_id: target.accountId,
+          run_id: target.runId,
+          post_id: target.postId,
+          provider: image.provider,
+          model: image.model,
+          purpose: 'image' as const,
+          kind: 'image' as const,
+          units: 1,
+          cost_usd: image.costUsd.toFixed(6),
+          cost_eur: (image.costUsd * target.usdToEur).toFixed(6),
+          counted_in_quota: true,
+          at: now,
+        })),
+      )
       .execute();
   }
   await trx
@@ -488,5 +539,5 @@ export async function storeVisual(trx: Tx, prepared: PreparedVisual, target: Vis
     { workspaceId: target.workspaceId, accountId: target.accountId, runId: target.runId, postId: target.postId, calls: prepared.calls, usdToEur: target.usdToEur, countsInQuota: false },
     now,
   );
-  return textUsd + (generated?.costUsd ?? 0);
+  return textUsd + prepared.imageCosts.reduce((sum, image) => sum + image.costUsd, 0);
 }

@@ -33,6 +33,10 @@ Deux risques dominent : un visuel illisible sur téléphone, ou présenté comme
 4. **Ordre de préparation :**
    1. L'IA lit le post (une donnée, GEN-13) et en tire un titre de 70 caractères au plus, un sous-titre facultatif, et 3 à 4 points de 45 caractères au plus. Quand le visuel porte une photo, elle choisit une photo de la médiathèque, seulement dans la liste fournie, ou décrit une scène à générer.
    2. La photo est générée si besoin, dans la limite du budget mensuel de l'espace et de deux images par post (RÈG-19). Sinon, le visuel devient un visuel texte et la raison est notée.
+
+      Chaque image générée est examinée par l'IA (VIS-11), sur une copie réduite : personne identifiable, texte ou chiffres, logo ou marque, défaut de génération, contenu choquant. Le code décide : une image écartée est refaite une fois, en précisant ce qu'il faut éviter. Deux images écartées donnent un visuel texte.
+
+      Chaque image compte et coûte, même écartée. Si l'IA ne peut pas examiner l'image, elle est gardée et signalée « à vérifier » : le titulaire valide de toute façon le visuel. La description relevée au contrôle sert de texte alternatif.
    3. Le modèle est choisi : ceux du compte s'il en a de ce genre, sinon ceux de l'espace. Un modèle à liste de points n'est pris que s'il y a des points. Le moins utilisé récemment par le compte passe en premier.
    4. Au plus deux modèles sont rendus, et le plus lisible est gardé (VIS-11 : texte coupé, contraste WCAG < 4,5, zone vide).
 5. **Alternance décidée d'avance (VIS-04).** Pour chaque compte, les posts de la passe sont pris dans l'ordre chronologique. Chacun porte une photo si cela rapproche la part des visuels avec photo du réglage du compte (0, ¼, ½, ¾, 1), en tenant compte de ses 8 derniers visuels. À égalité, la photo l'emporte. La décision est une fonction pure (`photoTurns`), indépendante de l'ordre dans lequel les posts sont rédigés en parallèle.
@@ -62,4 +66,5 @@ Deux risques dominent : un visuel illisible sur téléphone, ou présenté comme
 - Les visuels texte et le choix du modèle ne coûtent qu'un appel court à l'IA (effort faible). Une image générée coûte le prix du fournisseur, dans la limite du budget.
 - Un modèle de départ modifié garde ses modifications quand la charte change. La remise aux couleurs de la charte est une action explicite, qui les écrase.
 - Une police de la charte qui n'est pas parmi les trois polices embarquées s'ajoute au paquet, si sa licence le permet. Les polices du client ne sont pas téléversées.
-- Reporté : contrôle des défauts d'une image générée par un modèle de vision (VIS-11 : mains, visages, texte parasite), connecteur Canva (VIS-07), personnages de marque (VIS-06), carrousel PDF (VIS-10).
+- Le contrôle d'une image générée ajoute un appel court à l'IA, avec une image d'au plus 1024 pixels de côté.
+- Reporté : connecteur Canva (VIS-07), personnages de marque (VIS-06), carrousel PDF (VIS-10).

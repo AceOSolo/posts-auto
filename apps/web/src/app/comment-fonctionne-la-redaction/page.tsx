@@ -64,8 +64,9 @@ export default function HowWritingWorksPage() {
         </li>
         <li>
           Environ un visuel sur deux porte une photo. L’IA choisit d’abord une vraie photo de la médiathèque de l’entreprise ; sinon, une image
-          est générée par IA. Une image générée ne montre jamais de personne identifiable, de texte ni de logo, et elle est toujours signalée :
-          « Image générée par IA » sur la page du post, et « Illustration générée par IA » dans le texte alternatif publié sur LinkedIn.
+          est générée par IA. Une image générée ne doit montrer ni personne identifiable, ni texte, ni logo : l’IA examine chaque image et en fait
+          refaire une si besoin. Elle est toujours signalée : « Image générée par IA » sur la page du post, et « Illustration générée par IA »
+          dans le texte alternatif publié sur LinkedIn.
         </li>
         <li>Le visuel se valide avec le post. Vous pouvez le refaire avec une consigne, changer ou retirer la photo, ou mettre votre propre image.</li>
       </ul>

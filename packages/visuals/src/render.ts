@@ -179,6 +179,15 @@ function drawImage(ctx: SKRSContext2D, image: Image, zone: Zone): void {
   ctx.restore();
 }
 
+/** Copie réduite en JPEG (côté le plus long ≤ maxSide), pour la faire examiner par l'IA. */
+export async function downscaleJpeg(bytes: Uint8Array, maxSide = 1024): Promise<Uint8Array> {
+  const image = await loadImage(Buffer.from(bytes));
+  const ratio = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const canvas = createCanvas(Math.max(1, Math.round(image.width * ratio)), Math.max(1, Math.round(image.height * ratio)));
+  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  return new Uint8Array(await canvas.encode('jpeg', 85));
+}
+
 /** Dimensions réelles d'une image (PNG, JPEG, GIF) ; lève une erreur si elle est illisible. */
 export async function imageSize(bytes: Uint8Array): Promise<{ readonly width: number; readonly height: number }> {
   const image = await loadImage(Buffer.from(bytes));

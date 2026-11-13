@@ -33,6 +33,10 @@ export class FakeModel implements TextModel {
   #demo(request: ModelCall<unknown>): unknown {
     if (request.purpose === 'verify') return { issues: [] };
     if (request.purpose === 'interpret') return demoInterpretation(request.task);
+    if (request.purpose === 'visual' && (request.images?.length ?? 0) > 0) {
+      // Contrôle d'une image (VIS-11) : le générateur simulé ne produit que des dégradés.
+      return { identifiablePerson: false, visibleText: false, logoOrBrand: false, defects: false, shocking: false, description: 'Image abstraite en dégradé de couleurs (démonstration)' };
+    }
     if (request.purpose === 'visual') return demoVisual(request.task);
     this.#drafts += 1;
     if (request.task.startsWith('Propose trois accroches')) {

@@ -17,6 +17,13 @@ export interface ModelCall<T> {
   readonly task: string;
   readonly schema: z.ZodType<T>;
   readonly maxTokens?: number;
+  /** Images jointes à la tâche (contrôle d'une image générée, VIS-11). */
+  readonly images?: readonly ModelImage[];
+}
+
+export interface ModelImage {
+  readonly mime: 'image/png' | 'image/jpeg';
+  readonly data: Uint8Array;
 }
 
 export interface ModelUsage {

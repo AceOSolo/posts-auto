@@ -10,7 +10,7 @@ Périmètre et critères : cahier des charges v1.1, section 5.6 (VIS-01 à VIS-1
 
 Il faut maintenant brancher Higgsfield avec une vraie clé : le connecteur est écrit d'après la documentation publique, mais n'a pas encore été essayé contre l'API réelle. Il faut aussi la charte, les photos et les modèles de Secutop.
 
-Les tests automatiques passent (707), ainsi que les 82 vérifications de fumée. La chaîne y est vérifiée de bout en bout avec un modèle et un générateur d'images simulés.
+Les tests automatiques passent (713), ainsi que les 82 vérifications de fumée. La chaîne y est vérifiée de bout en bout avec un modèle et un générateur d'images simulés.
 
 ## Étapes
 
@@ -26,6 +26,7 @@ Les tests automatiques passent (707), ainsi que les 82 vérifications de fumée.
 | 8 | Écrans : modèles, éditeur avec aperçu en direct, charte et budget, médiathèque | VIS-01, VIS-02, VIS-05, VIS-08 | Fait : pages « Visuels », « Modèle de visuel », « Médiathèque » ; réglage sur la fiche du compte |
 | 9 | Connecteur Higgsfield | VIS-05 | Écrit et testé avec une API simulée ; à essayer avec une vraie clé |
 | 10 | Polices de la charte | VIS-02 | Fait : Inter, Montserrat ou Lora pour chaque zone de texte ; police des titres dans la charte |
+| 11 | Contrôle des images générées | VIS-11, VIS-05 | Fait : l'IA examine chaque image (personne identifiable, texte, logo, défaut, contenu choquant) ; image écartée refaite une fois ; description reprise dans le texte alternatif |
 
 ## Critère de recette de l'incrément 1c
 
@@ -54,7 +55,7 @@ Les tests automatiques passent (707), ainsi que les 82 vérifications de fumée.
 ## Hors de l'incrément ou reporté
 
 - **Autres polices** : trois polices libres sont embarquées (Inter, Montserrat, Lora). Une police propre au client s'ajoute au paquet si sa licence le permet.
-- **Défauts d'une image générée** (VIS-11 : mains, visages, texte parasite) : à contrôler par un modèle de vision, avec une seconde génération si besoin. Le texte qui déborde, le contraste et les zones vides sont contrôlés à chaque rendu.
+- **« Ancien texte de modèle resté »** (VIS-11) : ce cas concerne les modèles Canva, où l'on remplace des textes existants. Les modèles intégrés partent de zones vides.
 - **Extraction de la charte depuis le site web** (ONB-05, S).
 - **Connecteur Canva** (VIS-07, S) : à faire seulement si Secutop en a besoin pour son pilote. Les modèles intégrés et l'éditeur couvrent le besoin de départ.
 - **Personnages de marque** (VIS-06, S), **carrousel PDF** (VIS-10, C).
