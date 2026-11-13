@@ -7,7 +7,7 @@
  */
 import { DEFAULT_DATABASE_URL, asSystem, createDatabase } from '@posts-auto/db';
 import { writeFileSync } from 'node:fs';
-import { consumeLoginLink, createApiKey, readZip, requestLoginLink } from '@posts-auto/services';
+import { consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink } from '@posts-auto/services';
 
 const BASE = process.env['APP_URL'] ?? 'http://localhost:3000';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
@@ -228,6 +228,24 @@ try {
   );
   check('invitation par le formulaire : membre ajouté avec son rôle (ONB-07)', (invited.headers.get('location') ?? '').includes('message=invite') && newMember?.role === 'contributor', `HTTP ${invited.status}`);
   check('réglages refusés à un simple contributeur', !(await (await get(`/espace/${workspaceId}`, claire)).text()).includes('Envoyer l’invitation'));
+
+  // REC-14, VAL-06 : validation depuis l'e-mail.
+  const replanned = posts.find((p) => p.body.includes('sessions de formation incendie'));
+  if (replanned) {
+    const jpUser = await asSystem(db, (trx) => trx.selectFrom('users').select('id').where('email', '=', 'jp@demo.example.test').executeTakeFirstOrThrow());
+    const token = await createApprovalLink(db, replanned.id, jpUser.id, new Date());
+    const statusOf = async () => (await asSystem(db, (trx) => trx.selectFrom('posts').select('status').where('id', '=', replanned.id).executeTakeFirstOrThrow())).status;
+    let approvalHtml = '';
+    for (let i = 0; i < 3; i += 1) approvalHtml = await (await get(`/valider/${token}`)).text(); // antivirus de messagerie
+    check('REC-14 : ouvrir le lien (même 3 fois) ne valide rien', approvalHtml.includes('Confirmer la validation') && (await statusOf()) === 'a_valider');
+    const confirmForm = /<form[^>]*>([\s\S]*?)<\/form>/.exec(approvalHtml)?.[1] ?? '';
+    const confirmFields = new FormData();
+    for (const input of confirmForm.matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) confirmFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+    const confirmed = await fetch(`${BASE}/valider/${token}`, { method: 'POST', body: confirmFields, redirect: 'manual', headers: { origin: BASE } });
+    check('VAL-06 : « Confirmer » valide sans connexion', (confirmed.headers.get('location') ?? '').includes('r=valide') && (await statusOf()) === 'valide', `HTTP ${confirmed.status}`);
+    const again = await fetch(`${BASE}/valider/${token}`, { method: 'POST', body: confirmFields, redirect: 'manual', headers: { origin: BASE } });
+    check('VAL-06 : le lien ne sert qu’une fois', (again.headers.get('location') ?? '').includes('r=lien_invalide'));
+  }
 
   // REC-12 : export des données personnelles.
   const exported = await get('/moi/export', claire);

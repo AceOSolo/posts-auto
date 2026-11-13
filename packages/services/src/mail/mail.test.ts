@@ -14,6 +14,13 @@ describe('modèles d’e-mail', () => {
     expect(mail?.text).toContain('Pour régler vos notifications');
   });
 
+  it('rappel avec lien de validation : « Valider maintenant » puis « Voir et corriger » (VAL-06)', () => {
+    const mail = notificationMail('rappel_validation', { postId: 'p1', hours: 24, scheduledAt: '2026-11-17T11:00:00Z', approvalUrl: 'https://app.example/valider/abc' }, ctx);
+    expect(mail?.text).toContain('Valider maintenant : https://app.example/valider/abc');
+    expect(mail?.text).toContain('Voir et corriger : https://app.example/posts/p1');
+    expect(mail?.html.indexOf('Valider maintenant')).toBeLessThan(mail?.html.indexOf('Voir et corriger') ?? 0);
+  });
+
   it('échappe tout contenu variable dans la version HTML', () => {
     const mail = notificationMail('connexion_expiree', { accountName: '<img src=x onerror=alert(1)>' }, ctx);
     expect(mail?.html).not.toContain('<img src=x');

@@ -2,7 +2,7 @@
 
 État au 13 novembre 2026. Périmètre et critères : cahier des charges v1.1, section 11.
 
-**En résumé** : tout ce qui ne dépend que de nous est construit et vérifié. Il reste à brancher le vrai LinkedIn, qui attend l'application LinkedIn A de SimplX, et l'envoi réel des e-mails, qui attend la clé Brevo. Le reste est déjà vérifié avec un LinkedIn simulé : 364 tests automatiques et 34 vérifications de fumée sur l'application lancée.
+**En résumé** : tout ce qui ne dépend que de nous est construit et vérifié. Il reste à brancher le vrai LinkedIn, qui attend l'application LinkedIn A de SimplX, et l'envoi réel des e-mails, qui attend la clé Brevo. Le reste est déjà vérifié avec un LinkedIn simulé : 373 tests automatiques et 37 vérifications de fumée sur l'application lancée.
 
 ## Périmètre de l'incrément
 
@@ -17,7 +17,7 @@
 | Déconnexion, pause d'un compte (LNK-05, LNK-07) | Fait | — |
 | Posts, révisions, photos (jusqu'à 9, ordre réglable) | Fait | — |
 | Validation sur mobile : « Mes posts », détail, décision (VAL-01 à VAL-04, VAL-07 à VAL-10) | Fait | `apps/web` |
-| Liens « Valider » dans l'e-mail (VAL-06, priorité S) | À faire | Prévu, avec page de confirmation (M2) |
+| Liens « Valider » dans l'e-mail (VAL-06, priorité S) | Fait | Lien à usage unique dans les rappels, page de confirmation (M2) |
 | File de publication, nouvelles tentatives, issues incertaines (PUB-01 à PUB-05) | Fait, à brancher | Tâche `publication` ; attend l'application A |
 | Replanification (RÈG-08 à RÈG-11) | Fait | Tâche `replanification` |
 | Rappels 24 h et 3 h, récapitulatif du lundi (VAL-05) | Fait | Tâche `rappels` |
@@ -40,7 +40,7 @@
 | REC-11 | Validation complète depuis un smartphone | **Conforme** à l'écran (mise en page mobile, cibles de 44 px, sans JavaScript) ; à essayer sur de vrais téléphones | Test de fumée (formulaire, ajout de photo) |
 | REC-12 | Export RGPD d'un utilisateur | **Conforme** (JSON + images, limité à la personne, ouvert par Windows) | `export.test.ts`, test de fumée |
 | REC-13 | Même post envoyé deux fois par l'API | **Conforme**, y compris en parallèle | `exchange.test.ts`, test de fumée |
-| REC-14 | Lien « Valider » ouvert par un antivirus | **À faire avec VAL-06**. Le lien de connexion applique déjà le même principe (consommé au clic seulement). | `auth.test.ts` |
+| REC-14 | Lien « Valider » ouvert par un antivirus | **Conforme** : ouvrir le lien ne valide rien, seul « Confirmer » valide, une seule fois | `approval-links.test.ts`, test de fumée |
 | REC-15 | Bascule de Make vers le SaaS sans doublon | **Outil prêt** (compte en pause tant que Make publie) ; à dérouler compte par compte | `members.test.ts` |
 | REC-16 | Créneau « mardi 12h00 » de part et d'autre du changement d'heure | **Conforme** | `workspace-calendar.test.ts`, `reschedule.test.ts` |
 

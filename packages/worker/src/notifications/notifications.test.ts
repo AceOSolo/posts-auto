@@ -95,6 +95,22 @@ describe('envoi des e-mails', () => {
     expect(rows.find((r) => r.channel === 'in_app')?.delivery_status).toBeNull();
   });
 
+  it('le rappel contient un lien « Valider maintenant » créé à l’envoi, seulement si le post attend une décision (VAL-06)', async () => {
+    const pending = await createPost(db, workspaceId, accountId, { scheduled_at: hours(90) });
+    const validated = await createPost(db, workspaceId, accountId, { scheduled_at: hours(95), status: 'valide' });
+    await asSystem(db, async (trx) => {
+      await notify(trx, [holderId], workspaceId, 'rappel_validation', { postId: pending, hours: 24, scheduledAt: hours(90).toISOString() }, ['email']);
+      await notify(trx, [holderId], workspaceId, 'rappel_validation', { postId: validated, hours: 24, scheduledAt: hours(95).toISOString() }, ['email']);
+    });
+    const mailer = new ConsoleMailer();
+    await runEmailDispatch({ db, mailer, appUrl: 'https://app.example', clock: () => MONDAY_9H });
+    const [first, second] = mailer.sent;
+    expect(first?.text).toMatch(/Valider maintenant : https:\/\/app\.example\/valider\/[A-Za-z0-9_-]{43}/);
+    expect(second?.text).not.toContain('/valider/');
+    const links = await asSystem(db, (trx) => trx.selectFrom('approval_links').select(['post_id', 'user_id']).execute());
+    expect(links).toEqual([{ post_id: pending, user_id: holderId }]);
+  });
+
   it('respecte la préférence « pas d’e-mail » pour ce type (NOT-01)', async () => {
     await asSystem(db, async (trx) => {
       await trx.insertInto('notification_prefs').values({ user_id: delegateId, kind: 'rappel_validation', email: false }).execute();

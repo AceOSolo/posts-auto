@@ -9,8 +9,9 @@
  * - Une ligne n'est traitée que par un processus à la fois (verrou de ligne).
  */
 import { type Database, asSystem } from '@posts-auto/db';
-import { MailError, type Mailer, notificationMail } from '@posts-auto/services';
+import { MailError, type Mailer, createApprovalLink, notificationMail } from '@posts-auto/services';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const MAX_DELIVERY_ATTEMPTS = 5;
 export const STALE_AFTER_DAYS = 3;
 const BATCH = 100;
@@ -72,7 +73,16 @@ export async function runEmailDispatch(deps: EmailDispatchDeps): Promise<EmailDi
         .where('kind', '=', row.kind)
         .executeTakeFirst();
       // L'espace de la notification sert aux liens (ex. page des comptes pour reconnecter, REC-09).
-      const payload = { ...((row.payload ?? {}) as Record<string, unknown>), ...(row.workspace_id ? { workspaceId: row.workspace_id } : {}) };
+      const payload: Record<string, unknown> = { ...((row.payload ?? {}) as Record<string, unknown>), ...(row.workspace_id ? { workspaceId: row.workspace_id } : {}) };
+      // VAL-06 : lien « Valider maintenant » créé à l'envoi (le jeton n'existe en clair que dans l'e-mail),
+      // seulement si le post attend encore une décision.
+      if (row.kind === 'rappel_validation' && pref?.email !== false && typeof payload['postId'] === 'string' && UUID.test(payload['postId'])) {
+        const post = await trx.selectFrom('posts').select('status').where('id', '=', payload['postId']).executeTakeFirst();
+        if (post?.status === 'a_valider') {
+          const token = await createApprovalLink(deps.db, payload['postId'], row.user_id, now);
+          payload['approvalUrl'] = `${deps.appUrl}/valider/${token}`;
+        }
+      }
       const mail =
         pref?.email === false ? null : notificationMail(row.kind, payload, { appUrl: deps.appUrl, recipientName: row.full_name, timeZone: row.timezone ?? 'Europe/Paris' });
       if (mail === null) {

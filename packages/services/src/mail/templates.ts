@@ -28,23 +28,29 @@ function when(iso: unknown, timeZone = 'Europe/Paris'): string {
 const str = (value: unknown, fallback = ''): string => (typeof value === 'string' && value !== '' ? value : fallback);
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 
-/** Assemble un e-mail : mêmes paragraphes en texte brut et en HTML échappé, un bouton facultatif. */
+interface MailAction {
+  readonly label: string;
+  readonly url: string;
+}
+
+/** Assemble un e-mail : mêmes paragraphes en texte brut et en HTML échappé, des boutons facultatifs. */
 function compose(
   ctx: TemplateContext,
   subject: string,
   paragraphs: readonly string[],
-  action: { readonly label: string; readonly url: string } | null,
+  action: MailAction | readonly MailAction[] | null,
   footer: string | null,
 ): RenderedMail {
+  const actions: readonly MailAction[] = action === null ? [] : Array.isArray(action) ? action : [action as MailAction];
   const greeting = ctx.recipientName ? `Bonjour ${ctx.recipientName},` : 'Bonjour,';
-  const text = [greeting, '', ...paragraphs.flatMap((p) => [p, '']), ...(action ? [`${action.label} : ${action.url}`, ''] : []), ...(footer ? ['—', footer] : [])].join('\n');
+  const text = [greeting, '', ...paragraphs.flatMap((p) => [p, '']), ...actions.flatMap((a) => [`${a.label} : ${a.url}`, '']), ...(footer ? ['—', footer] : [])].join('\n');
+  const button = (a: MailAction, primary: boolean) =>
+    `<a href="${escapeHtml(a.url)}" style="display:inline-block;margin:0 8px 8px 0;background:${primary ? '#0f5b8c' : '#ffffff'};color:${primary ? '#ffffff' : '#0f5b8c'};border:2px solid #0f5b8c;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${escapeHtml(a.label)}</a>`;
   const html = [
     '<!doctype html><html lang="fr"><body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#17212b;line-height:1.5;max-width:560px;margin:0 auto;padding:16px">',
     `<p>${escapeHtml(greeting)}</p>`,
     ...paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`),
-    action
-      ? `<p><a href="${escapeHtml(action.url)}" style="display:inline-block;background:#0f5b8c;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">${escapeHtml(action.label)}</a></p>`
-      : '',
+    actions.length > 0 ? `<p>${actions.map((a, index) => button(a, index === 0)).join('')}</p>` : '',
     footer ? `<hr style="border:none;border-top:1px solid #d5dde4"><p style="font-size:13px;color:#566573">${escapeHtml(footer)}</p>` : '',
     '</body></html>',
   ].join('');
@@ -92,11 +98,13 @@ export function notificationMail(kind: string, payload: Record<string, unknown>,
   switch (kind) {
     case 'rappel_validation': {
       const hours = Number(payload['hours']);
+      // VAL-06 : « Valider maintenant » sans connexion, si un lien a été préparé à l'envoi.
+      const approvalUrl = str(payload['approvalUrl']);
       return compose(
         ctx,
         hours <= 3 ? `Dernier rappel : un post part dans ${hours} h` : 'Un post attend votre validation',
         [`Le post prévu sur ${account} le ${when(payload['scheduledAt'], ctx.timeZone)} n’est pas encore validé.`, 'Sans validation, il sera décalé au jour suivant, à la même heure.'],
-        postAction,
+        approvalUrl ? [{ label: 'Valider maintenant', url: approvalUrl }, { label: 'Voir et corriger', url: postAction.url }] : postAction,
         footer,
       );
     }

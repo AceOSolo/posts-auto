@@ -10,6 +10,7 @@ export * from './media/image-check.ts';
 export * from './notifications/notification-center.ts';
 export * from './rgpd/export.ts';
 export * from './rgpd/zip.ts';
+export * from './posts/approval-links.ts';
 export * from './posts/post-actions.ts';
 export * from './posts/post-media.ts';
 export * from './posts/post-queries.ts';
