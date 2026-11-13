@@ -46,7 +46,7 @@ async function get(path: string, token?: string): Promise<Response> {
  * Envoie, comme un navigateur sans JavaScript, le formulaire de la page qui contient
  * `marker` (texte d'un bouton) : champs cachés de l'action serveur + champs fournis.
  */
-async function submitForm(path: string, token: string, marker: string, values: Record<string, string>): Promise<Response> {
+async function submitForm(path: string, token: string, marker: string, values: Record<string, string | File>): Promise<Response> {
   const page = await (await get(path, token)).text();
   const form = [...page.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].find((m) => (m[1] ?? '').includes(marker));
   const fields = new FormData();
@@ -314,6 +314,24 @@ try {
   check('événement enregistré avec le compte qui le relaie (PLA-04)', (savedEvent.headers.get('location') ?? '').includes('evenement-enregistre') && eventRow !== undefined, `HTTP ${savedEvent.status}`);
   const inventoryPage = await get(`/planning/${workspaceId}/inventaire`, claire);
   check('inventaire de la semaine visible par une contributrice (PLA-08)', inventoryPage.status === 200 && (await inventoryPage.text()).includes(subject));
+
+  // IDE-01, IDE-03 : idées et demandes de post.
+  const ideaTitle = `Idée du test de fumée ${Date.now()}`;
+  const proposed = await submitForm(`/idees/${workspaceId}`, claire, '>Proposer<', { titre: ideaTitle, details: 'Détails utiles' });
+  const ideaRow = await asSystem(db, (trx) => trx.selectFrom('ideas').select(['id', 'status']).where('title', '=', ideaTitle).executeTakeFirst());
+  check('idée proposée par une contributrice (IDE-01)', (proposed.headers.get('location') ?? '').includes('idee-proposee') && ideaRow?.status === 'new', `HTTP ${proposed.status}`);
+  const kept = ideaRow ? await submitForm(`/idees/${workspaceId}`, alexis, '>Retenir<', {}) : null;
+  check('idée retenue par l’administratrice', (kept?.headers.get('location') ?? '').includes('idee-kept'), `HTTP ${kept?.status}`);
+  const requestText = `Demande du test de fumée ${Date.now()}`;
+  const requested = await submitForm(`/demandes/${workspaceId}`, claire, 'Envoyer la demande', {
+    demande: requestText,
+    comptes: jpRowKey.slice('compte:'.length),
+    photos: new File([Buffer.from('GIF89a-photo-de-demande')], 'photo.gif', { type: 'image/gif' }),
+  });
+  const requestRow = await asSystem(db, (trx) => trx.selectFrom('post_requests').select(['id', 'status']).where('raw_text', '=', requestText).executeTakeFirst());
+  const requestPhotos = requestRow ? await asSystem(db, (trx) => trx.selectFrom('request_photos').select('position').where('request_id', '=', requestRow.id).execute()) : [];
+  check('demande de post avec photo, suivie par la demandeuse (IDE-03, IDE-06)', (requested.headers.get('location') ?? '').includes('demande-envoyee') && requestRow?.status === 'new' && requestPhotos.length === 1, `HTTP ${requested.status}`);
+  check('demande visible dans « Mes demandes »', (await (await get(`/demandes/${workspaceId}`, claire)).text()).includes(requestText));
 
   // REC-14, VAL-06 : validation depuis l'e-mail.
   const replanned = posts.find((p) => p.body.includes('sessions de formation incendie'));
