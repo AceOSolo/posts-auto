@@ -54,6 +54,10 @@ export default async function PlanningPage({
         <Link href={query(addDays(from, -7 * WEEKS))}>← Trimestre précédent</Link>
         <Link href={query(grid.currentWeek)}>Cette semaine</Link>
         <Link href={query(addDays(from, 7 * WEEKS))}>Trimestre suivant →</Link>
+        <a href={`/planning/${workspaceId}/export?depuis=${from}`} download>
+          Exporter en CSV
+        </a>
+        <span className="hint no-print">Pour un PDF : imprimer la page, puis « Enregistrer au format PDF ».</span>
         <form method="get" className="inline">
           <input type="hidden" name="depuis" value={from} />
           <label htmlFor="compte">Compte</label>

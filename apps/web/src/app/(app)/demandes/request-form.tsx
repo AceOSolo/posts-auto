@@ -8,6 +8,7 @@
  * personne les vérifie avant d'envoyer, rien n'est envoyé à sa place.
  */
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { DictationButton } from '../../../components/dictation-button.tsx';
 import type { PrefillResult } from './actions.ts';
 
 interface Props {
@@ -74,6 +75,7 @@ export function RequestForm({ accounts, action, interpret }: Props) {
     <form ref={form} action={action} className="stack">
       <label htmlFor="demande">Ce que vous voulez dire</label>
       <textarea id="demande" name="demande" rows={5} required maxLength={5000} aria-describedby="demande-aide" />
+      <DictationButton targetId="demande" />
       <p id="demande-aide" className="hint">
         Les faits, les chiffres, les noms : l’IA n’invente rien et marquera [À COMPLÉTER] ce qui manque.
       </p>

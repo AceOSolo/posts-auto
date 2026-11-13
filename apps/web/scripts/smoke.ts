@@ -330,6 +330,13 @@ try {
   const savedEvent = await submitForm(`/planning/${workspaceId}/evenements`, alexis, '>Ajouter<', { titre: eventTitle, debut: nextWeek, comptes: jpRowKey.slice('compte:'.length) });
   const eventRow = await asSystem(db, (trx) => trx.selectFrom('events').select('id').where('title', '=', eventTitle).executeTakeFirst());
   check('événement enregistré avec le compte qui le relaie (PLA-04)', (savedEvent.headers.get('location') ?? '').includes('evenement-enregistre') && eventRow !== undefined, `HTTP ${savedEvent.status}`);
+  const planningExport = await get(`/planning/${workspaceId}/export`, alexis);
+  const exportedCsv = await planningExport.text();
+  check(
+    'export du planning en CSV (PLA-09)',
+    planningExport.status === 200 && (planningExport.headers.get('content-type') ?? '').startsWith('text/csv') && exportedCsv.includes('"Ligne"') && exportedCsv.includes('Jean-Pierre Martin'),
+    `HTTP ${planningExport.status}`,
+  );
   const inventoryPage = await get(`/planning/${workspaceId}/inventaire`, claire);
   check('inventaire de la semaine visible par une contributrice (PLA-08)', inventoryPage.status === 200 && (await inventoryPage.text()).includes(subject));
 
@@ -422,6 +429,7 @@ try {
   const outsider = await sessionFor('exterieur@demo.example.test');
   check('REC-01 : post d’un autre client → 404', (await get(`/posts/${withPhotos.id}`, outsider)).status === 404);
   check('REC-01 : image d’un autre client → 404', (await get(`/media/${assetId}`, outsider)).status === 404);
+  check('REC-01 : planning d’un autre client non exportable → 404', (await get(`/planning/${workspaceId}/export`, outsider)).status === 404);
 } finally {
   await db.destroy();
 }

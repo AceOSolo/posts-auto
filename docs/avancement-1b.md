@@ -20,6 +20,7 @@ Périmètre et critères : cahier des charges v1.1, sections 5.4 à 5.7 et 11. C
 | 10 | Sources de veille (flux RSS et Atom), avec protection du réseau interne | GEN-09 | Fait : section « Sources de veille » de la ligne éditoriale, tâche « veille » |
 | 11 | Retouches à la demande : raccourcir, changer de ton, réécrire, 3 accroches | GEN-08 | Fait : bloc « Retravailler avec l’IA » sur la page d’un post à valider |
 | 12 | Apprentissage des préférences à partir des corrections | EDI-06 | Fait : tâche quotidienne « apprentissage », résumé visible et modifiable sur la fiche du compte |
+| 13 | Export du planning, dictée des demandes | PLA-09, IDE-05 | Fait : export CSV et impression en PDF du trimestre ; bouton « Dicter » (reconnaissance vocale du navigateur, signalée comme telle) |
 
 ## Critères de recette de l'incrément 1b
 

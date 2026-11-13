@@ -227,3 +227,18 @@ details.assist summary { cursor: pointer; font-weight: 600; min-height: 32px; di
 ol.hooks { padding-left: 20px; }
 ol.hooks li { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
 ol.hooks form { display: contents; }
+
+/* PLA-09 : impression du planning (et enregistrement en PDF), paysage, sans navigation. */
+@media print {
+  @page { size: landscape; margin: 10mm; }
+  .topbar, .subnav, .toolbar, .legend + details, .no-print, form, details { display: none !important; }
+  main { max-width: none; padding: 0; }
+  .grid-scroll { overflow: visible; border: none; }
+  table.planning { font-size: 7pt; }
+  table.planning th, table.planning td { min-width: 0; }
+  table.planning tbody th, table.planning thead th { position: static; }
+  .chip { break-inside: avoid; }
+}
+
+/* IDE-05 : dictée. */
+.dictation { display: flex; flex-direction: column; gap: 4px; }
