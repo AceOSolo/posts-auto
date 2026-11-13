@@ -74,7 +74,7 @@ describe('visuels des posts rédigés (REC-18)', () => {
     expect(await imageCount()).toBe(2);
 
     const run = await asSystem(db, (trx) => trx.selectFrom('generation_runs').select('report').where('id', '=', outcome.runId as string).executeTakeFirstOrThrow());
-    const report = run.report as RunReport;
+    const report = run.report as unknown as RunReport;
     expect(report.posts.map((p) => p.visual?.photo)).toEqual(expect.arrayContaining(['generated', null]));
     expect(report.posts.every((p) => p.visual?.made)).toBe(true);
   });

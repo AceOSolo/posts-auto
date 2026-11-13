@@ -30,7 +30,18 @@ export interface AccountProfile {
   readonly postsPerWeek: number;
   readonly optionalPerWeek: number;
   readonly usualSlots: readonly UsualSlot[];
+  /** VIS-04 : part des visuels avec photo (0 à 1). */
+  readonly aiImageRatio: number;
 }
+
+/** VIS-04 : parts proposées pour les visuels avec photo. */
+export const IMAGE_RATIOS: readonly { readonly value: number; readonly label: string }[] = [
+  { value: 0, label: 'Jamais : visuels texte seulement' },
+  { value: 0.25, label: 'Un visuel sur quatre' },
+  { value: 0.5, label: 'Un visuel sur deux' },
+  { value: 0.75, label: 'Trois visuels sur quatre' },
+  { value: 1, label: 'Toujours' },
+];
 
 export interface ProfileRights {
   /** Toute la fiche (gestion du contenu). */
@@ -72,6 +83,7 @@ async function loadProfile(trx: Tx, accountId: string): Promise<AccountProfile |
       'p.posts_per_week',
       'p.optional_per_week',
       'p.usual_slots',
+      'p.ai_image_ratio',
     ])
     .where('a.id', '=', accountId)
     .executeTakeFirst();
@@ -89,6 +101,7 @@ async function loadProfile(trx: Tx, accountId: string): Promise<AccountProfile |
     postsPerWeek: row.posts_per_week ?? 1,
     optionalPerWeek: row.optional_per_week ?? 0,
     usualSlots: parseUsualSlots(row.usual_slots),
+    aiImageRatio: row.ai_image_ratio === null ? 0.5 : Number(row.ai_image_ratio),
   };
 }
 
@@ -120,6 +133,7 @@ export interface AccountProfileInput {
   readonly postsPerWeek?: number;
   readonly optionalPerWeek?: number;
   readonly usualSlots?: readonly UsualSlot[];
+  readonly aiImageRatio?: number;
 }
 
 const OWN_FIELDS: ReadonlySet<keyof AccountProfileInput> = new Set(['tenor', 'avoid']);
@@ -134,6 +148,7 @@ function count(value: number | undefined, name: string): number | undefined {
 export async function saveAccountProfile(db: Database, userId: string, accountId: string, input: AccountProfileInput, now: Date): Promise<readonly string[]> {
   if (input.voice !== undefined && input.voice !== null && input.voice !== 'je' && input.voice !== 'nous') throw new RefusedError('voix_invalide', 'Voix inconnue.');
   if (input.sensitivity !== undefined && !SENSITIVITIES.includes(input.sensitivity)) throw new RefusedError('sensibilite_invalide', 'Sensibilité inconnue.');
+  if (input.aiImageRatio !== undefined && !IMAGE_RATIOS.some((r) => r.value === input.aiImageRatio)) throw new RefusedError('part_photos_invalide', 'Part des visuels avec photo inconnue.');
   const values = {
     voice: input.voice,
     tenor: input.tenor === undefined ? undefined : cleanText(input.tenor, 2000),
@@ -142,6 +157,7 @@ export async function saveAccountProfile(db: Database, userId: string, accountId
     posts_per_week: count(input.postsPerWeek, 'rythme'),
     optional_per_week: count(input.optionalPerWeek, 'options'),
     usual_slots: input.usualSlots === undefined ? undefined : JSON.stringify(parseUsualSlots(input.usualSlots)),
+    ai_image_ratio: input.aiImageRatio === undefined ? undefined : input.aiImageRatio.toFixed(2),
   };
   const provided = (Object.keys(input) as (keyof AccountProfileInput)[]).filter((key) => input[key] !== undefined);
 

@@ -29,4 +29,6 @@ export * from './editorial/sources.ts';
 export * from './posts/assist.ts';
 export * from './planning/week-document.ts';
 export * from './visuals/branding.ts';
+export * from './visuals/library.ts';
+export * from './visuals/templates.ts';
 export * from './visuals/visual-requests.ts';
