@@ -15,3 +15,6 @@ export * from './posts/post-actions.ts';
 export * from './posts/post-media.ts';
 export * from './posts/post-queries.ts';
 export * from './workspaces/members.ts';
+export * from './audit.ts';
+export * from './editorial/editorial-line.ts';
+export * from './editorial/account-profiles.ts';

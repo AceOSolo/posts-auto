@@ -61,6 +61,9 @@ export default async function AccountsPage({
                   ? `Connexion valable jusqu’au ${dateFormat.format(account.connectionExpiresAt)}.`
                   : 'Aucune connexion active : les posts de ce compte ne partiront pas.'}
               </p>
+              <p>
+                <Link href={`/comptes/${workspaceId}/fiche/${account.id}`}>Fiche du compte : voix, rythme, créneaux, exemples</Link>
+              </p>
               {account.canDisconnect && (
                 <details>
                   <summary>Déconnecter ce compte</summary>

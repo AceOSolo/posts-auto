@@ -184,3 +184,8 @@ details.photos summary { cursor: pointer; font-weight: 600; min-height: 32px; di
   .decide { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
   .decide details { flex: 1 1 100%; }
 }
+
+/* Fiche du compte : jour et heure côte à côte ; textes collés gardant leurs retours à la ligne. */
+.inline-fields { display: flex; gap: 8px; margin: 6px 0; }
+.inline-fields select, .inline-fields input { width: auto; }
+.pre { white-space: pre-wrap; }

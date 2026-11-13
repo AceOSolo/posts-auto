@@ -42,6 +42,21 @@ async function get(path: string, token?: string): Promise<Response> {
   return fetch(`${BASE}${path}`, { redirect: 'manual', headers: cookie ? { cookie } : {} });
 }
 
+/**
+ * Envoie, comme un navigateur sans JavaScript, le formulaire de la page qui contient
+ * `marker` (texte d'un bouton) : champs cachés de l'action serveur + champs fournis.
+ */
+async function submitForm(path: string, token: string, marker: string, values: Record<string, string>): Promise<Response> {
+  const page = await (await get(path, token)).text();
+  const form = [...page.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].find((m) => (m[1] ?? '').includes(marker));
+  const fields = new FormData();
+  for (const input of (form?.[1] ?? '').matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) {
+    fields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+  }
+  for (const [name, value] of Object.entries(values)) fields.append(name, value);
+  return fetch(`${BASE}${path.split('?')[0]}`, { method: 'POST', body: fields, redirect: 'manual', headers: { cookie: `session=${token}; __Host-session=${token}`, origin: BASE } });
+}
+
 try {
   const health = await get('/sante');
   check('/sante répond', health.status === 200 && ((await health.json()) as { ok: boolean }).ok);
@@ -228,6 +243,45 @@ try {
   );
   check('invitation par le formulaire : membre ajouté avec son rôle (ONB-07)', (invited.headers.get('location') ?? '').includes('message=invite') && newMember?.role === 'contributor', `HTTP ${invited.status}`);
   check('réglages refusés à un simple contributeur', !(await (await get(`/espace/${workspaceId}`, claire)).text()).includes('Envoyer l’invitation'));
+
+  // EDI-01 à EDI-05 : ligne éditoriale et fiche du compte.
+  const linePath = `/ligne/${workspaceId}`;
+  const versionOf = async () =>
+    (await asSystem(db, (trx) => trx.selectFrom('editorial_lines').select('version').where('workspace_id', '=', workspaceId).where('is_current', '=', true).executeTakeFirst()))?.version ?? 0;
+  const versionBefore = await versionOf();
+  const tone = `Direct et concret (essai du ${new Date().toISOString()})`;
+  const savedLine = await submitForm(linePath, alexis, 'Enregistrer une nouvelle version', {
+    positionnement: 'Prévention et sécurité au travail pour les PME',
+    ton: tone,
+    interdits: 'leader du marché\nn°1',
+    hashtags: '0',
+    emojis: 'rare',
+    'longueur-min': '600',
+    'longueur-max': '1300',
+    'liens-en-fin': 'on',
+    question: 'on',
+  });
+  check('ligne éditoriale enregistrée par l’administratrice : nouvelle version (EDI-01, EDI-07)', (savedLine.headers.get('location') ?? '').includes('ligne-enregistree') && (await versionOf()) === versionBefore + 1, `HTTP ${savedLine.status}`);
+  const lineForClaire = await (await get(linePath, claire)).text();
+  check('ligne éditoriale en lecture seule pour une contributrice', lineForClaire.includes(tone.replace(/’/g, '&#x27;').slice(0, 20)) && !lineForClaire.includes('Enregistrer une nouvelle version'));
+
+  // Claire est contributrice et titulaire de son profil : elle règle son ton, pas son rythme.
+  const claireAccount = await asSystem(db, (trx) =>
+    trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspaceId).where('display_name', '=', 'Claire Durand').executeTakeFirstOrThrow(),
+  );
+  const fichePath = `/comptes/${workspaceId}/fiche/${claireAccount.id}`;
+  const tenor = `Sobre, chiffres sourcés (${Date.now()})`;
+  const savedProfile = await submitForm(fichePath, claire, 'Enregistrer la fiche', { teneur: tenor, 'a-eviter': 'La politique', rythme: '9', sensibilite: 'strict' });
+  const profileRow = await asSystem(db, (trx) =>
+    trx.selectFrom('account_profiles').select(['tenor', 'posts_per_week', 'sensitivity']).where('account_id', '=', claireAccount.id).executeTakeFirst(),
+  );
+  check(
+    'fiche : la titulaire règle son ton, pas son rythme (EDI-04, matrice 3.3)',
+    (savedProfile.headers.get('location') ?? '').includes('fiche-enregistree') && profileRow?.tenor === tenor && profileRow.posts_per_week !== 9 && profileRow.sensitivity !== 'strict',
+    `HTTP ${savedProfile.status} → ${savedProfile.headers.get('location') ?? ''}`,
+  );
+  const example = await submitForm(fichePath, claire, '>Ajouter<', { texte: 'Un post de référence collé par la titulaire.', etiquette: 'imiter' });
+  check('fiche : exemple « à imiter » ajouté par le titulaire (EDI-05)', (example.headers.get('location') ?? '').includes('exemple-ajoute'), `HTTP ${example.status}`);
 
   // REC-14, VAL-06 : validation depuis l'e-mail.
   const replanned = posts.find((p) => p.body.includes('sessions de formation incendie'));

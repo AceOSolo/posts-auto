@@ -10,7 +10,7 @@ Périmètre et critères : cahier des charges v1.1, sections 5.4 à 5.7 et 11. C
 | --- | --- | --- | --- |
 | 1 | Schéma : ligne éditoriale, offre, exemples, planning, banque de sujets, événements, idées, demandes, générations, coûts IA, signalements | Section 7 | Fait |
 | 2 | Règles de rédaction mesurables et affectation des sujets (fonctions pures) | EDI-02, RÈG-15 à RÈG-18, GEN-02, GEN-03 | Fait |
-| 3 | Ligne éditoriale, état de l'offre, fiches de compte, exemples (services et écrans) | EDI-01 à EDI-05, EDI-07 | À faire |
+| 3 | Ligne éditoriale, état de l'offre, fiches de compte, exemples (services et écrans) | EDI-01 à EDI-07 | Fait : pages « Ligne éditoriale » et « Fiche du compte » |
 | 4 | Planning, banque de sujets, événements, inventaire de la semaine, import CSV du PAM | PLA-01 à PLA-05, PLA-07, PLA-08 | À faire |
 | 5 | Idées et demandes de post | IDE-01 à IDE-04, IDE-06 | À faire |
 | 6 | Paquet IA : modèle réel et simulé, consignes, vérification, garde contre les consignes cachées, coûts | GEN-04, GEN-05, GEN-11, GEN-13 | À faire |

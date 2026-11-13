@@ -59,3 +59,34 @@ export function canEditPost(access: Access): boolean {
 
 /** Changer la date et l'heure d'un post (matrice 3.3 « replanifier »). */
 export const canReschedulePost = canEditPost;
+
+/** Rôle effectif d'une personne dans un espace (lu sous RLS) ; `null` si l'espace lui est invisible ou étranger. */
+export async function workspaceRole(trx: Tx, userId: string, workspaceId: string): Promise<WorkspaceRole | null> {
+  const workspace = await trx.selectFrom('workspaces').select('org_id').where('id', '=', workspaceId).executeTakeFirst();
+  if (workspace === undefined) return null;
+  const owner = await trx
+    .selectFrom('org_members')
+    .select('role')
+    .where('org_id', '=', workspace.org_id)
+    .where('user_id', '=', userId)
+    .where('role', '=', 'owner')
+    .executeTakeFirst();
+  if (owner !== undefined) return 'owner';
+  const member = await trx
+    .selectFrom('workspace_members')
+    .select('role')
+    .where('workspace_id', '=', workspaceId)
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  return (member?.role as WorkspaceRole | undefined) ?? null;
+}
+
+/** Ligne éditoriale, fiches de compte, planning, génération (matrice 3.3). */
+export function canManageContent(role: WorkspaceRole | null): boolean {
+  return role === 'owner' || role === 'admin' || role === 'editor';
+}
+
+/** Proposer une idée ou une demande de post : tout le monde, sauf les lecteurs (matrice 3.3). */
+export function canPropose(role: WorkspaceRole | null): boolean {
+  return role !== null && role !== 'viewer';
+}

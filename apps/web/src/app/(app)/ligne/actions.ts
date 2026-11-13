@@ -1,0 +1,101 @@
+'use server';
+
+import { type EmojiPolicy, parseEditorialRules } from '@posts-auto/core';
+import {
+  ForbiddenError,
+  NotFoundError,
+  type OfferPricing,
+  type OfferStatus,
+  RefusedError,
+  deleteOfferItem,
+  saveEditorialLine,
+  saveOfferItem,
+} from '@posts-auto/services';
+import { revalidatePath } from 'next/cache';
+import { notFound, redirect } from 'next/navigation';
+import { database } from '../../../server/context.ts';
+import { requireUserId } from '../../../server/session.ts';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function run(workspaceId: string, anchor: string, action: (userId: string, now: Date) => Promise<string>): Promise<never> {
+  if (!UUID.test(workspaceId)) notFound();
+  const userId = await requireUserId();
+  let message: string;
+  try {
+    message = await action(userId, new Date());
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    if (error instanceof ForbiddenError) message = 'interdit';
+    else if (error instanceof RefusedError) message = error.code;
+    else throw error;
+  }
+  revalidatePath(`/ligne/${workspaceId}`);
+  redirect(`/ligne/${workspaceId}?message=${encodeURIComponent(message)}#${anchor}`);
+}
+
+const text = (form: FormData, name: string) => String(form.get(name) ?? '');
+const number = (form: FormData, name: string) => {
+  const value = Number.parseInt(text(form, name), 10);
+  return Number.isNaN(value) ? undefined : value;
+};
+
+/** EDI-01, EDI-02 : enregistre une nouvelle version de la ligne éditoriale. */
+export async function saveLineAction(workspaceId: string, form: FormData): Promise<void> {
+  await run(workspaceId, 'ligne', async (userId, now) => {
+    const rules = parseEditorialRules({
+      maxHashtags: number(form, 'hashtags'),
+      emojis: text(form, 'emojis') as EmojiPolicy,
+      minLength: number(form, 'longueur-min'),
+      maxLength: number(form, 'longueur-max'),
+      linksAtEnd: form.get('liens-en-fin') === 'on',
+      askQuestion: form.get('question') === 'on',
+    });
+    const result = await saveEditorialLine(
+      database(),
+      userId,
+      workspaceId,
+      {
+        positioning: text(form, 'positionnement'),
+        offers: text(form, 'offres'),
+        audiences: text(form, 'cibles'),
+        allowedProofs: text(form, 'preuves'),
+        tone: text(form, 'ton'),
+        bannedPhrases: text(form, 'interdits').split(/\r?\n/),
+        rules,
+      },
+      now,
+    );
+    return result.changed.length === 0 ? 'ligne-inchangee' : 'ligne-enregistree';
+  });
+}
+
+/** EDI-03 : ajoute (itemId null) ou modifie une offre. */
+export async function saveOfferAction(workspaceId: string, itemId: string | null, form: FormData): Promise<void> {
+  await run(workspaceId, 'offre', async (userId, now) => {
+    if (itemId !== null && !UUID.test(itemId)) throw new NotFoundError('Offre');
+    const pricing = text(form, 'prix');
+    await saveOfferItem(
+      database(),
+      userId,
+      workspaceId,
+      itemId,
+      {
+        name: text(form, 'nom'),
+        description: text(form, 'description'),
+        status: text(form, 'disponibilite') as OfferStatus,
+        pricing: (pricing === 'free' || pricing === 'paid' ? pricing : null) as OfferPricing,
+      },
+      now,
+    );
+    return 'offre-enregistree';
+  });
+}
+
+export async function deleteOfferAction(workspaceId: string, itemId: string): Promise<void> {
+  await run(workspaceId, 'offre', async (userId, now) => {
+    if (!UUID.test(itemId)) throw new NotFoundError('Offre');
+    await deleteOfferItem(database(), userId, workspaceId, itemId, now);
+    return 'offre-supprimee';
+  });
+}
