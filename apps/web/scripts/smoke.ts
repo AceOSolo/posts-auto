@@ -6,7 +6,8 @@
  * comme le ferait un navigateur, y compris l'isolation entre clients et les images.
  */
 import { DEFAULT_DATABASE_URL, asSystem, createDatabase } from '@posts-auto/db';
-import { consumeLoginLink, createApiKey, requestLoginLink } from '@posts-auto/services';
+import { writeFileSync } from 'node:fs';
+import { consumeLoginLink, createApiKey, readZip, requestLoginLink } from '@posts-auto/services';
 
 const BASE = process.env['APP_URL'] ?? 'http://localhost:3000';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
@@ -227,6 +228,17 @@ try {
   );
   check('invitation par le formulaire : membre ajouté avec son rôle (ONB-07)', (invited.headers.get('location') ?? '').includes('message=invite') && newMember?.role === 'contributor', `HTTP ${invited.status}`);
   check('réglages refusés à un simple contributeur', !(await (await get(`/espace/${workspaceId}`, claire)).text()).includes('Envoyer l’invitation'));
+
+  // REC-12 : export des données personnelles.
+  const exported = await get('/moi/export', claire);
+  const zipBytes = new Uint8Array(await exported.arrayBuffer());
+  const zipEntries = exported.status === 200 ? readZip(zipBytes) : [];
+  check(
+    'REC-12 : export RGPD en archive (JSON + images)',
+    exported.headers.get('content-type') === 'application/zip' && zipEntries[0]?.path === 'mes-donnees.json' && zipEntries.some((e) => e.path.startsWith('images/')),
+    `HTTP ${exported.status}`,
+  );
+  if (process.env['SMOKE_EXPORT_PATH']) writeFileSync(process.env['SMOKE_EXPORT_PATH'], zipBytes);
 
   // REC-01 : une personne d'un autre client ne voit ni le post ni l'image.
   await asSystem(db, (trx) =>

@@ -29,11 +29,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </span>
           ))}
         </nav>
-        <form action={logout}>
-          <button type="submit" className="link">
-            Déconnexion
-          </button>
-        </form>
+        <span className="nav-group">
+          <Link href="/moi">Mon compte</Link>
+          <form action={logout}>
+            <button type="submit" className="link">
+              Déconnexion
+            </button>
+          </form>
+        </span>
       </header>
       <main>{children}</main>
     </>

@@ -1,5 +1,5 @@
 import type { PostStatus } from '@posts-auto/core';
-import { type PostCard, listMyPosts } from '@posts-auto/services';
+import { type PostCard, hasConnectedProfile, listMyPosts, listMyWorkspaces } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Flash } from '../../components/flash.tsx';
@@ -53,11 +53,19 @@ export default async function MyPostsPage({ searchParams }: { searchParams: Prom
   const userId = await requireUserId();
   const { message } = await searchParams;
   const posts = await listMyPosts(database(), userId, new Date());
+  const [workspaces, connected] = await Promise.all([listMyWorkspaces(database(), userId), hasConnectedProfile(database(), userId)]);
+  const firstWorkspace = workspaces[0];
 
   return (
     <>
       <h1>Mes posts</h1>
       <Flash code={message} />
+      {!connected && firstWorkspace && (
+        <p className="card">
+          Pour que des posts puissent partir sur votre profil, connectez-le à LinkedIn (une minute, une seule fois).{' '}
+          <Link href={`/comptes/${firstWorkspace.id}/connecter`}>Connecter mon profil LinkedIn</Link>
+        </p>
+      )}
       {GROUPS.map((group) => {
         const items = posts.filter((post) => group.statuses.includes(post.status));
         if (items.length === 0 && group.empty === '') return null;

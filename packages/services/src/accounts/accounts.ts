@@ -211,6 +211,20 @@ export async function disconnectAccount(db: Database, userId: string, accountId:
   });
 }
 
+/** La personne a-t-elle un profil LinkedIn connecté (ou qui expire bientôt) ? */
+export async function hasConnectedProfile(db: Database, userId: string): Promise<boolean> {
+  const row = await asUser(db, userId, (trx) =>
+    trx
+      .selectFrom('social_accounts')
+      .select('id')
+      .where('holder_user_id', '=', userId)
+      .where('kind', '=', 'profile')
+      .where('status', 'in', ['connected', 'expiring'])
+      .executeTakeFirst(),
+  );
+  return row !== undefined;
+}
+
 export interface AccountSummary {
   readonly id: string;
   readonly kind: 'profile' | 'page';
