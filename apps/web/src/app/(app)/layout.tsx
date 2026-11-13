@@ -1,4 +1,4 @@
-import { listMyWorkspaces } from '@posts-auto/services';
+import { listMyWorkspaces, listNotifications } from '@posts-auto/services';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { database } from '../../server/context.ts';
@@ -9,6 +9,7 @@ import { logout } from '../connexion/actions.ts';
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const userId = await requireUserId();
   const workspaces = await listMyWorkspaces(database(), userId);
+  const { unread } = await listNotifications(database(), userId, 1);
   return (
     <>
       <header className="topbar">
@@ -17,6 +18,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             Posts LinkedIn
           </Link>
           <Link href="/">Mes posts</Link>
+          <Link href="/notifications" aria-label={`Notifications${unread > 0 ? ` : ${unread} non lue${unread > 1 ? 's' : ''}` : ''}`}>
+            Notifications{unread > 0 && <span className="pill">{unread}</span>}
+          </Link>
           {workspaces.map((workspace) => (
             <span key={workspace.id} className="nav-group">
               <Link href={`/equipe/${workspace.id}`}>Équipe · {workspace.name}</Link>

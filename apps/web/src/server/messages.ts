@@ -45,6 +45,7 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   image_type_mismatch: { tone: 'error', text: 'Le contenu du fichier ne correspond pas à son format.' },
   image_too_large: { tone: 'error', text: 'Photo trop lourde : 10 Mo au plus.' },
   image_corrupted: { tone: 'error', text: 'Photo illisible ou incomplète.' },
+  'preferences-enregistrees': { tone: 'success', text: 'Réglages enregistrés.' },
   envoye: { tone: 'success', text: 'Si cette adresse correspond à un compte, un lien de connexion vient d’y être envoyé. Il est valable 15 minutes.' },
 
   blocking_markers: { tone: 'error', text: 'Le texte contient encore [À COMPLÉTER] ou [À VÉRIFIER] : complétez-le avant de valider.' },

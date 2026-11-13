@@ -52,7 +52,7 @@ function compose(
 }
 
 function notificationFooter(ctx: TemplateContext): string {
-  return `Vous recevez cet e-mail parce que vous participez à la publication des posts LinkedIn de votre entreprise. Pour régler vos notifications : ${ctx.appUrl}/`;
+  return `Vous recevez cet e-mail parce que vous participez à la publication des posts LinkedIn de votre entreprise. Pour régler vos notifications : ${ctx.appUrl}/notifications`;
 }
 
 export function loginLinkMail(ctx: TemplateContext, url: string): RenderedMail {

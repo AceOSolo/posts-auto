@@ -106,6 +106,12 @@ details.photos summary { cursor: pointer; font-weight: 600; min-height: 32px; di
 .photo-list form { display: contents; }
 .photo-list button { min-width: 44px; padding: 8px 10px; }
 
+.pill { display: inline-block; margin-left: 6px; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--primary); color: var(--primary-text); font-size: 0.75rem; text-align: center; }
+.notification-list { list-style: none; padding: 0; margin: 12px 0; }
+.notification-list li { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.notification-list li.unread { font-weight: 600; }
+.notification-list time { color: var(--muted); font-size: 0.85rem; font-weight: normal; }
+
 /* Messages */
 .flash { padding: 10px 14px; border-radius: var(--radius); margin: 12px 0; }
 .flash.success { background: var(--success-bg); color: var(--success-text); }
