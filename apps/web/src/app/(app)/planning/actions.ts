@@ -7,6 +7,7 @@ import {
   RefusedError,
   addPlanningEntry,
   canManageContent,
+  configureGeneration,
   deleteEvent,
   deletePlanningEntry,
   deleteSubject,
@@ -14,6 +15,7 @@ import {
   importSubjects,
   parseRowKey,
   placeSubject,
+  requestGeneration,
   saveEvent,
   saveSubject,
   setAsidePlanningEntry,
@@ -164,6 +166,26 @@ export async function deleteEventAction(workspaceId: string, eventId: string): P
     if (!UUID.test(eventId)) throw new NotFoundError('Événement');
     await deleteEvent(database(), userId, workspaceId, eventId, now);
     return 'evenement-supprime';
+  });
+}
+
+// --- Rédaction (GEN-01) ---
+
+export async function requestGenerationAction(workspaceId: string): Promise<void> {
+  await run(workspaceId, `/planning/${workspaceId}/redactions`, async (userId, now) => {
+    await requestGeneration(database(), userId, workspaceId, now);
+    return 'redaction-demandee';
+  });
+}
+
+export async function configureGenerationAction(workspaceId: string, form: FormData): Promise<void> {
+  await run(workspaceId, `/planning/${workspaceId}/redactions`, async (userId, now) => {
+    const minutes = /^(\d{2}):(\d{2})$/.exec(text(form, 'heure'));
+    const day = Number(text(form, 'jour'));
+    if (minutes === null || !(day >= 1 && day <= 7)) throw new RefusedError('cron_invalide', 'Programmation invalide.');
+    const cron = `${Number(minutes[2])} ${Number(minutes[1])} * * ${day}`;
+    await configureGeneration(database(), userId, workspaceId, { auto: form.get('auto') === 'on', cron }, now);
+    return 'redaction-programmee';
   });
 }
 

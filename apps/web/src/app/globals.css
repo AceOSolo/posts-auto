@@ -212,3 +212,8 @@ table.planning .add { display: inline-block; min-width: 32px; min-height: 32px; 
 .chip.attention { outline: 2px solid var(--error-text); }
 ul.plain { list-style: none; padding: 0; margin: 6px 0; }
 ul.plain li { margin: 4px 0; }
+
+/* Origine d'un post (GEN-06) et signalement (GEN-12). */
+.origin { margin: 10px 0 0; font-size: 0.9rem; }
+details.report { margin: 24px 0; }
+details.report summary { cursor: pointer; color: var(--muted); }

@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   // Les paquets du dépôt sont publiés en TypeScript source : Next.js les compile.
-  transpilePackages: ['@posts-auto/core', '@posts-auto/db', '@posts-auto/services', '@posts-auto/worker', '@posts-auto/linkedin'],
+  transpilePackages: ['@posts-auto/ai', '@posts-auto/core', '@posts-auto/db', '@posts-auto/services', '@posts-auto/worker', '@posts-auto/linkedin'],
   // Pilote PostgreSQL : chargé tel quel côté serveur, jamais empaqueté.
   serverExternalPackages: ['pg'],
   poweredByHeader: false,

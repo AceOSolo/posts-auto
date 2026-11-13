@@ -21,3 +21,5 @@ export * from './editorial/account-profiles.ts';
 export * from './planning/planning.ts';
 export * from './planning/subjects-events.ts';
 export * from './requests/ideas-requests.ts';
+export * from './posts/content-reports.ts';
+export * from './planning/generation.ts';

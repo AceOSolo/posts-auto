@@ -17,9 +17,10 @@ export function mondayLabel(weekStart: string): string {
 }
 
 /** Sous-navigation du planning, commune à ses pages. */
-export function PlanningNav({ workspaceId, current }: { workspaceId: string; current: 'grille' | 'banque' | 'evenements' | 'inventaire' | 'import' }) {
+export function PlanningNav({ workspaceId, current }: { workspaceId: string; current: 'grille' | 'banque' | 'evenements' | 'inventaire' | 'import' | 'redactions' }) {
   const links = [
     ['grille', `/planning/${workspaceId}`, 'Planning'],
+    ['redactions', `/planning/${workspaceId}/redactions`, 'Rédaction'],
     ['inventaire', `/planning/${workspaceId}/inventaire`, 'Inventaire de la semaine'],
     ['banque', `/planning/${workspaceId}/banque`, 'Banque de sujets'],
     ['evenements', `/planning/${workspaceId}/evenements`, 'Événements'],

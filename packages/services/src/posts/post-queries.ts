@@ -158,7 +158,19 @@ export interface PostEvent {
   readonly reason: string | null;
 }
 
+/** GEN-06 : d'où vient le post, affiché avec lui. */
+export interface PostOriginInfo {
+  readonly label: string;
+  readonly detail: string | null;
+  readonly href: string | null;
+  /** Le texte a été rédigé par l'IA (GEN-12). */
+  readonly aiWritten: boolean;
+  /** 1 : premier post ; 2, 3… : reprises (GEN-07). */
+  readonly versionNo: number;
+}
+
 export interface PostDetail extends PostCard {
+  readonly origin: PostOriginInfo;
   /** Marqueurs [À COMPLÉTER] / [À VÉRIFIER] à surligner (VAL-03). */
   readonly markers: readonly MarkerSpan[];
   readonly versions: readonly PostVersion[];
@@ -197,6 +209,7 @@ export async function getPostDetail(db: Database, userId: string, postId: string
     const editableStatuses: readonly PostStatus[] = ['brouillon', 'a_valider', 'modif', 'valide', 'erreur'];
     return {
       ...card,
+      origin: await originOf(trx, postId, versions.some((v) => v.author_kind === 'ai')),
       markers: findBlockingMarkers(card.body),
       versions: versions.map((v) => ({
         revision: v.revision,
@@ -214,6 +227,59 @@ export async function getPostDetail(db: Database, userId: string, postId: string
       url: row.external_post_url,
     };
   });
+}
+
+/** GEN-06 : origine affichée (planning, idée, événement, demande, IA…), avec un lien vers la source. */
+async function originOf(trx: Tx, postId: string, aiWritten: boolean): Promise<PostOriginInfo> {
+  const p = await trx
+    .selectFrom('posts as p')
+    .leftJoin('planning_cells as c', 'c.id', 'p.planning_cell_id')
+    .leftJoin('ideas as i', 'i.id', 'p.idea_id')
+    .leftJoin('events as e', 'e.id', 'p.event_id')
+    .leftJoin('post_requests as r', 'r.id', 'p.request_id')
+    .leftJoin('users as ru', 'ru.id', 'r.created_by')
+    .select([
+      'p.workspace_id',
+      'p.origin',
+      'p.version_no',
+      'p.source_note',
+      'p.planning_cell_id',
+      'p.subject_id',
+      'c.content as cell_content',
+      'c.week_start as cell_week',
+      'c.account_id as cell_account',
+      'i.title as idea_title',
+      'e.title as event_title',
+      'ru.full_name as requester',
+    ])
+    .where('p.id', '=', postId)
+    .executeTakeFirstOrThrow();
+  const ws = encodeURIComponent(p.workspace_id);
+  const base = { aiWritten, versionNo: p.version_no };
+  switch (p.origin) {
+    case 'planning':
+      if (p.planning_cell_id !== null && p.cell_week !== null) {
+        return {
+          ...base,
+          label: 'Planning',
+          detail: p.cell_content,
+          href: p.cell_account ? `/planning/${ws}/case?ligne=${encodeURIComponent(`compte:${p.cell_account}`)}&semaine=${p.cell_week}` : `/planning/${ws}`,
+        };
+      }
+      return { ...base, label: p.subject_id !== null ? 'Banque de sujets' : 'Planning', detail: p.source_note, href: p.subject_id !== null ? `/planning/${ws}/banque` : null };
+    case 'event':
+      return { ...base, label: 'Événement', detail: p.event_title ?? p.source_note, href: `/planning/${ws}/evenements` };
+    case 'team_idea':
+      return { ...base, label: 'Idée de l’équipe', detail: p.idea_title ?? p.source_note, href: `/idees/${ws}?vue=utilisees` };
+    case 'ai_reserve':
+      return { ...base, label: 'Réserve de l’IA', detail: p.idea_title ?? p.source_note, href: null };
+    case 'ai_idea':
+      return { ...base, label: 'Idée de l’IA', detail: p.source_note, href: null };
+    case 'request':
+      return { ...base, label: 'Demande ponctuelle', detail: p.requester ? `de ${p.requester}` : p.source_note, href: `/demandes/${ws}?toutes=1` };
+    default:
+      return { ...base, label: 'Source externe', detail: p.source_note, href: null };
+  }
 }
 
 export interface TeamWeekAccount {

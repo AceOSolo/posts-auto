@@ -5,7 +5,9 @@
  * Ouvre une vraie session par le parcours de connexion (services), puis vérifie chaque page
  * comme le ferait un navigateur, y compris l'isolation entre clients et les images.
  */
+import { FakeModel } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, asSystem, createDatabase } from '@posts-auto/db';
+import { runGenerationTick } from '@posts-auto/worker';
 import { writeFileSync } from 'node:fs';
 import { consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink } from '@posts-auto/services';
 
@@ -332,6 +334,26 @@ try {
   const requestPhotos = requestRow ? await asSystem(db, (trx) => trx.selectFrom('request_photos').select('position').where('request_id', '=', requestRow.id).execute()) : [];
   check('demande de post avec photo, suivie par la demandeuse (IDE-03, IDE-06)', (requested.headers.get('location') ?? '').includes('demande-envoyee') && requestRow?.status === 'new' && requestPhotos.length === 1, `HTTP ${requested.status}`);
   check('demande visible dans « Mes demandes »', (await (await get(`/demandes/${workspaceId}`, claire)).text()).includes(requestText));
+
+  // GEN-01, GEN-05, GEN-06, GEN-12 : rédaction de bout en bout (modèle simulé), rapport, origine, signalement.
+  const launched = await submitForm(`/planning/${workspaceId}/redactions`, alexis, 'Lancer la rédaction maintenant', {});
+  check('rédaction demandée depuis l’application (GEN-01)', (launched.headers.get('location') ?? '').includes('redaction-demandee'), `HTTP ${launched.status}`);
+  // La tâche de fond, exécutée ici comme le ferait le processus des tâches.
+  const tick = await runGenerationTick({ db, model: new FakeModel() });
+  const runId = tick.runs.find((r) => r.workspaceId === workspaceId)?.runId ?? null;
+  check('la tâche de fond rédige les posts de l’espace', runId !== null && (tick.runs.find((r) => r.workspaceId === workspaceId)?.created ?? 0) > 0, JSON.stringify(tick.runs));
+  if (runId !== null) {
+    const reportPage = await get(`/planning/${workspaceId}/redactions/${runId}`, alexis);
+    check('rapport de rédaction lisible par l’équipe (GEN-05)', reportPage.status === 200 && (await reportPage.text()).includes('Posts rédigés'), `HTTP ${reportPage.status}`);
+    const generated = await asSystem(db, (trx) => trx.selectFrom('posts').select('id').where('generation_run_id', '=', runId).executeTakeFirstOrThrow());
+    const generatedPage = (await (await get(`/posts/${generated.id}`, alexis)).text()).replace(/<!-- -->/g, '');
+    check('post rédigé : origine et mention IA affichées (GEN-06, GEN-12)', generatedPage.includes('Origine :') && generatedPage.includes('Texte rédigé par une IA'));
+    const reported = await submitForm(`/posts/${generated.id}`, claire, 'Envoyer le signalement', { motif: 'Chiffre à vérifier' });
+    const reports = await asSystem(db, (trx) => trx.selectFrom('content_reports').select('id').where('post_id', '=', generated.id).execute());
+    check('« Signaler un contenu » enregistré (GEN-12)', (reported.headers.get('location') ?? '').includes('contenu-signale') && reports.length === 1, `HTTP ${reported.status}`);
+  }
+  const howItWorks = await get('/comment-fonctionne-la-redaction');
+  check('page « Comment fonctionne la rédaction » publique (GEN-12)', howItWorks.status === 200 && (await howItWorks.text()).includes('L’IA peut se tromper'));
 
   // REC-14, VAL-06 : validation depuis l'e-mail.
   const replanned = posts.find((p) => p.body.includes('sessions de formation incendie'));

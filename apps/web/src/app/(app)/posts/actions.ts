@@ -13,12 +13,14 @@ import {
   movePostPhoto,
   removePostPhoto,
   reschedulePost,
+  escapeHtml,
+  reportContent,
   retryPublication,
   withdrawPost,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database, mediaStore } from '../../../server/context.ts';
+import { appUrl, database, mailer, mediaStore } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -144,5 +146,26 @@ export async function retryAction(postId: string, formData: FormData): Promise<v
   await run(postId, formData, async (userId, now) => {
     await retryPublication(database(), userId, postId, now);
     return 'reessai';
+  });
+}
+
+/**
+ * GEN-12 : « Signaler un contenu ». Le signalement est enregistré, et l'éditeur du produit
+ * est prévenu à l'adresse SUPPORT_EMAIL (sans elle, l'e-mail s'affiche dans la console).
+ */
+export async function reportContentAction(postId: string, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    const reason = String(formData.get('motif') ?? '');
+    const receipt = await reportContent(database(), userId, postId, reason, now);
+    const support = process.env['SUPPORT_EMAIL'] ?? 'support@exemple.invalid';
+    const text = [
+      `Signalement n° ${receipt.reportId}`,
+      `Espace : ${receipt.workspaceName} — compte : ${receipt.accountName}`,
+      `Signalé par : ${receipt.reporterEmail}`,
+      `Motif : ${reason.trim()}`,
+      `Post : ${appUrl()}/posts/${postId}`,
+    ].join('\n');
+    await mailer().send({ to: { email: support }, subject: `Signalement d’un contenu (${receipt.workspaceName})`, text, html: `<pre>${escapeHtml(text)}</pre>`, tag: 'signalement' });
+    return 'contenu-signale';
   });
 }

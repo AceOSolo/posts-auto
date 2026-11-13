@@ -1,5 +1,5 @@
 import { REFUSAL_REASONS } from '@posts-auto/core';
-import { NotFoundError, getPostDetail } from '@posts-auto/services';
+import { CONTENT_REPORT_DELAY, NotFoundError, getPostDetail } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -17,6 +17,7 @@ import {
   removePhotoAction,
   requestChangesAction,
   rescheduleAction,
+  reportContentAction,
   retryAction,
   validateAction,
   withdrawAction,
@@ -93,7 +94,17 @@ export default async function PostPage({
       )}
 
       <PostPreview accountName={post.accountName} accountKind={post.accountKind} body={post.body} media={post.media} expanded />
-      <p className="ai-note">Texte préparé avec l’aide de l’IA : vérifiez les faits, chiffres et noms avant de valider.</p>
+      <p className="origin">
+        Origine : <strong>{post.origin.label}</strong>
+        {post.origin.detail && <> · {post.origin.href ? <Link href={post.origin.href}>{post.origin.detail}</Link> : post.origin.detail}</>}
+        {post.origin.versionNo > 1 && <> · reprise n°{post.origin.versionNo - 1}</>}
+      </p>
+      {post.origin.aiWritten && (
+        <p className="ai-note">
+          Texte rédigé par une IA : elle peut se tromper. Vérifiez les faits, chiffres et noms avant de valider.{' '}
+          <Link href="/comment-fonctionne-la-redaction">Comment fonctionne la rédaction</Link>
+        </p>
+      )}
 
       {post.actions.canEdit && (
         <details className="photos">
@@ -238,6 +249,19 @@ export default async function PostPage({
           ))}
         </ol>
       </section>
+
+      <details className="report">
+        <summary>Signaler un contenu</summary>
+        <form action={reportContentAction.bind(null, post.id)} className="stack">
+          <p className="hint">
+            Un texte ou une image qui pose problème (erreur, propos inappropriés, contenu protégé) ? L’éditeur du produit examine chaque signalement sous{' '}
+            {CONTENT_REPORT_DELAY}.
+          </p>
+          <label htmlFor="motif">Ce qui pose problème</label>
+          <textarea id="motif" name="motif" rows={3} required maxLength={2000} />
+          <button type="submit">Envoyer le signalement</button>
+        </form>
+      </details>
     </>
   );
 }
