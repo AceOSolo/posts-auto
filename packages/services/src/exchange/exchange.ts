@@ -9,6 +9,8 @@
  * LinkedIn, contrôle des images (SEC-07).
  */
 import {
+  POST_ORIGINS,
+  type PostOrigin,
   type PostStatus,
   SLOT_OCCUPYING_STATUSES,
   addMinutes,
@@ -26,8 +28,6 @@ export interface MediaWriter {
   write(storageKey: string, bytes: Uint8Array): Promise<void>;
 }
 
-export const POST_ORIGINS = ['planning', 'event', 'team_idea', 'ai_idea', 'ai_reserve', 'request', 'external_source'] as const;
-export type PostOrigin = (typeof POST_ORIGINS)[number];
 
 const REFERENCE = /^[\w.:-]{1,100}$/;
 const MAX_TEXT = 3000;

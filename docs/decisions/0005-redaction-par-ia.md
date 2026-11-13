@@ -26,7 +26,12 @@ Deux risques dominent : un post faux ou hors règles qui part sous le nom d'une 
    Cette affectation est une fonction pure de `@posts-auto/core`, testée sans IA. L'origine affichée (GEN-06) est donc un fait, pas une déclaration de l'IA.
 
    L'IA ne choisit un sujet qu'au rang 6 (« autre matière vérifiable »). Elle le choisit alors parmi des sources fournies : ligne éditoriale, état de l'offre, articles des sources externes.
-2. **Remplacement d'un post « à valider » (GEN-03)** : seulement si un sujet de rang **strictement meilleur** n'a pas trouvé de créneau.
+2. **Remplacement d'un post « à valider » (GEN-03)** : seulement si une matière plus intéressante est **apparue** depuis la rédaction du post et n'a pas trouvé de créneau. Il faut à la fois :
+   - un sujet de rang 1 à 4 (case, événement, idée de l'équipe, banque) ;
+   - un rang strictement meilleur que celui du post ;
+   - un sujet créé après le post.
+
+   La réserve ne remplace jamais. Un sujet remis en circulation par un remplacement non plus, car il est plus ancien que les posts en place. Sans cette double règle, chaque remplacement en déclencherait un autre à la génération suivante.
 
    Ne sont jamais touchés :
    - les posts validés, publiés, refusés ou « à modifier » ;

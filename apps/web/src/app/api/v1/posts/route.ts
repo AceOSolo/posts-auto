@@ -2,7 +2,8 @@
  * GET  /api/v1/posts?depuis=…&jusqua=… : posts de l'espace et décisions des titulaires.
  * POST /api/v1/posts : dépôt d'un post « à valider » ou d'une reprise (PUB-10).
  */
-import { POST_ORIGINS, type PostOrigin, type SubmittedImage, listPosts, submitPost } from '@posts-auto/services';
+import { POST_ORIGINS, type PostOrigin } from '@posts-auto/core';
+import { type SubmittedImage, listPosts, submitPost } from '@posts-auto/services';
 import { apiError, parseInstant, withApiKey } from '../../../../server/api.ts';
 import { database, mediaStore } from '../../../../server/context.ts';
 

@@ -5,3 +5,6 @@ export * from './calendar/holidays.ts';
 export * from './calendar/workspace-calendar.ts';
 export * from './scheduling/slots.ts';
 export * from './scheduling/reschedule.ts';
+export * from './writing/rules.ts';
+export * from './generation/allocation.ts';
+export * from './planning/cell-state.ts';
