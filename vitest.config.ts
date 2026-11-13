@@ -14,6 +14,9 @@ export default defineConfig({
         test: { name: 'linkedin', include: ['packages/linkedin/src/**/*.test.ts'], env },
       },
       {
+        test: { name: 'ai', include: ['packages/ai/src/**/*.test.ts'], env },
+      },
+      {
         test: {
           name: 'db',
           include: ['packages/db/src/**/*.test.ts'],
