@@ -4,7 +4,10 @@
  */
 declare module 'vitest' {
   export interface ProvidedContext {
-    /** Base PostgreSQL jetable, migrée, propre à l'exécution des tests. */
+    /**
+     * Base modèle migrée, propre à l'exécution des tests. Ne pas s'y connecter
+     * directement : utiliser openTestDatabase(), qui en fait une copie par fichier.
+     */
     databaseUrl: string;
   }
 }

@@ -3,11 +3,19 @@
  * Couvre REC-05, REC-06, REC-08 et la garantie « jamais de double publication ».
  */
 import { randomBytes } from 'node:crypto';
-import { type Database, asSystem, createDatabase } from '@posts-auto/db';
-import { addMember, createAccount, createOrganization, createPost, createUser } from '@posts-auto/db/testing';
+import { type Database, asSystem } from '@posts-auto/db';
+import {
+  addMember,
+  closeTestDatabase,
+  createAccount,
+  createOrganization,
+  createPost,
+  createUser,
+  openTestDatabase,
+} from '@posts-auto/db/testing';
 import { FakeLinkedIn, linkedInFailures } from '@posts-auto/linkedin';
 import { sql } from 'kysely';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MemoryMediaStore } from '../media/media-store.js';
 import { TokenCipher } from '../secrets/token-cipher.js';
 import { type PublicationDeps, runPublicationTick } from './publication.js';
@@ -15,12 +23,10 @@ import { type PublicationDeps, runPublicationTick } from './publication.js';
 let db: Database;
 const cipher = new TokenCipher(new Map([['k1', randomBytes(32)]]), 'k1');
 
-beforeAll(() => {
-  db = createDatabase(inject('databaseUrl'), { maxConnections: 6 });
+beforeAll(async () => {
+  db = await openTestDatabase();
 });
-afterAll(async () => {
-  await db.destroy();
-});
+afterAll(() => closeTestDatabase(db));
 
 // Mardi 17 novembre 2026, 12h00 à Paris = 11:00 UTC.
 const NOON = new Date('2026-11-17T11:00:00Z');

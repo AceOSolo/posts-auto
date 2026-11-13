@@ -20,7 +20,7 @@ import {
   applyPostCommand,
   departureForValidatedPost,
 } from '@posts-auto/core';
-import { type DB, type Database, type Tx, asSystem } from '@posts-auto/db';
+import { type DB, type Database, type Tx, asSystem, calendarOf, slotRulesOf, weekStartOf } from '@posts-auto/db';
 import type { Updateable } from 'kysely';
 import {
   type LinkedInImageMime,
@@ -31,7 +31,6 @@ import {
 } from '@posts-auto/linkedin';
 import type { MediaStore } from '../media/media-store.js';
 import type { TokenCipher } from '../secrets/token-cipher.js';
-import { calendarOf, slotRulesOf, weekStartOf } from '../workspace-settings.js';
 
 /** PUB-04 : 3 nouvelles tentatives, à 1, 5 puis 15 minutes. */
 export const RETRY_DELAYS_MINUTES = [1, 5, 15] as const;

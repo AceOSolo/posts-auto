@@ -14,8 +14,7 @@ import {
   applyPostCommand,
   rescheduleMissedPost,
 } from '@posts-auto/core';
-import { type Database, type Tx, asSystem } from '@posts-auto/db';
-import { calendarOf, slotRulesOf, weekStartOf } from '../workspace-settings.js';
+import { type Database, type Tx, asSystem, calendarOf, slotRulesOf, weekStartOf } from '@posts-auto/db';
 
 export const MISSED_SLOT_GRACE_MINUTES = 60;
 const BATCH = 100;

@@ -4,9 +4,10 @@
 import { POST_STATUSES, hasBlockingMarkers } from '@posts-auto/core';
 import { BLOCKING_MARKER_SAMPLES } from '@posts-auto/core/testing';
 import { sql } from 'kysely';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
-import { type Database, createDatabase } from './client.js';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Database } from './client.js';
 import { asSystem } from './context.js';
+import { closeTestDatabase, openTestDatabase } from './testing/test-database.js';
 import { type OrgSetup, createAccount, createOrganization, createPost } from './testing/fixtures.js';
 
 let db: Database;
@@ -14,13 +15,11 @@ let org: OrgSetup;
 const ws = () => org.workspaceIds[0] as string;
 
 beforeAll(async () => {
-  db = createDatabase(inject('databaseUrl'), { maxConnections: 4 });
+  db = await openTestDatabase();
   org = await createOrganization(db, { workspaces: 2 });
 });
 
-afterAll(async () => {
-  await db.destroy();
-});
+afterAll(() => closeTestDatabase(db));
 
 describe('concordance avec le moteur de règles', () => {
   it('la contrainte sur posts.status liste exactement les statuts de @posts-auto/core', async () => {

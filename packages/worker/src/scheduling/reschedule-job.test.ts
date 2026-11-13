@@ -1,15 +1,20 @@
-import { type Database, asSystem, createDatabase } from '@posts-auto/db';
-import { createAccount, createOrganization, createPost, createUser } from '@posts-auto/db/testing';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
+import { type Database, asSystem } from '@posts-auto/db';
+import {
+  closeTestDatabase,
+  createAccount,
+  createOrganization,
+  createPost,
+  createUser,
+  openTestDatabase,
+} from '@posts-auto/db/testing';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { describeSlot, runRescheduleTick } from './reschedule-job.js';
 
 let db: Database;
-beforeAll(() => {
-  db = createDatabase(inject('databaseUrl'), { maxConnections: 4 });
+beforeAll(async () => {
+  db = await openTestDatabase();
 });
-afterAll(async () => {
-  await db.destroy();
-});
+afterAll(() => closeTestDatabase(db));
 
 // Mardi 17 novembre 2026, 12h00 à Paris = 11:00 UTC.
 const NOON = new Date('2026-11-17T11:00:00Z');

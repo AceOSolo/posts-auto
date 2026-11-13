@@ -34,6 +34,18 @@ export default defineConfig({
           hookTimeout: 60_000,
         },
       },
+      {
+        // Base distincte de celle du worker : une passe de publication traite tous les
+        // posts dus de la base et pourrait modifier ceux des tests de services.
+        test: {
+          name: 'services',
+          include: ['packages/services/src/**/*.test.ts'],
+          env,
+          globalSetup: ['packages/db/src/testing/global-setup.ts'],
+          testTimeout: 20_000,
+          hookTimeout: 60_000,
+        },
+      },
     ],
     coverage: {
       provider: 'v8',

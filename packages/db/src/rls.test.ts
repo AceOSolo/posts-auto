@@ -3,9 +3,10 @@
  * avec le rôle de l'application web, sans passer par le code applicatif.
  */
 import { sql } from 'kysely';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
-import { type Database, createDatabase } from './client.js';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Database } from './client.js';
 import { asSystem, asUser } from './context.js';
+import { closeTestDatabase, openTestDatabase } from './testing/test-database.js';
 import {
   type OrgSetup,
   addMember,
@@ -31,7 +32,7 @@ const wsA = () => orgA.workspaceIds[0] as string;
 const wsB = () => orgB.workspaceIds[0] as string;
 
 beforeAll(async () => {
-  db = createDatabase(inject('databaseUrl'), { maxConnections: 4 });
+  db = await openTestDatabase();
   orgA = await createOrganization(db);
   orgB = await createOrganization(db);
   agency = await createOrganization(db, { kind: 'agence', workspaces: 2 });
@@ -49,9 +50,7 @@ beforeAll(async () => {
   postB = await createPost(db, wsB(), accountB);
 });
 
-afterAll(async () => {
-  await db.destroy();
-});
+afterAll(() => closeTestDatabase(db));
 
 describe('isolation entre clients (SEC-01, REC-01)', () => {
   it('un utilisateur de A ne trouve pas un post de B (l’application répondra 404)', async () => {

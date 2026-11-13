@@ -47,6 +47,26 @@ export async function createEmptyTempDatabase(
   };
 }
 
+/**
+ * Copie instantanée d'une base modèle (CREATE DATABASE … TEMPLATE). La base modèle ne doit
+ * avoir aucune connexion ouverte pendant la copie.
+ */
+export async function cloneTempDatabase(
+  templateUrl: string,
+  prefix: string,
+  adminUrl = process.env['TEST_DATABASE_ADMIN_URL'] ?? DEFAULT_ADMIN_URL,
+): Promise<TempDatabase> {
+  const template = new URL(templateUrl).pathname.slice(1);
+  const name = `${prefix}_${Date.now()}_${randomBytes(3).toString('hex')}`;
+  await admin(adminUrl, (client) => client.query(`CREATE DATABASE ${name} TEMPLATE ${template}`));
+  const url = new URL(adminUrl);
+  url.pathname = `/${name}`;
+  return {
+    url: url.toString(),
+    drop: () => admin(adminUrl, (client) => client.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`)).then(() => undefined),
+  };
+}
+
 /** Base à jour de toutes les migrations du dépôt. */
 export async function createMigratedTempDatabase(prefix: string, adminUrl?: string): Promise<TempDatabase> {
   const temp = await createEmptyTempDatabase(prefix, adminUrl);
