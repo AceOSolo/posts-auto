@@ -220,3 +220,10 @@ details.report summary { cursor: pointer; color: var(--muted); }
 
 /* IDE-04 : champ rempli par l'IA, à vérifier. */
 .badge.prefilled { background: #efe7fb; color: #4b2a7a; border-color: #d4c2f0; font-weight: normal; font-size: 0.75rem; }
+
+/* GEN-08 : retouches par l'IA. */
+details.assist { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-top: 12px; }
+details.assist summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+ol.hooks { padding-left: 20px; }
+ol.hooks li { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+ol.hooks form { display: contents; }

@@ -337,7 +337,8 @@ export async function loadGenerationData(trx: Tx, workspaceId: string, now: Date
       'p.subject_id',
       'p.is_optional',
       'p.created_at',
-      eb.exists(eb.selectFrom('post_versions as v').select('v.id').whereRef('v.post_id', '=', 'p.id').where('v.author_kind', '=', 'user')).as('edited'),
+      // Corrigé par une personne, ou retouché par l'IA à sa demande (GEN-08).
+      eb.exists(eb.selectFrom('post_versions as v').select('v.id').whereRef('v.post_id', '=', 'p.id').where((w) => w.or([w('v.author_kind', '=', 'user'), w('v.author_user_id', 'is not', null)]))).as('edited'),
     ])
     .where('p.workspace_id', '=', workspaceId)
     .where('p.account_id', 'in', ids)

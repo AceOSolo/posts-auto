@@ -141,7 +141,12 @@ async function replacePost(trx: Tx, postId: string, accountId: string, now: Date
     .where('id', '=', postId)
     .forUpdate()
     .executeTakeFirst();
-  const edited = await trx.selectFrom('post_versions').select('id').where('post_id', '=', postId).where('author_kind', '=', 'user').executeTakeFirst();
+  const edited = await trx
+    .selectFrom('post_versions')
+    .select('id')
+    .where('post_id', '=', postId)
+    .where((w) => w.or([w('author_kind', '=', 'user'), w('author_user_id', 'is not', null)]))
+    .executeTakeFirst();
   if (old === undefined || old.status !== 'a_valider' || edited !== undefined) return false;
   await trx.updateTable('posts').set({ status: 'remplace' }).where('id', '=', postId).execute();
   await trx

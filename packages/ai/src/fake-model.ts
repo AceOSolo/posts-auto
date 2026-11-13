@@ -34,6 +34,9 @@ export class FakeModel implements TextModel {
     if (request.purpose === 'verify') return { issues: [] };
     if (request.purpose === 'interpret') return demoInterpretation(request.task);
     this.#drafts += 1;
+    if (request.task.startsWith('Propose trois accroches')) {
+      return { hooks: [1, 2, 3].map((n) => `Accroche de démonstration n°${n} (sans IA)`) };
+    }
     return demoDraft(request.context, request.task, this.#drafts);
   }
 }

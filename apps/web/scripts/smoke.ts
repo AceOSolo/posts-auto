@@ -368,6 +368,17 @@ try {
     const reports = await asSystem(db, (trx) => trx.selectFrom('content_reports').select('id').where('post_id', '=', generated.id).execute());
     check('« Signaler un contenu » enregistré (GEN-12)', (reported.headers.get('location') ?? '').includes('contenu-signale') && reports.length === 1, `HTTP ${reported.status}`);
   }
+  // GEN-08 : retouche par l'IA et accroches, au moment de valider (déléguée de la page).
+  const webinar = posts.find((p) => p.body.includes('Webinaire gratuit'));
+  if (webinar) {
+    const revisionsOf = async () => (await asSystem(db, (trx) => trx.selectFrom('post_versions').select('id').where('post_id', '=', webinar.id).execute())).length;
+    const before = await revisionsOf();
+    const shortened = await submitForm(`/posts/${webinar.id}`, alexis, '>Raccourcir<', {});
+    check('« Raccourcir » : nouvelle révision du post (GEN-08)', (shortened.headers.get('location') ?? '').includes('retouche-') && (await revisionsOf()) === before + 1, `HTTP ${shortened.status}`);
+    await submitForm(`/posts/${webinar.id}`, alexis, 'Proposer 3 accroches', {});
+    const withHooks = (await (await get(`/posts/${webinar.id}`, alexis)).text()).replace(/<!-- -->/g, '');
+    check('« Proposer 3 accroches » : propositions affichées (GEN-08)', withHooks.includes('Utiliser cette accroche'));
+  }
   const howItWorks = await get('/comment-fonctionne-la-redaction');
   check('page « Comment fonctionne la rédaction » publique (GEN-12)', howItWorks.status === 200 && (await howItWorks.text()).includes('L’IA peut se tromper'));
 

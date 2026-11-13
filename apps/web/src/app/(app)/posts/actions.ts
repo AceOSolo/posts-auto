@@ -1,26 +1,30 @@
 'use server';
 
 import { DEFAULT_WORKSPACE_CALENDAR, REFUSAL_REASONS, type RefusalReason, atLocal } from '@posts-auto/core';
+import { type AssistKind, ModelError } from '@posts-auto/ai';
 import {
   type Decision,
   ForbiddenError,
   NotFoundError,
   RefusedError,
   addPostPhotos,
+  assistPost,
   decidePost,
   editPostText,
   getPostDetail,
   movePostPhoto,
+  proposeHooks,
   removePostPhoto,
   reschedulePost,
   escapeHtml,
   reportContent,
   retryPublication,
+  applyHook,
   withdrawPost,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { appUrl, database, mailer, mediaStore } from '../../../server/context.ts';
+import { appUrl, database, mailer, mediaStore, model, usdToEur } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -167,5 +171,38 @@ export async function reportContentAction(postId: string, formData: FormData): P
     ].join('\n');
     await mailer().send({ to: { email: support }, subject: `Signalement d’un contenu (${receipt.workspaceName})`, text, html: `<pre>${escapeHtml(text)}</pre>`, tag: 'signalement' });
     return 'contenu-signale';
+  });
+}
+
+/** GEN-08 : retouche du texte par l'IA (raccourcir, changer de ton, régénérer). */
+export async function assistAction(postId: string, kind: AssistKind, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    try {
+      const result = await assistPost(database(), model(), userId, postId, kind, now, usdToEur());
+      return result.remaining.length > 0 ? 'retouche-a-verifier' : 'retouche-faite';
+    } catch (error) {
+      if (error instanceof ModelError) return 'ia-indisponible';
+      throw error;
+    }
+  });
+}
+
+/** GEN-08 : trois accroches proposées, affichées sur la page du post. */
+export async function hooksAction(postId: string, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    try {
+      await proposeHooks(database(), model(), userId, postId, now, usdToEur());
+      return 'accroches-proposees';
+    } catch (error) {
+      if (error instanceof ModelError) return 'ia-indisponible';
+      throw error;
+    }
+  });
+}
+
+export async function applyHookAction(postId: string, index: number, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    await applyHook(database(), userId, postId, index, now);
+    return 'accroche-utilisee';
   });
 }

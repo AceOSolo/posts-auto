@@ -1,5 +1,5 @@
 import { REFUSAL_REASONS } from '@posts-auto/core';
-import { CONTENT_REPORT_DELAY, NotFoundError, getPostDetail } from '@posts-auto/services';
+import { CONTENT_REPORT_DELAY, NotFoundError, getPostDetail, pendingHooks } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -11,7 +11,10 @@ import { logDeniedAccess } from '../../../../server/security-log.ts';
 import { requireUserId } from '../../../../server/session.ts';
 import {
   addPhotosAction,
+  applyHookAction,
+  assistAction,
   editTextAction,
+  hooksAction,
   movePhotoAction,
   refuseAction,
   removePhotoAction,
@@ -26,6 +29,14 @@ import {
 export const metadata: Metadata = { title: 'Post' };
 export const dynamic = 'force-dynamic';
 
+/** GEN-08 : retouches proposées au moment de valider. */
+const ASSIST_BUTTONS = [
+  ['raccourcir', 'Raccourcir'],
+  ['ton_direct', 'Plus direct'],
+  ['ton_chaleureux', 'Plus chaleureux'],
+  ['ton_formel', 'Plus formel'],
+  ['regenerer', 'Réécrire entièrement'],
+] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Valeur d'un champ datetime-local, dans le fuseau de l'espace. */
@@ -73,6 +84,7 @@ export default async function PostPage({
     throw error;
   }
   const can = new Set(post.actions.commands);
+  const hooks = post.actions.canEdit && post.status === 'a_valider' ? await pendingHooks(database(), userId, post.id, new Date()) : [];
 
   return (
     <>
@@ -104,6 +116,35 @@ export default async function PostPage({
           Texte rédigé par une IA : elle peut se tromper. Vérifiez les faits, chiffres et noms avant de valider.{' '}
           <Link href="/comment-fonctionne-la-redaction">Comment fonctionne la rédaction</Link>
         </p>
+      )}
+
+      {post.actions.canEdit && post.status === 'a_valider' && (
+        <details className="assist" open={hooks.length > 0}>
+          <summary>Retravailler avec l’IA</summary>
+          <p className="hint">Une nouvelle version du texte est rédigée et vérifiée ; cela prend jusqu’à une minute. L’ancienne reste dans l’historique.</p>
+          <div className="actions">
+            {ASSIST_BUTTONS.map(([kind, label]) => (
+              <form key={kind} action={assistAction.bind(null, post.id, kind)}>
+                <button type="submit">{label}</button>
+              </form>
+            ))}
+            <form action={hooksAction.bind(null, post.id)}>
+              <button type="submit">Proposer 3 accroches</button>
+            </form>
+          </div>
+          {hooks.length > 0 && (
+            <ol className="hooks">
+              {hooks.map((hook, index) => (
+                <li key={hook}>
+                  <span>{hook}</span>
+                  <form action={applyHookAction.bind(null, post.id, index)}>
+                    <button type="submit">Utiliser cette accroche</button>
+                  </form>
+                </li>
+              ))}
+            </ol>
+          )}
+        </details>
       )}
 
       {post.actions.canEdit && (

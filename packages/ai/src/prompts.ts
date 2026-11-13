@@ -197,6 +197,33 @@ export function renderReworkBrief(brief: PostBrief, previousText: string, note: 
   ].join('\n\n');
 }
 
+/** GEN-08 : retouches demandées au moment de valider. */
+export const ASSIST_INSTRUCTIONS = {
+  raccourcir: 'Raccourcis le texte d’environ un tiers, sans perdre l’information utile ni le lien éventuel.',
+  ton_direct: 'Rends le ton plus direct : phrases plus courtes, verbes d’action, moins de précautions oratoires.',
+  ton_chaleureux: 'Rends le ton plus chaleureux et humain, sans familiarité ni emoji supplémentaire.',
+  ton_formel: 'Rends le ton plus formel et institutionnel, sans jargon.',
+  regenerer: 'Réécris entièrement le post sur le même sujet, avec une autre accroche et une autre construction.',
+} as const;
+export type AssistKind = keyof typeof ASSIST_INSTRUCTIONS;
+
+/** Retouche d'un post existant : le texte actuel et la consigne de la personne. */
+export function renderAssistTask(currentText: string, kind: AssistKind): string {
+  return [
+    'Retouche le post ci-dessous à la demande de la personne qui le valide. Garde le sujet, les faits et les marqueurs [À COMPLÉTER] ou [À VÉRIFIER] encore présents ; n’ajoute aucun fait.',
+    `Consigne : ${ASSIST_INSTRUCTIONS[kind]}`,
+    asDocument('texte_actuel', { id: 'texte-actuel' }, currentText),
+  ].join('\n\n');
+}
+
+/** Trois accroches de remplacement (GEN-08). */
+export function renderHooksTask(currentText: string): string {
+  return [
+    'Propose trois accroches différentes pour remplacer le premier paragraphe du post ci-dessous. Chacune tient en une ou deux lignes, sans emoji, sans hashtag, et n’ajoute aucun fait absent du texte.',
+    asDocument('texte_actuel', { id: 'texte-actuel' }, currentText),
+  ].join('\n\n');
+}
+
 /** Second essai après vérification : la liste des problèmes à corriger. */
 export function renderRewriteTask(task: string, draft: string, problems: readonly string[]): string {
   return [
