@@ -4,7 +4,7 @@ Périmètre et critères : cahier des charges v1.1, sections 5.4 à 5.7 et 11. C
 
 **Jalon de sortie** : les tâches Claude programmées de rédaction et de reprise sont débranchées ; l'API d'échange n'est plus utilisée.
 
-**En résumé (13 novembre 2026)** : toutes les exigences « M » de l'incrément sont construites et testées. Il faut maintenant brancher le vrai modèle d'IA : clé Anthropic et contrat sans réutilisation des données. Il reste aussi à relire les premiers posts rédigés pour Secutop, puis à dérouler la bascule décrite dans `docs/api-echange.md`. Les tests automatiques passent (595), ainsi que les 66 vérifications de fumée. La rédaction y est vérifiée de bout en bout avec un modèle simulé.
+**En résumé (13 novembre 2026)** : toutes les exigences « M » de l'incrément sont construites et testées. Il faut maintenant brancher le vrai modèle d'IA : clé Anthropic et contrat sans réutilisation des données. Il reste aussi à relire les premiers posts rédigés pour Secutop, puis à dérouler la bascule décrite dans `docs/api-echange.md`. Les tests automatiques passent (604), ainsi que les 67 vérifications de fumée. La rédaction y est vérifiée de bout en bout avec un modèle simulé.
 
 ## Étapes
 
@@ -23,6 +23,7 @@ Périmètre et critères : cahier des charges v1.1, sections 5.4 à 5.7 et 11. C
 | 11 | Retouches à la demande : raccourcir, changer de ton, réécrire, 3 accroches | GEN-08 | Fait : bloc « Retravailler avec l’IA » sur la page d’un post à valider |
 | 12 | Apprentissage des préférences à partir des corrections | EDI-06 | Fait : tâche quotidienne « apprentissage », résumé visible et modifiable sur la fiche du compte |
 | 13 | Export du planning, dictée des demandes | PLA-09, IDE-05 | Fait : export CSV et impression en PDF du trimestre ; bouton « Dicter » (reconnaissance vocale du navigateur, signalée comme telle) |
+| 14 | Rendez-vous récurrents à relayer | EDI-08 | Fait : événement qui se répète (semaine, mois, année), occurrences des 60 prochains jours relayées comme des événements |
 
 ## Critères de recette de l'incrément 1b
 
@@ -55,5 +56,5 @@ Périmètre et critères : cahier des charges v1.1, sections 5.4 à 5.7 et 11. C
 
 - **Quotas et plafonds d'usage IA** (GEN-11 « plafonné », FAC-04, RÈG-19, RÈG-20) : le coût est mesuré par espace et par compte, mais le plafond dépend des abonnements (lot 2).
 - **Synchronisation avec le Google Sheet** (PLA-06, S) : demande la connexion Google du client ; l'import CSV couvre la reprise.
-- **Rendez-vous récurrents** (EDI-08, S) et **document de semaine** (GEN-10, S) : à faire.
+- **Document de semaine** (GEN-10, S) : à faire.
 - **Création d'idée ou de demande par e-mail** (IDE-07, C), **journées mondiales suggérées** (PLA-10, C).

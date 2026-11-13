@@ -205,3 +205,33 @@ describe('isolation', () => {
     });
   });
 });
+
+describe('rendez-vous récurrents (EDI-08)', () => {
+  it('récurrence contrôlée ; un modèle passé reste listé ; le modifier recrée les occurrences à venir non relayées', async () => {
+    await expect(
+      saveEvent(db, people.editor, workspaceId, null, { title: 'x', startsOn: '2026-10-01', recurrence: 'daily' as 'weekly', accountIds: [] }, NOW),
+    ).rejects.toMatchObject({ code: 'recurrence_invalide' });
+    await expect(
+      saveEvent(db, people.editor, workspaceId, null, { title: 'x', startsOn: '2026-10-01', recurrence: 'monthly', recurrenceUntil: '2026-09-01', accountIds: [] }, NOW),
+    ).rejects.toMatchObject({ code: 'date_fin_invalide' });
+
+    const root = await saveEvent(db, people.editor, workspaceId, null, { title: 'Webinaire mensuel', startsOn: '2026-10-01', recurrence: 'monthly', accountIds: [jp] }, NOW);
+    const occurrence = async (date: string) =>
+      asSystem(db, (trx) => trx.insertInto('events').values({ workspace_id: workspaceId, title: 'Webinaire mensuel', starts_on: date, series_id: root }).returning('id').executeTakeFirstOrThrow());
+    const relayed = await occurrence('2026-12-01');
+    const notYet = await occurrence('2027-01-01');
+    await createPost(db, workspaceId, jp, { event_id: relayed.id, origin: 'event', scheduled_at: new Date('2026-11-27T11:00:00Z'), week_start: '2026-11-23' });
+
+    const listed = (await listEvents(db, people.viewer, workspaceId, W47)).events;
+    expect(listed.find((e) => e.id === root)).toMatchObject({ recurrence: 'monthly', seriesId: null });
+    expect(listed.find((e) => e.id === relayed.id)).toMatchObject({ seriesId: root, recurrence: 'none' });
+
+    await saveEvent(db, people.editor, workspaceId, root, { title: 'Webinaire du mois', startsOn: '2026-10-01', recurrence: 'monthly', accountIds: [jp, page] }, NOW);
+    const remaining = await asSystem(db, (trx) => trx.selectFrom('events').select('id').where('series_id', '=', root).execute());
+    expect(remaining.map((r) => r.id)).toEqual([relayed.id]);
+    expect(remaining.map((r) => r.id)).not.toContain(notYet.id);
+    // Une occurrence modifiée ne devient pas récurrente.
+    await saveEvent(db, people.editor, workspaceId, relayed.id, { title: 'Webinaire de décembre', startsOn: '2026-12-01', recurrence: 'monthly', accountIds: [jp] }, NOW);
+    expect((await listEvents(db, people.editor, workspaceId)).events.find((e) => e.id === relayed.id)?.recurrence).toBe('none');
+  });
+});

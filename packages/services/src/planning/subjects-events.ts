@@ -3,7 +3,7 @@
  *
  * Lecture : tous les membres de l'espace. Écriture : gestion du contenu (matrice 3.3).
  */
-import type { PostStatus, SubjectRow } from '@posts-auto/core';
+import { type PostStatus, RECURRENCES, type Recurrence, type SubjectRow } from '@posts-auto/core';
 import { type Database, type Tx, asUser } from '@posts-auto/db';
 import { canManageContent, workspaceRole } from '../access.ts';
 import { audit, cleanText } from '../audit.ts';
@@ -201,6 +201,10 @@ export interface PlannedEvent {
   readonly endsOn: string | null;
   readonly link: string | null;
   readonly details: string | null;
+  /** EDI-08 : récurrence de l'événement modèle ; ses occurrences ont un `seriesId`. */
+  readonly recurrence: Recurrence;
+  readonly recurrenceUntil: string | null;
+  readonly seriesId: string | null;
   readonly accountIds: readonly string[];
   /** Posts qui relaient l'événement. */
   readonly relays: readonly { readonly postId: string; readonly accountId: string; readonly status: PostStatus }[];
@@ -212,18 +216,24 @@ export interface EventInput {
   readonly endsOn?: string | null;
   readonly link?: string | null;
   readonly details?: string | null;
+  readonly recurrence?: Recurrence;
+  readonly recurrenceUntil?: string | null;
   readonly accountIds: readonly string[];
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const validDate = (value: string) => ISO_DATE.test(value) && !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()) && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
 
-/** `since` : n'affiche que les événements qui ne sont pas terminés à cette date. */
+/** `since` : n'affiche que les événements qui ne sont pas terminés à cette date (et les rendez-vous récurrents, toujours modifiables). */
 export async function listEvents(db: Database, userId: string, workspaceId: string, since?: string): Promise<{ events: PlannedEvent[]; canEdit: boolean }> {
   return asUser(db, userId, async (trx) => {
     const role = await requireRole(trx, userId, workspaceId);
-    let query = trx.selectFrom('events').select(['id', 'title', 'starts_on', 'ends_on', 'link', 'details']).where('workspace_id', '=', workspaceId).orderBy('starts_on');
-    if (since !== undefined) query = query.where((eb) => eb(eb.fn.coalesce('ends_on', 'starts_on'), '>=', since));
+    let query = trx
+      .selectFrom('events')
+      .select(['id', 'title', 'starts_on', 'ends_on', 'link', 'details', 'recurrence', 'recurrence_until', 'series_id'])
+      .where('workspace_id', '=', workspaceId)
+      .orderBy('starts_on');
+    if (since !== undefined) query = query.where((eb) => eb.or([eb(eb.fn.coalesce('ends_on', 'starts_on'), '>=', since), eb('recurrence', '<>', 'none')]));
     const events = await query.execute();
     const ids = events.map((e) => e.id);
     const links = ids.length === 0 ? [] : await trx.selectFrom('event_accounts').select(['event_id', 'account_id']).where('event_id', 'in', ids).execute();
@@ -237,6 +247,9 @@ export async function listEvents(db: Database, userId: string, workspaceId: stri
         endsOn: e.ends_on,
         link: e.link,
         details: e.details,
+        recurrence: e.recurrence as Recurrence,
+        recurrenceUntil: e.recurrence_until,
+        seriesId: e.series_id,
         accountIds: links.filter((l) => l.event_id === e.id).map((l) => l.account_id),
         relays: relays.filter((r) => r.event_id === e.id).map((r) => ({ postId: r.id, accountId: r.account_id, status: r.status })),
       })),
@@ -251,7 +264,11 @@ export async function saveEvent(db: Database, userId: string, workspaceId: strin
   const endsOn = input.endsOn === undefined || input.endsOn === null || input.endsOn === '' ? null : input.endsOn;
   if (endsOn !== null && (!validDate(endsOn) || endsOn < input.startsOn)) throw new RefusedError('date_fin_invalide', 'La fin doit être le même jour ou après le début.');
   const accountIds = [...new Set(input.accountIds)];
-  const values = { title, starts_on: input.startsOn, ends_on: endsOn, link: cleanText(input.link, 1000), details: cleanText(input.details, 4000) };
+  const recurrence = input.recurrence ?? 'none';
+  if (!RECURRENCES.includes(recurrence)) throw new RefusedError('recurrence_invalide', 'Récurrence inconnue.');
+  const until = recurrence === 'none' || !input.recurrenceUntil ? null : input.recurrenceUntil;
+  if (until !== null && (!validDate(until) || until < input.startsOn)) throw new RefusedError('date_fin_invalide', 'La fin de la récurrence doit être après le premier rendez-vous.');
+  const values = { title, starts_on: input.startsOn, ends_on: endsOn, link: cleanText(input.link, 1000), details: cleanText(input.details, 4000), recurrence, recurrence_until: until };
   return asUser(db, userId, async (trx) => {
     await requireEditor(trx, userId, workspaceId);
     await requireAccounts(trx, workspaceId, accountIds);
@@ -259,10 +276,20 @@ export async function saveEvent(db: Database, userId: string, workspaceId: strin
     if (eventId === null) {
       id = (await trx.insertInto('events').values({ workspace_id: workspaceId, created_by: userId, ...values }).returning('id').executeTakeFirstOrThrow()).id;
     } else {
-      const row = await trx.updateTable('events').set(values).where('id', '=', eventId).where('workspace_id', '=', workspaceId).returning('id').executeTakeFirst();
-      if (row === undefined) throw new NotFoundError('Événement');
-      id = row.id;
+      const existing = await trx.selectFrom('events').select('series_id').where('id', '=', eventId).where('workspace_id', '=', workspaceId).executeTakeFirst();
+      if (existing === undefined) throw new NotFoundError('Événement');
+      // Une occurrence d'une série n'est jamais elle-même récurrente.
+      const set = existing.series_id === null ? values : { ...values, recurrence: 'none', recurrence_until: null };
+      await trx.updateTable('events').set(set).where('id', '=', eventId).execute();
+      id = eventId;
       await trx.deleteFrom('event_accounts').where('event_id', '=', id).execute();
+      // EDI-08 : les occurrences à venir pas encore relayées sont recréées avec les nouveaux réglages.
+      await trx
+        .deleteFrom('events')
+        .where('series_id', '=', id)
+        .where('starts_on', '>', now.toISOString().slice(0, 10))
+        .where((eb) => eb.not(eb.exists(eb.selectFrom('posts').select('posts.id').whereRef('posts.event_id', '=', 'events.id'))))
+        .execute();
     }
     if (accountIds.length > 0) {
       await trx.insertInto('event_accounts').values(accountIds.map((accountId) => ({ event_id: id, account_id: accountId, workspace_id: workspaceId }))).execute();

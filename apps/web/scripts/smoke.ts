@@ -330,6 +330,10 @@ try {
   const savedEvent = await submitForm(`/planning/${workspaceId}/evenements`, alexis, '>Ajouter<', { titre: eventTitle, debut: nextWeek, comptes: jpRowKey.slice('compte:'.length) });
   const eventRow = await asSystem(db, (trx) => trx.selectFrom('events').select('id').where('title', '=', eventTitle).executeTakeFirst());
   check('événement enregistré avec le compte qui le relaie (PLA-04)', (savedEvent.headers.get('location') ?? '').includes('evenement-enregistre') && eventRow !== undefined, `HTTP ${savedEvent.status}`);
+  const monthlyTitle = `Webinaire mensuel de test ${Date.now()}`;
+  await submitForm(`/planning/${workspaceId}/evenements`, alexis, '>Ajouter<', { titre: monthlyTitle, debut: nextWeek, recurrence: 'monthly', comptes: jpRowKey.slice('compte:'.length) });
+  const monthly = await asSystem(db, (trx) => trx.selectFrom('events').select('recurrence').where('title', '=', monthlyTitle).executeTakeFirst());
+  check('rendez-vous récurrent enregistré (EDI-08)', monthly?.recurrence === 'monthly');
   const planningExport = await get(`/planning/${workspaceId}/export`, alexis);
   const exportedCsv = await planningExport.text();
   check(

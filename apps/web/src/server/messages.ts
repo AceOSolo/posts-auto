@@ -98,6 +98,7 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   'sujet-place': { tone: 'success', text: 'Sujet placé dans le planning.' },
   autre_compte: { tone: 'error', text: 'Ce sujet appartient à la banque d’un autre compte.' },
   compte_inconnu: { tone: 'error', text: 'Compte inconnu dans cet espace.' },
+  recurrence_invalide: { tone: 'error', text: 'Récurrence inconnue.' },
   'evenement-enregistre': { tone: 'success', text: 'Événement enregistré.' },
   'evenement-supprime': { tone: 'success', text: 'Événement supprimé.' },
   titre_requis: { tone: 'error', text: 'Donnez un titre.' },

@@ -13,6 +13,7 @@ export const metadata: Metadata = { title: 'Événements à relayer' };
 export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const REPEATS: Record<string, string> = { weekly: 'Chaque semaine', monthly: 'Chaque mois', yearly: 'Chaque année' };
 const longDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const day = (date: string) => longDate.format(new Date(`${date}T00:00:00Z`));
 
@@ -28,6 +29,23 @@ function EventFields({ event, accounts }: { event?: PlannedEvent; accounts: read
       <input id={`fin-${p}`} name="fin" type="date" defaultValue={event?.endsOn ?? ''} />
       <label htmlFor={`lien-${p}`}>Lien</label>
       <input id={`lien-${p}`} name="lien" type="url" maxLength={1000} defaultValue={event?.link ?? ''} />
+      {!event?.seriesId && (
+        <div className="inline-fields">
+          <div>
+            <label htmlFor={`recurrence-${p}`}>Se répète</label>
+            <select id={`recurrence-${p}`} name="recurrence" defaultValue={event?.recurrence ?? 'none'}>
+              <option value="none">Jamais</option>
+              <option value="weekly">Chaque semaine</option>
+              <option value="monthly">Chaque mois</option>
+              <option value="yearly">Chaque année</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor={`jusqua-${p}`}>Jusqu’au (facultatif)</label>
+            <input id={`jusqua-${p}`} name="jusqua" type="date" defaultValue={event?.recurrenceUntil ?? ''} />
+          </div>
+        </div>
+      )}
       <label htmlFor={`details-${p}`}>Détails utiles à la rédaction</label>
       <textarea id={`details-${p}`} name="details" rows={3} maxLength={4000} defaultValue={event?.details ?? ''} />
       <fieldset>
@@ -71,13 +89,19 @@ export default async function EventsPage({
       <h1>Événements à relayer</h1>
       <PlanningNav workspaceId={workspaceId} current="evenements" />
       <Flash code={message} />
-      <p className="hint">Chaque compte choisi publie un post sur l’événement dans les 3 semaines qui le précèdent, jamais après sa date.</p>
+      <p className="hint">
+        Chaque compte choisi publie un post sur l’événement dans les 3 semaines qui le précèdent, jamais après sa date. Un rendez-vous qui se répète
+        (webinaire mensuel, salon annuel, journée mondiale) est relayé à chaque occurrence.
+      </p>
 
       {events.length === 0 && <p className="muted">Aucun événement à venir.</p>}
       <ul className="cards">
         {events.map((event) => (
           <li key={event.id} className="card">
-            <h2>{event.title}</h2>
+            <h2>
+              {event.title} {event.recurrence !== 'none' && <span className="badge">{REPEATS[event.recurrence]}</span>}
+              {event.seriesId && <span className="badge">Rendez-vous récurrent</span>}
+            </h2>
             <p>
               {day(event.startsOn)}
               {event.endsOn && event.endsOn !== event.startsOn && ` au ${day(event.endsOn)}`}

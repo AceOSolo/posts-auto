@@ -178,6 +178,9 @@ export interface Events {
   ends_on: string | null;
   id: Generated<string>;
   link: string | null;
+  recurrence: Generated<string>;
+  recurrence_until: string | null;
+  series_id: string | null;
   starts_on: string;
   title: string;
   updated_at: Generated<Timestamp>;

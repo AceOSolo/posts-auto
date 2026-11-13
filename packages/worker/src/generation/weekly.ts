@@ -15,6 +15,7 @@ import { type Assignment, type Subject, allocateSubjects, isoWeekNumber, lastCro
 import { type Database, type Tx, asSystem, weekStartOf } from '@posts-auto/db';
 import { notify } from '../notifications/recipients.ts';
 import { type AccountData, type GenerationData, loadGenerationData, subjectKey } from './load.ts';
+import { materializeRecurringEvents } from './recurring-events.ts';
 import { accountContext, dayLabel, insertGeneratedPost, recordUsage, slotLabel } from './store.ts';
 
 export interface GenerationDeps {
@@ -236,6 +237,8 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
   const { db, model } = deps;
   const clock = deps.clock ?? (() => new Date());
   const now = clock();
+  // EDI-08 : occurrences à venir des rendez-vous récurrents, relayées comme des événements.
+  await materializeRecurringEvents(db, now, workspaceId);
   const data: GenerationData = await asSystem(db, (trx) => loadGenerationData(trx, workspaceId, now));
   const runId = await openRun(db, workspaceId, data.weeks, options.triggeredBy ?? null, model, PROMPT_VERSION, now);
   if (runId === null) return { workspaceId, runId: null, skipped: 'deja_en_cours', created: 0, replaced: 0, unplaced: 0, errors: 0 };

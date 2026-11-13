@@ -153,6 +153,8 @@ export async function saveEventAction(workspaceId: string, eventId: string | nul
         endsOn: text(form, 'fin'),
         link: text(form, 'lien'),
         details: text(form, 'details'),
+        recurrence: (['weekly', 'monthly', 'yearly'] as const).find((r) => r === text(form, 'recurrence')) ?? 'none',
+        recurrenceUntil: text(form, 'jusqua'),
         accountIds: form.getAll('comptes').map(String).filter((id) => UUID.test(id)),
       },
       now,
