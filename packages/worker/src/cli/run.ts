@@ -8,6 +8,7 @@
  * - Envoi des e-mails : toutes les minutes (Brevo si BREVO_API_KEY et MAIL_FROM, sinon console).
  * - Rédaction : toutes les 5 minutes, les espaces dont la rédaction est due (GEN-01, décision 0005).
  * - Demandes de post : toutes les 5 minutes, traitées dans l'heure (IDE-06).
+ * - Reprises : toutes les 5 minutes, posts « à modifier » ou « refusés » (GEN-07).
  *
  * Variables d'environnement :
  * - DATABASE_URL, MEDIA_ROOT, TOKEN_ENCRYPTION_KEYS, TOKEN_ENCRYPTION_KEY_ID ;
@@ -32,6 +33,7 @@ import {
 import { mailerFromEnv } from '@posts-auto/services';
 import { runTokenCheck } from '../accounts/token-check.ts';
 import { runRequestTick } from '../generation/requests.ts';
+import { runReworkTick } from '../generation/reworks.ts';
 import { runGenerationTick } from '../generation/weekly.ts';
 import { runEmailDispatch } from '../notifications/email-dispatch.ts';
 import { runValidationReminders } from '../notifications/reminders.ts';
@@ -73,6 +75,7 @@ const scheduler = startScheduler(
     { name: 'e-mails', intervalMs: 60_000, run: () => runEmailDispatch({ db, mailer, appUrl }) },
     { name: 'redaction', intervalMs: 5 * 60_000, run: () => runGenerationTick({ db, model, usdToEur }) },
     { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick({ db, model, usdToEur }) },
+    { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick({ db, model, usdToEur }) },
   ],
   { info: (event, details) => log('info', event, details), error: (event, details) => log('error', event, details) },
 );
