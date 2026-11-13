@@ -458,11 +458,14 @@ try {
   check('modèles en lecture seule pour une contributrice', !(await (await get(`/visuels/${workspaceId}`, claire)).text()).includes('Enregistrer la charte'));
 
   // ONB-05, VIS-05 : charte et budget d'images.
-  const savedBrand = await submitForm(`/visuels/${workspaceId}`, alexis, 'Enregistrer la charte', { principale: '#123456', accent: '#f0a500', claire: '#f5f7fa', sombre: '#1a1a1a', budget: '40' });
+  const savedBrand = await submitForm(`/visuels/${workspaceId}`, alexis, 'Enregistrer la charte', { principale: '#123456', accent: '#f0a500', claire: '#f5f7fa', sombre: '#1a1a1a', police: 'lora', budget: '40' });
   const brandRow = await asSystem(db, (trx) => trx.selectFrom('workspaces').select(['branding', 'image_budget_monthly']).where('id', '=', workspaceId).executeTakeFirstOrThrow());
   check(
-    'charte et budget d’images enregistrés (ONB-05, VIS-05)',
-    (savedBrand.headers.get('location') ?? '').includes('charte-enregistree') && (brandRow.branding as { primary?: string } | null)?.primary === '#123456' && brandRow.image_budget_monthly === 40,
+    'charte (couleurs, police des titres) et budget d’images enregistrés (ONB-05, VIS-02, VIS-05)',
+    (savedBrand.headers.get('location') ?? '').includes('charte-enregistree') &&
+      (brandRow.branding as { primary?: string; font?: string } | null)?.primary === '#123456' &&
+      (brandRow.branding as { font?: string } | null)?.font === 'lora' &&
+      brandRow.image_budget_monthly === 40,
     `HTTP ${savedBrand.status}`,
   );
 

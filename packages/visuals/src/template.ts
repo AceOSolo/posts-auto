@@ -10,6 +10,18 @@ export type TemplateFormat = 'square' | 'portrait';
 export type ZoneKind = 'title' | 'subtitle' | 'bullets' | 'photo' | 'logo' | 'signature';
 export type FontWeight = 400 | 600 | 700 | 800;
 
+/**
+ * Polices embarquées (licence OFL), au choix pour chaque zone de texte (VIS-02) : une
+ * linéale neutre (par défaut), une géométrique et une à empattements.
+ */
+export const FONTS = {
+  inter: { family: 'Inter', label: 'Inter (linéale, par défaut)', weights: [400, 600, 700, 800] },
+  montserrat: { family: 'Montserrat', label: 'Montserrat (géométrique)', weights: [400, 600, 700, 800] },
+  lora: { family: 'Lora', label: 'Lora (à empattements)', weights: [400, 600, 700] },
+} as const;
+export type FontKey = keyof typeof FONTS;
+export const FONT_KEYS = Object.keys(FONTS) as FontKey[];
+
 export const FORMAT_SIZES: Readonly<Record<TemplateFormat, { readonly width: number; readonly height: number }>> = {
   square: { width: 1080, height: 1080 },
   portrait: { width: 1080, height: 1350 },
@@ -27,6 +39,8 @@ export interface Box {
 
 export interface TextStyle {
   readonly color: string;
+  /** Police ; Inter si absente. */
+  readonly font?: FontKey;
   readonly weight: FontWeight;
   /** Taille de police essayée d'abord ; elle diminue jusqu'à `minSize` pour que le texte tienne. */
   readonly maxSize: number;
@@ -117,8 +131,12 @@ export function parseTemplate(raw: unknown): TemplateDefinition {
     if (TEXT_KINDS.has(kind as ZoneKind)) {
       const s = (z['style'] ?? {}) as Record<string, unknown>;
       const maxSize = num(s['maxSize'], `zones[${i}].style.maxSize`, 12, 200);
+      const font = s['font'] ?? 'inter';
+      if (!FONT_KEYS.includes(font as FontKey)) throw new TemplateError(`zones[${i}].style.font : ${FONT_KEYS.join(', ')}.`);
       const style: TextStyle = {
         color: color(s['color'], `zones[${i}].style.color`),
+        // Inter, police par défaut, n'est pas écrite : une définition garde une seule forme.
+        ...(font !== 'inter' && { font: font as FontKey }),
         weight: WEIGHTS.includes(s['weight'] as FontWeight) ? (s['weight'] as FontWeight) : 400,
         maxSize,
         minSize: num(s['minSize'] ?? Math.min(28, maxSize), `zones[${i}].style.minSize`, 12, maxSize),

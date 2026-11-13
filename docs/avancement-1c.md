@@ -10,7 +10,7 @@ Périmètre et critères : cahier des charges v1.1, section 5.6 (VIS-01 à VIS-1
 
 Il faut maintenant brancher Higgsfield avec une vraie clé : le connecteur est écrit d'après la documentation publique, mais n'a pas encore été essayé contre l'API réelle. Il faut aussi la charte, les photos et les modèles de Secutop.
 
-Les tests automatiques passent (706), ainsi que les 82 vérifications de fumée. La chaîne y est vérifiée de bout en bout avec un modèle et un générateur d'images simulés.
+Les tests automatiques passent (707), ainsi que les 82 vérifications de fumée. La chaîne y est vérifiée de bout en bout avec un modèle et un générateur d'images simulés.
 
 ## Étapes
 
@@ -25,6 +25,7 @@ Les tests automatiques passent (706), ainsi que les 82 vérifications de fumée.
 | 7 | Services : modèles, charte, budget, médiathèque, part des visuels avec photo par compte | VIS-01, VIS-02, VIS-04, VIS-05, VIS-08, ONB-05 | Fait |
 | 8 | Écrans : modèles, éditeur avec aperçu en direct, charte et budget, médiathèque | VIS-01, VIS-02, VIS-05, VIS-08 | Fait : pages « Visuels », « Modèle de visuel », « Médiathèque » ; réglage sur la fiche du compte |
 | 9 | Connecteur Higgsfield | VIS-05 | Écrit et testé avec une API simulée ; à essayer avec une vraie clé |
+| 10 | Polices de la charte | VIS-02 | Fait : Inter, Montserrat ou Lora pour chaque zone de texte ; police des titres dans la charte |
 
 ## Critère de recette de l'incrément 1c
 
@@ -42,8 +43,8 @@ Les tests automatiques passent (706), ainsi que les 82 vérifications de fumée.
    - vérifier les conditions d'utilisation : usage commercial des images, et sort des consignes envoyées.
 2. **Hébergement** : le serveur web et le worker chargent un module natif (`@napi-rs/canvas`). Il est fourni précompilé pour Linux x64 (glibc et musl) ; à confirmer sur l'hébergeur retenu.
 3. **Secutop — charte et modèles** (page « Visuels ») :
-   - saisir les couleurs et le logo ;
-   - remettre les modèles de départ aux couleurs de la charte ;
+   - saisir les couleurs, la police des titres et le logo ;
+   - remettre les modèles de départ à la charte ;
    - adapter ou copier les modèles pour retrouver la mise en page des visuels Canva actuels ;
    - fixer le budget mensuel d'images (30 par défaut).
 4. **Secutop — médiathèque** : déposer les vraies photos (chantiers, équipes, locaux, formations), avec un nom, un dossier et des mots-clés précis. C'est ce qui permet à l'IA de les choisir.
@@ -52,7 +53,7 @@ Les tests automatiques passent (706), ainsi que les 82 vérifications de fumée.
 
 ## Hors de l'incrément ou reporté
 
-- **Polices de la charte** (VIS-02) : seule la police Inter, embarquée, est proposée. D'autres polices libres pourront être ajoutées au paquet.
+- **Autres polices** : trois polices libres sont embarquées (Inter, Montserrat, Lora). Une police propre au client s'ajoute au paquet si sa licence le permet.
 - **Défauts d'une image générée** (VIS-11 : mains, visages, texte parasite) : à contrôler par un modèle de vision, avec une seconde génération si besoin. Le texte qui déborde, le contraste et les zones vides sont contrôlés à chaque rendu.
 - **Extraction de la charte depuis le site web** (ONB-05, S).
 - **Connecteur Canva** (VIS-07, S) : à faire seulement si Secutop en a besoin pour son pilote. Les modèles intégrés et l'éditeur couvrent le besoin de départ.

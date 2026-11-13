@@ -5,7 +5,7 @@ const config: NextConfig = {
   transpilePackages: ['@posts-auto/ai', '@posts-auto/core', '@posts-auto/db', '@posts-auto/services', '@posts-auto/worker', '@posts-auto/linkedin', '@posts-auto/visuals'],
   // Pilote PostgreSQL et moteur de rendu des visuels (module natif) : chargés tels quels
   // côté serveur, jamais empaquetés.
-  serverExternalPackages: ['pg', '@napi-rs/canvas', '@fontsource/inter'],
+  serverExternalPackages: ['pg', '@napi-rs/canvas', '@fontsource/inter', '@fontsource/montserrat', '@fontsource/lora'],
   poweredByHeader: false,
   // Ajout de photos depuis le téléphone (REC-11) : plusieurs images de 10 Mo au plus chacune.
   experimental: { serverActions: { bodySizeLimit: '25mb' } },

@@ -13,6 +13,7 @@ import {
   setTemplateArchived,
   updateLibraryPhoto,
 } from '@posts-auto/services';
+import type { FontKey } from '@posts-auto/visuals';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { database, mediaStore } from '../../../server/context.ts';
@@ -94,6 +95,7 @@ export async function saveBrandingAction(workspaceId: string, form: FormData): P
         secondary: text(form, 'accent'),
         light: text(form, 'claire'),
         dark: text(form, 'sombre'),
+        ...(text(form, 'police') !== '' && { font: text(form, 'police') as FontKey }),
         ...(logo !== undefined ? { logo: { bytes: new Uint8Array(await logo.arrayBuffer()), mime: logo.type } } : form.get('retirer-logo') === 'on' ? { logo: null } : {}),
         ...(budget !== '' && { imageBudgetMonthly: Number(budget) }),
       },

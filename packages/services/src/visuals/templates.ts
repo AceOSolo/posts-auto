@@ -9,7 +9,7 @@
 import { randomUUID } from 'node:crypto';
 import { DEFAULT_WORKSPACE_CALENDAR, startOfLocalMonth } from '@posts-auto/core';
 import { type Database, type Tx, asUser } from '@posts-auto/db';
-import { type TemplateDefinition, TemplateError, galleryTemplates, hasZone, parseTemplate } from '@posts-auto/visuals';
+import { FONT_KEYS, type FontKey, type TemplateDefinition, TemplateError, galleryTemplates, hasZone, parseTemplate } from '@posts-auto/visuals';
 import { sql } from 'kysely';
 import { type WorkspaceRole, canManageContent, workspaceRole } from '../access.ts';
 import { audit, cleanText } from '../audit.ts';
@@ -229,6 +229,8 @@ export interface BrandingInput {
   readonly secondary: string;
   readonly light: string;
   readonly dark: string;
+  /** Police des titres (VIS-02) ; absente : garder l'actuelle. */
+  readonly font?: FontKey;
   /** Nouveau logo ; null : retirer le logo ; absent : garder l'actuel. */
   readonly logo?: { readonly bytes: Uint8Array; readonly mime?: string } | null;
   /** Images générées par mois (propriétaire et admins seulement). */
@@ -240,6 +242,7 @@ export async function saveBranding(db: Database, media: MediaWriter, userId: str
   for (const key of ['primary', 'secondary', 'light', 'dark'] as const) {
     if (!COLOR.test(input[key])) throw new RefusedError('couleur_invalide', 'Couleur invalide : format #rrggbb.');
   }
+  if (input.font !== undefined && !FONT_KEYS.includes(input.font)) throw new RefusedError('police_inconnue', 'Police inconnue.');
   const budget = input.imageBudgetMonthly;
   if (budget !== undefined && (!Number.isInteger(budget) || budget < 0 || budget > 1000)) throw new RefusedError('budget_invalide', 'Budget d’images : un nombre entre 0 et 1000.');
   let logo: { bytes: Uint8Array; mime: ImageMime } | null | undefined = input.logo === undefined ? undefined : null;
@@ -264,7 +267,14 @@ export async function saveBranding(db: Database, media: MediaWriter, userId: str
         .values({ id: logoAssetId, workspace_id: workspaceId, kind: 'upload', storage_key: storageKey, mime: logo.mime, bytes: logo.bytes.length, label: 'Logo', uploaded_by: userId, created_at: now })
         .execute();
     }
-    const branding = { primary: input.primary.toLowerCase(), secondary: input.secondary.toLowerCase(), light: input.light.toLowerCase(), dark: input.dark.toLowerCase(), logoAssetId };
+    const branding = {
+      primary: input.primary.toLowerCase(),
+      secondary: input.secondary.toLowerCase(),
+      light: input.light.toLowerCase(),
+      dark: input.dark.toLowerCase(),
+      font: input.font ?? current.font,
+      logoAssetId,
+    };
     await trx
       .updateTable('workspaces')
       .set({ branding: JSON.stringify(branding), ...(budget !== undefined && { image_budget_monthly: budget }) })

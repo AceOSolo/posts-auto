@@ -1,4 +1,5 @@
 import { NotFoundError, getTemplateLibrary } from '@posts-auto/services';
+import { FONTS } from '@posts-auto/visuals';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -113,6 +114,16 @@ export default async function VisualsPage({
                 </label>
               ))}
             </div>
+            <label htmlFor="police" className="field">
+              Police des titres (les autres textes restent en Inter)
+              <select id="police" name="police" defaultValue={branding.font}>
+                {Object.entries(FONTS).map(([key, font]) => (
+                  <option key={key} value={key}>
+                    {font.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <fieldset>
               <legend>Logo</legend>
               {branding.logoAssetId !== null && (
@@ -148,8 +159,11 @@ export default async function VisualsPage({
         )}
         {canManage && (
           <form action={recolorAction.bind(null, workspaceId)}>
-            <p className="hint">Les modèles de départ gardent les couleurs qu’ils avaient à leur création. Vous pouvez les remettre aux couleurs actuelles de la charte : leurs modifications seront perdues.</p>
-            <button type="submit">Remettre les modèles de départ aux couleurs de la charte</button>
+            <p className="hint">
+              Les modèles de départ gardent les couleurs et la police qu’ils avaient à leur création. Vous pouvez les remettre à la charte actuelle : leurs modifications seront
+              perdues.
+            </p>
+            <button type="submit">Remettre les modèles de départ à la charte</button>
           </form>
         )}
       </section>

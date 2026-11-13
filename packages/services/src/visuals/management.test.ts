@@ -87,17 +87,21 @@ describe('bibliothèque de modèles (VIS-01, VIS-02)', () => {
 
 describe('charte et budget d’images (ONB-05, VIS-05)', () => {
   it('les couleurs et le logo de la charte ; les modèles de départ reprennent les couleurs à la demande', async () => {
-    await saveBranding(db, media, people.editor, workspaceId, { ...BRAND, primary: '#AA0000', logo: { bytes: await png('logo') } }, NOW);
+    await saveBranding(db, media, people.editor, workspaceId, { ...BRAND, primary: '#AA0000', font: 'montserrat', logo: { bytes: await png('logo') } }, NOW);
     const library = await getTemplateLibrary(db, people.editor, workspaceId, NOW);
-    expect(library.branding).toMatchObject({ primary: '#aa0000', logoAssetId: expect.any(String) });
+    expect(library.branding).toMatchObject({ primary: '#aa0000', font: 'montserrat', logoAssetId: expect.any(String) });
     expect(stored.has(`${workspaceId}/charte/${library.branding.logoAssetId}.png`)).toBe(true);
 
     expect(await recolorGalleryTemplates(db, people.editor, workspaceId, NOW)).toBe(4);
     const recolored = await getTemplate(db, people.editor, library.templates.find((t) => t.galleryKey === 'titre-points')?.id as string);
     expect(recolored.definition.background).toBe('#aa0000');
+    expect(recolored.definition.zones.find((z) => z.kind === 'title')?.style?.font).toBe('montserrat');
 
     await saveBranding(db, media, people.editor, workspaceId, { ...BRAND, logo: null }, NOW);
-    expect((await getTemplateLibrary(db, people.editor, workspaceId, NOW)).branding.logoAssetId).toBeNull();
+    const after = (await getTemplateLibrary(db, people.editor, workspaceId, NOW)).branding;
+    // Logo retiré ; la police, absente du formulaire, est gardée.
+    expect(after).toMatchObject({ logoAssetId: null, font: 'montserrat' });
+    await expect(saveBranding(db, media, people.editor, workspaceId, { ...BRAND, font: 'comic' as never }, NOW)).rejects.toMatchObject({ code: 'police_inconnue' });
   });
 
   it('refuse une couleur invalide ; seuls le propriétaire et les admins fixent le budget', async () => {

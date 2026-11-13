@@ -1,5 +1,5 @@
 import { NotFoundError, findMediaForUser, getTemplate } from '@posts-auto/services';
-import { FORMAT_SIZES, type Zone, renderTemplate, sampleContent } from '@posts-auto/visuals';
+import { FONTS, FORMAT_SIZES, type Zone, renderTemplate, sampleContent } from '@posts-auto/visuals';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -56,6 +56,16 @@ function ZoneFields({ zone, index, width, height }: { zone: Zone; index: number;
             <label htmlFor={id('couleur')} className="field">
               Couleur
               <input id={id('couleur')} name={`${p}couleur`} type="color" list="couleurs-charte" defaultValue={style.color} />
+            </label>
+            <label htmlFor={id('police')} className="field">
+              Police
+              <select id={id('police')} name={`${p}police`} defaultValue={style.font ?? 'inter'}>
+                {Object.entries(FONTS).map(([key, font]) => (
+                  <option key={key} value={key}>
+                    {font.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label htmlFor={id('graisse')} className="field">
               Graisse

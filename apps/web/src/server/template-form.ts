@@ -49,6 +49,7 @@ export function definitionFromForm(form: FormData): Record<string, unknown> {
     if (TEXT_ZONES.includes(kind)) {
       zone['style'] = {
         color: text(form, `${p}couleur`),
+        ...(text(form, `${p}police`) !== '' && { font: text(form, `${p}police`) }),
         weight: num(form, `${p}graisse`),
         maxSize: num(form, `${p}taille-max`),
         minSize: num(form, `${p}taille-min`),

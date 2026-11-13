@@ -7,9 +7,8 @@
  */
 import { type Image, GlobalFonts, type SKRSContext2D, createCanvas, loadImage } from '@napi-rs/canvas';
 import { contrastRatio } from './contrast.ts';
-import { FORMAT_SIZES, type FontWeight, IMAGE_KINDS, type TemplateContent, type TemplateDefinition, type TextStyle, type Zone } from './template.ts';
+import { FONTS, FORMAT_SIZES, IMAGE_KINDS, type TemplateContent, type TemplateDefinition, type TextStyle, type Zone } from './template.ts';
 
-const FONT = 'Inter';
 let fontsReady = false;
 
 /**
@@ -23,12 +22,17 @@ function registerFonts(): void {
   if (fontsReady) return;
   const { createRequire } = process.getBuiltinModule('node:module');
   const resolve = createRequire(import.meta.url).resolve;
-  for (const weight of [400, 600, 700, 800] as FontWeight[]) {
-    const file = resolve(['@fontsource', 'inter', 'files', `inter-latin-${weight}-normal.woff2`].join('/'));
-    GlobalFonts.registerFromPath(file, FONT);
+  for (const [key, font] of Object.entries(FONTS)) {
+    for (const weight of font.weights) {
+      const file = resolve(['@fontsource', key, 'files', `${key}-latin-${weight}-normal.woff2`].join('/'));
+      GlobalFonts.registerFromPath(file, font.family);
+    }
   }
   fontsReady = true;
 }
+
+/** Police CSS d'une zone ; la graisse absente d'une police est remplacée par la plus proche. */
+const fontOf = (style: TextStyle, size: number) => `${style.weight} ${size}px ${FONTS[style.font ?? 'inter'].family}`;
 
 export type RenderIssueCode = 'text_truncated' | 'low_contrast' | 'empty_zone';
 
@@ -124,14 +128,14 @@ interface Layout {
 /** Plus grande taille de police pour laquelle tous les blocs (titre, ou points d'une liste) tiennent. */
 function layout(ctx: SKRSContext2D, blocks: readonly string[], style: TextStyle, width: number, height: number, bulletIndent: number): Layout {
   for (let size = style.maxSize; size >= style.minSize; size -= 2) {
-    ctx.font = `${style.weight} ${size}px ${FONT}`;
+    ctx.font = fontOf(style, size);
     const wrapped = blocks.map((b) => wrap(ctx, style.uppercase ? b.toUpperCase() : b, width - bulletIndent * size));
     const lines = wrapped.reduce((n, w) => n + w.length, 0);
     const gaps = Math.max(0, wrapped.length - 1) * size * 0.5;
     if (lines * size * style.lineHeight + gaps <= height) return { size, blocks: wrapped, fits: true };
   }
   const size = style.minSize;
-  ctx.font = `${style.weight} ${size}px ${FONT}`;
+  ctx.font = fontOf(style, size);
   return { size, blocks: blocks.map((b) => wrap(ctx, style.uppercase ? b.toUpperCase() : b, width - bulletIndent * size)), fits: false };
 }
 
@@ -225,7 +229,7 @@ export async function renderTemplate(definition: TemplateDefinition, content: Te
     const bullet = zone.kind === 'bullets';
     const result = layout(ctx, blocks, style, w - 2 * pad, h - 2 * pad, bullet ? 1.1 : 0);
     if (!result.fits) issues.push({ code: 'text_truncated', zone: zone.key, message: `Texte trop long pour la zone « ${zone.key} » : coupé.` });
-    ctx.font = `${style.weight} ${result.size}px ${FONT}`;
+    ctx.font = fontOf(style, result.size);
     ctx.fillStyle = style.color;
     ctx.textBaseline = 'top';
     const size = result.size;

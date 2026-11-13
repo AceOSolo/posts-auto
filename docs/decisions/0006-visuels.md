@@ -16,7 +16,7 @@ Deux risques dominent : un visuel illisible sur téléphone, ou présenté comme
 
 ## Décisions
 
-1. **Rendu par une bibliothèque de dessin, pas par un navigateur.** Le cahier évoquait un navigateur sans tête (Playwright) ou Satori. Le rendu passe par `@napi-rs/canvas` (Skia), avec la police Inter embarquée (licence OFL) :
+1. **Rendu par une bibliothèque de dessin, pas par un navigateur.** Le cahier évoquait un navigateur sans tête (Playwright) ou Satori. Le rendu passe par `@napi-rs/canvas` (Skia), avec trois polices embarquées (licence OFL) au choix pour chaque zone de texte. Inter, linéale, est celle par défaut. Montserrat (géométrique) et Lora (à empattements) servent de police des titres de la charte. Ce choix apporte :
    - un seul module natif, sans navigateur à installer ni à maintenir sur le serveur ;
    - un rendu identique au pixel près entre le poste de développement, l'intégration continue et la production ;
    - le texte mesuré exactement : le moteur cherche la plus grande taille qui tient dans la zone, sans descendre sous la taille minimale ; au-delà, le texte est coupé avec « … » et le problème est signalé.
@@ -61,4 +61,5 @@ Deux risques dominent : un visuel illisible sur téléphone, ou présenté comme
 - Le serveur web et le worker chargent un module natif (`@napi-rs/canvas`). Next.js le charge tel quel, sans l'empaqueter. Les fichiers de la police sont résolus à l'exécution, par Node.
 - Les visuels texte et le choix du modèle ne coûtent qu'un appel court à l'IA (effort faible). Une image générée coûte le prix du fournisseur, dans la limite du budget.
 - Un modèle de départ modifié garde ses modifications quand la charte change. La remise aux couleurs de la charte est une action explicite, qui les écrase.
-- Reporté : polices autres qu'Inter (VIS-02 « polices de la charte »), contrôle des défauts d'une image générée par un modèle de vision (VIS-11 : mains, visages, texte parasite), connecteur Canva (VIS-07), personnages de marque (VIS-06), carrousel PDF (VIS-10).
+- Une police de la charte qui n'est pas parmi les trois polices embarquées s'ajoute au paquet, si sa licence le permet. Les polices du client ne sont pas téléversées.
+- Reporté : contrôle des défauts d'une image générée par un modèle de vision (VIS-11 : mains, visages, texte parasite), connecteur Canva (VIS-07), personnages de marque (VIS-06), carrousel PDF (VIS-10).

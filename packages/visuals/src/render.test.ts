@@ -42,10 +42,17 @@ describe('modèles de départ', () => {
   });
 
   it('prennent les couleurs de l’espace ; une couleur invalide garde la valeur par défaut', () => {
-    const brand = parseBrand({ primary: '#AA0000', secondary: 'rouge', light: 12 });
+    const brand = parseBrand({ primary: '#AA0000', secondary: 'rouge', light: 12, font: 'comic' });
     expect(brand).toEqual({ ...DEFAULT_BRAND, primary: '#aa0000' });
     expect(parseBrand(null)).toEqual(DEFAULT_BRAND);
     expect(galleryTemplates(brand).find((t) => t.key === 'titre-points')?.definition.background).toBe('#aa0000');
+    // Police des titres de la charte : les titres seulement, et toujours une définition valide.
+    const serif = galleryTemplates(parseBrand({ font: 'lora' }));
+    for (const t of serif) {
+      expect(t.definition.zones.filter((z) => z.kind === 'title').every((z) => z.style?.font === 'lora'), t.key).toBe(true);
+      expect(t.definition.zones.filter((z) => z.kind !== 'title').every((z) => z.style?.font === undefined), t.key).toBe(true);
+      expect(parseTemplate(JSON.parse(JSON.stringify(t.definition)))).toEqual(t.definition);
+    }
   });
 
   it('se rendent sans problème avec un contenu complet', async () => {
@@ -197,6 +204,22 @@ describe('rendu', () => {
   it('applique les espaces insécables du français', () => {
     expect(frenchSpacing('Évaluer les risques : 5 erreurs à éviter')).toBe('Évaluer les risques : 5 erreurs à éviter');
     expect(frenchSpacing('« Prévenir » ou guérir ? 30 % des cas')).toBe('« Prévenir » ou guérir ? 30 % des cas');
+  });
+
+  it('rend chaque zone dans sa police (VIS-02)', async () => {
+    const withFont = (font?: string) =>
+      parseTemplate({
+        format: 'square',
+        background: '#ffffff',
+        zones: [{ key: 'titre', kind: 'title', box: { x: 50, y: 50, w: 980, h: 400 }, style: { color: '#000000', maxSize: 80, weight: 800, ...(font && { font }) } }],
+      });
+    const [inter, montserrat, lora] = await Promise.all([undefined, 'montserrat', 'lora'].map(async (font) => Buffer.from((await renderTemplate(withFont(font), { title: 'Prévention des risques' })).png)));
+    expect(inter?.equals(montserrat as Buffer)).toBe(false);
+    expect(montserrat?.equals(lora as Buffer)).toBe(false);
+    expect(withFont('lora').zones[0]?.style?.font).toBe('lora');
+    // Inter, par défaut, n'est pas écrite.
+    expect(withFont('inter').zones[0]?.style).not.toHaveProperty('font');
+    expect(() => withFont('comic')).toThrow(/style\.font/);
   });
 
   it('donne le même PNG pour le même contenu', async () => {
