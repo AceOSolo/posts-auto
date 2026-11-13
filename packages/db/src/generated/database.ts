@@ -194,9 +194,12 @@ export interface Posts {
   last_error: string | null;
   motif: string | null;
   must_publish_by: Timestamp | null;
+  next_publish_attempt_at: Timestamp | null;
   origin: string;
   original_scheduled_at: Timestamp | null;
   planning_cell_id: string | null;
+  publish_lease_until: Timestamp | null;
+  publish_retries_left: Generated<number>;
   published_at: Timestamp | null;
   replaces_post_id: string | null;
   request_id: string | null;
@@ -243,6 +246,7 @@ export interface PublishAttempts {
   http_status: number | null;
   id: Generated<Int8>;
   idempotency_key: string;
+  outcome: string | null;
   post_id: string;
   started_at: Generated<Timestamp>;
   workspace_id: string;

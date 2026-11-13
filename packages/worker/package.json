@@ -1,0 +1,19 @@
+{
+  "name": "@posts-auto/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tâches de fond : file de publication, chiffrement des jetons, stockage des médias.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@posts-auto/core": "*",
+    "@posts-auto/db": "*",
+    "@posts-auto/linkedin": "*",
+    "kysely": "^0.29.9"
+  }
+}

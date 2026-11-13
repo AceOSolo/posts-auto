@@ -1,0 +1,13 @@
+{
+  "name": "@posts-auto/linkedin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Client de l'API LinkedIn (publication de posts et d'images), classification des erreurs, faux client pour les tests.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

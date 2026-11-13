@@ -14,6 +14,8 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 | --- | --- |
 | `packages/core` | Règles métier pures : cycle de vie d'un post, marqueurs bloquants, calendrier de l'espace (fuseau, plages, jours fériés), occupation des créneaux, replanification. Sans base de données ni réseau. |
 | `packages/db` | Base PostgreSQL : migrations SQL, cloisonnement des clients par la base (RLS), accès typé avec Kysely, contextes `asUser` / `asSystem`. |
+| `packages/linkedin` | Client de l'API LinkedIn (posts, images, format « little »), classification des pannes (post créé ou non), faux LinkedIn pour les tests. |
+| `packages/worker` | Tâches de fond : file de publication (unicité, nouvelles tentatives, issues incertaines), chiffrement des jetons, stockage des médias. |
 
 ## Démarrer
 

@@ -11,11 +11,24 @@ export default defineConfig({
         test: { name: 'core', include: ['packages/core/src/**/*.test.ts'], env },
       },
       {
+        test: { name: 'linkedin', include: ['packages/linkedin/src/**/*.test.ts'], env },
+      },
+      {
         test: {
           name: 'db',
           include: ['packages/db/src/**/*.test.ts'],
           env,
           // Base PostgreSQL jetable : nécessite `docker compose up -d --wait`.
+          globalSetup: ['packages/db/src/testing/global-setup.ts'],
+          testTimeout: 20_000,
+          hookTimeout: 60_000,
+        },
+      },
+      {
+        test: {
+          name: 'worker',
+          include: ['packages/worker/src/**/*.test.ts'],
+          env,
           globalSetup: ['packages/db/src/testing/global-setup.ts'],
           testTimeout: 20_000,
           hookTimeout: 60_000,
