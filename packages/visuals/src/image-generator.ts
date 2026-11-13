@@ -21,6 +21,8 @@ export interface GeneratedImage {
   readonly model: string;
   /** Consigne réellement envoyée (gardée avec l'image : media_assets.prompt). */
   readonly prompt: string;
+  /** Coût de l'image, s'il est connu (GEN-11). */
+  readonly costUsd?: number;
 }
 
 export interface ImageGenerator {

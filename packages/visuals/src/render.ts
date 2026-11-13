@@ -168,6 +168,12 @@ function drawImage(ctx: SKRSContext2D, image: Image, zone: Zone): void {
   ctx.restore();
 }
 
+/** Dimensions réelles d'une image (PNG, JPEG, GIF) ; lève une erreur si elle est illisible. */
+export async function imageSize(bytes: Uint8Array): Promise<{ readonly width: number; readonly height: number }> {
+  const image = await loadImage(Buffer.from(bytes));
+  return { width: image.width, height: image.height };
+}
+
 export async function renderTemplate(definition: TemplateDefinition, content: TemplateContent): Promise<RenderResult> {
   registerFonts();
   const { width, height } = FORMAT_SIZES[definition.format];

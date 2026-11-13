@@ -63,6 +63,11 @@ export function localDate(instant: Date, calendar: WorkspaceCalendar): string {
   return toLocal(instant, calendar).toISODate() ?? '';
 }
 
+/** Début du mois civil (1er à minuit, heure locale) qui contient l'instant, dans le fuseau de l'espace. */
+export function startOfLocalMonth(instant: Date, calendar: WorkspaceCalendar): Date {
+  return toLocal(instant, calendar).startOf('month').toJSDate();
+}
+
 /**
  * Instant correspondant à une heure locale donnée un jour donné, ou `null` si cette
  * heure n'existe pas ce jour-là (passage à l'heure d'été : 2h30 n'existe pas).

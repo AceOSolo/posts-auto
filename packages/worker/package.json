@@ -17,6 +17,7 @@
     "@posts-auto/db": "*",
     "@posts-auto/linkedin": "*",
     "@posts-auto/services": "*",
+    "@posts-auto/visuals": "*",
     "fast-xml-parser": "^5.12.1",
     "kysely": "^0.29.9",
     "undici": "^8.12.4",

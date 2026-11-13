@@ -15,6 +15,7 @@
     "@posts-auto/core": "*",
     "@posts-auto/db": "*",
     "@posts-auto/linkedin": "*",
+    "@posts-auto/visuals": "*",
     "kysely": "^0.29.9",
     "zod": "^4.6.7"
   }
