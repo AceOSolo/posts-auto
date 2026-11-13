@@ -14,7 +14,7 @@ import { FileMediaStore } from '@posts-auto/worker';
 
 const ORG_NAME = 'Démo Secutop';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
-const media = new FileMediaStore(process.env['MEDIA_ROOT'] ?? path.resolve(import.meta.dirname, '../.media'));
+const media = new FileMediaStore(process.env['MEDIA_ROOT'] ?? path.resolve(import.meta.dirname, '../../../.media'));
 
 /** Image PNG unie (couleur RVB), sans dépendance. */
 function solidPng(width: number, height: number, [r, g, b]: [number, number, number]): Uint8Array {

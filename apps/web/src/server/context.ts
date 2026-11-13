@@ -2,6 +2,7 @@
  * Ressources partagées du serveur web : base, médias, e-mails. Une seule instance par
  * processus, conservée à travers les rechargements à chaud du mode développement.
  */
+import path from 'node:path';
 import { DEFAULT_DATABASE_URL, type Database, createDatabase } from '@posts-auto/db';
 import { FileMediaStore, type MediaStore } from '@posts-auto/worker';
 import { ConsoleMailer, type Mailer } from './mailer.ts';
@@ -20,7 +21,8 @@ export function database(): Database {
 }
 
 export function mediaStore(): MediaStore {
-  resources.media ??= new FileMediaStore(process.env['MEDIA_ROOT'] ?? '.media');
+  // En développement, dossier « .media » à la racine du dépôt, partagé avec les tâches de fond.
+  resources.media ??= new FileMediaStore(process.env['MEDIA_ROOT'] ?? path.resolve(process.cwd(), '../../.media'));
   return resources.media;
 }
 
