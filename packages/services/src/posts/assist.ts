@@ -24,6 +24,7 @@ import { type Database, type Tx, asSystem, asUser } from '@posts-auto/db';
 import { sql } from 'kysely';
 import { z } from 'zod';
 import { canEditPost, loadAccess } from '../access.ts';
+import { audit } from '../audit.ts';
 import { accountProfileForSystem, referencePostsOf } from '../editorial/account-profiles.ts';
 import { currentEditorialLine, offerItems } from '../editorial/editorial-line.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
@@ -54,6 +55,24 @@ async function loadEditable(db: Database, userId: string, postId: string): Promi
     if (!canEditPost(await loadAccess(trx, userId, post.workspace_id, post.account_id))) throw new ForbiddenError('assist');
     if (post.status !== 'a_valider') throw new RefusedError('not_editable', 'Les retouches par l’IA se font sur un post à valider.');
     return post;
+  });
+}
+
+/** Au plus 30 retouches par personne et par heure : chacune coûte des appels à l'IA. */
+export const ASSIST_MAX_PER_HOUR = 30;
+
+/** Compte la retouche demandée (journal d'audit) ; refuse au-delà de la limite horaire. */
+async function consumeAssistBudget(db: Database, userId: string, post: EditablePost, kind: string, now: Date): Promise<void> {
+  await asUser(db, userId, async (trx) => {
+    const recent = await trx
+      .selectFrom('audit_log')
+      .select((eb) => eb.fn.countAll<string>().as('n'))
+      .where('actor_user_id', '=', userId)
+      .where('action', '=', 'post.retouche_ia')
+      .where('at', '>', new Date(now.getTime() - 3_600_000))
+      .executeTakeFirstOrThrow();
+    if (Number(recent.n) >= ASSIST_MAX_PER_HOUR) throw new RefusedError('trop_de_retouches', 'Trop de retouches demandées : réessayez dans une heure.');
+    await audit(trx, { workspaceId: post.workspace_id, actorUserId: userId, action: 'post.retouche_ia', entity: 'post', entityId: post.id, details: { kind }, at: now });
   });
 }
 
@@ -121,6 +140,7 @@ export async function assistPost(
 ): Promise<{ remaining: readonly string[] }> {
   if (!ASSIST_KINDS.includes(kind)) throw new RefusedError('retouche_inconnue', 'Retouche inconnue.');
   const post = await loadEditable(db, userId, postId);
+  await consumeAssistBudget(db, userId, post, kind, now);
   const { context, editorial } = await asSystem(db, (trx) => contextFor(trx, post.workspace_id, post.account_id));
   const others = await asSystem(db, (trx) =>
     trx
@@ -175,6 +195,7 @@ export async function assistPost(
 /** Trois accroches proposées ; elles restent disponibles une heure sur la page du post. */
 export async function proposeHooks(db: Database, model: TextModel, userId: string, postId: string, now: Date, usdToEur = 0.86): Promise<readonly string[]> {
   const post = await loadEditable(db, userId, postId);
+  await consumeAssistBudget(db, userId, post, 'accroches', now);
   const { context } = await asSystem(db, (trx) => contextFor(trx, post.workspace_id, post.account_id));
   const result = await model.call({ purpose: 'rework', system: WRITER_SYSTEM, context, task: renderHooksTask(post.body), schema: HooksSchema, maxTokens: 4000 });
   const hooks = result.value.hooks

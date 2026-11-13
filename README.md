@@ -8,18 +8,20 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 - [Revue du cadrage](./docs/cadrage/01-revue-cdc-v1.md) : règles LinkedIn vérifiées, contradictions corrigées, décisions.
 - [Décisions techniques](./docs/decisions/) : un fichier par décision.
 - [Avancement de l'incrément 1a](./docs/avancement-1a.md) : critères de recette, preuves, ce qui reste à brancher.
-- [API d'échange](./docs/api-echange.md) : comment la tâche Claude actuelle dépose ses posts et lit les décisions (incrément 1a).
+- [Avancement de l'incrément 1b](./docs/avancement-1b.md) : planning, rédaction par l'IA, reprises ; ce qui reste à brancher.
+- [API d'échange](./docs/api-echange.md) : comment la tâche Claude actuelle dépose ses posts et lit les décisions (incrément 1a), et comment reprendre ses idées et ses demandes (incrément 1b).
 
 ## Structure
 
 | Dossier | Contenu |
 | --- | --- |
-| `packages/core` | Règles métier pures : cycle de vie d'un post, marqueurs bloquants, phrase de départ, calendrier de l'espace (fuseau, plages, jours fériés), créneaux, replanification. Sans base de données ni réseau. |
+| `packages/core` | Règles métier pures : cycle de vie d'un post, marqueurs bloquants, phrase de départ, calendrier de l'espace (fuseau, plages, jours fériés), créneaux, replanification, règles de rédaction mesurables, affectation des sujets aux créneaux, lecture des CSV du planning. Sans base de données ni réseau. |
 | `packages/db` | Base PostgreSQL : migrations SQL, cloisonnement des clients par la base (RLS), accès typé avec Kysely, contextes `asUser` / `asSystem`. |
+| `packages/ai` | Rédaction par l'IA : modèle Anthropic ou simulé, consignes versionnées, rédaction puis vérification indépendante, garde contre les consignes cachées, coût des appels. |
 | `packages/linkedin` | Client de l'API LinkedIn (posts, images, format « little »), classification des pannes (post créé ou non), faux LinkedIn pour les tests. |
 | `packages/services` | Actions et lectures appelées par l'application : connexion, validation, corrections, créneaux, « Mes posts », vue équipe, avec contrôle des droits. |
-| `packages/worker` | Tâches de fond : file de publication, replanification, chiffrement des jetons, stockage des médias. |
-| `apps/web` | Application web Next.js : connexion, « Mes posts », détail et décision, vue équipe. |
+| `packages/worker` | Tâches de fond : publication, replanification, connexions, rappels, e-mails, rédaction hebdomadaire, demandes, reprises, veille RSS, apprentissage ; chiffrement des jetons, stockage des médias. |
+| `apps/web` | Application web Next.js : connexion, « Mes posts », détail et décision, vue équipe, comptes et fiches, ligne éditoriale, planning, idées et demandes, rédaction, API d'échange. |
 
 ## Démarrer
 
@@ -31,14 +33,14 @@ docker compose up -d --wait        # PostgreSQL 16 sur 127.0.0.1:15432
 npm run migrate -w @posts-auto/db  # applique les migrations à la base de développement
 npm run seed -w @posts-auto/web    # données de démonstration (espace « Démo Secutop »)
 npm run dev -w @posts-auto/web     # http://localhost:3000
-npm run start -w @posts-auto/worker  # tâches de fond : publication, replanification, connexions, rappels, e-mails
+npm run start -w @posts-auto/worker  # tâches de fond : publication, rédaction, reprises, demandes, rappels, e-mails…
 ```
 
-En développement, `LINKEDIN_MODE=fake` simule LinkedIn (connexion et publication) ; les tâches de fond exigent `TOKEN_ENCRYPTION_KEYS` et `TOKEN_ENCRYPTION_KEY_ID` (voir `.env.example`).
+En développement, `LINKEDIN_MODE=fake` simule LinkedIn (connexion et publication) et `AI_MODE=fake` (par défaut) simule l'IA, avec des textes de démonstration marqués comme tels ; les tâches de fond exigent `TOKEN_ENCRYPTION_KEYS` et `TOKEN_ENCRYPTION_KEY_ID` (voir `.env.example`).
 
 Connexion : saisir `jp@demo.example.test` (titulaire), `alexis@…` (communication, déléguée sur la page), `claire@…` (formatrice) ou `direction@…` (lecture seule). Le lien de connexion s'affiche dans la console du serveur.
 
-Variables d'environnement (voir `.env.example`) : `DATABASE_URL`, `APP_URL`, `MEDIA_ROOT`, `TOKEN_ENCRYPTION_KEYS`, `TOKEN_ENCRYPTION_KEY_ID`.
+Variables d'environnement (voir `.env.example`) : `DATABASE_URL`, `APP_URL`, `MEDIA_ROOT`, `TOKEN_ENCRYPTION_KEYS`, `TOKEN_ENCRYPTION_KEY_ID`, `AI_MODE`, `ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_USD_TO_EUR`, `SUPPORT_EMAIL`.
 
 ## Commandes
 

@@ -110,6 +110,7 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   'accroches-proposees': { tone: 'success', text: 'Trois accroches proposées : choisissez-en une, ou gardez la vôtre.' },
   'accroche-utilisee': { tone: 'success', text: 'Accroche remplacée.' },
   accroche_expiree: { tone: 'error', text: 'Cette proposition n’est plus disponible : redemandez des accroches.' },
+  trop_de_retouches: { tone: 'error', text: 'Trop de retouches demandées : réessayez dans une heure.' },
   'ia-indisponible': { tone: 'error', text: 'L’IA n’a pas pu répondre. Réessayez dans quelques minutes.' },
   post_modifie: { tone: 'error', text: 'Le post a changé pendant la retouche : rechargez la page.' },
   retouche_inconnue: { tone: 'error', text: 'Retouche inconnue.' },

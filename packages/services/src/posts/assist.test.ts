@@ -81,3 +81,20 @@ describe('retouches à la demande (GEN-08)', () => {
     await expect(applyHook(db, holder, postId, 0, NOW)).rejects.toMatchObject({ code: 'accroche_expiree' });
   });
 });
+
+describe('coût des retouches', () => {
+  it('au plus 30 retouches par personne et par heure', async () => {
+    const postId = await newPost();
+    const model = new FakeModel(() => ({ hooks: ['A', 'B', 'C'] }));
+    // Les demandes déjà faites dans ce fichier comptent aussi : on complète jusqu'à la limite.
+    let refused: unknown = null;
+    for (let i = 0; i < 40 && refused === null; i += 1) {
+      refused = await proposeHooks(db, model, holder, postId, NOW).then(
+        () => null,
+        (error: unknown) => error,
+      );
+    }
+    expect(refused).toMatchObject({ code: 'trop_de_retouches' });
+    await expect(proposeHooks(db, model, holder, postId, new Date(NOW.getTime() + 3_601_000))).resolves.toHaveLength(3);
+  });
+});
