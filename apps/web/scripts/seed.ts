@@ -256,6 +256,23 @@ await asSystem(db, async (trx) => {
   await post(pageSecutop, slot(1, '15:00'), 'Nos prochaines sessions de formation incendie sont ouvertes. (post replanifié faute de validation)', {
     reschedule: slot(-1, '15:00'),
   });
+
+  // Incrément 1c : médiathèque (VIS-08). L'IA y choisit une vraie photo quand son nom, son
+  // dossier ou ses mots-clés reprennent le sujet du post ; les modèles de départ sont copiés
+  // à la première rédaction ou à la première visite de la page « Visuels ».
+  const libraryPhotos: { label: string; folder: string; tags: string[]; color: [number, number, number] }[] = [
+    { label: 'Salle de formation de Lyon', folder: 'Locaux', tags: ['formation', 'lyon', 'salle'], color: [70, 110, 150] },
+    { label: 'Chantier de gros œuvre', folder: 'Chantiers', tags: ['chantier', 'sécurité', 'échafaudage'], color: [150, 120, 80] },
+    { label: 'Exercice d’évacuation incendie', folder: 'Formations', tags: ['incendie', 'évacuation', 'formation'], color: [180, 60, 40] },
+  ];
+  for (const [index, photo] of libraryPhotos.entries()) {
+    const key = `${ws.id}/mediatheque/demo-${index + 1}.png`;
+    await media.write(key, solidPng(1200, 900, photo.color));
+    await trx
+      .insertInto('media_assets')
+      .values({ workspace_id: ws.id, kind: 'upload', storage_key: key, mime: 'image/png', width: 1200, height: 900, in_library: true, label: photo.label, folder: photo.folder, tags: photo.tags })
+      .execute();
+  }
 });
 
 await db.destroy();

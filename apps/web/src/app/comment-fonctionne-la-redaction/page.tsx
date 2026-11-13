@@ -55,6 +55,21 @@ export default function HowWritingWorksPage() {
         </li>
       </ol>
 
+      <h2>Les visuels</h2>
+      <ul>
+        <li>
+          Chaque post reçoit un visuel préparé à partir d’un modèle de l’entreprise : l’IA y place un titre et quelques points tirés du post,
+          sans rien ajouter. Le texte est ajusté pour rester lisible sur téléphone ; un texte trop long ou un contraste trop faible est
+          signalé sur la page du post.
+        </li>
+        <li>
+          Environ un visuel sur deux porte une photo. L’IA choisit d’abord une vraie photo de la médiathèque de l’entreprise ; sinon, une image
+          est générée par IA. Une image générée ne montre jamais de personne identifiable, de texte ni de logo, et elle est toujours signalée :
+          « Image générée par IA » sur la page du post, et « Illustration générée par IA » dans le texte alternatif publié sur LinkedIn.
+        </li>
+        <li>Le visuel se valide avec le post. Vous pouvez le refaire avec une consigne, changer ou retirer la photo, ou mettre votre propre image.</li>
+      </ul>
+
       <h2>Votre rôle</h2>
       <p>
         <strong>L’IA peut se tromper.</strong> Avant de valider, relisez le post comme s’il venait d’un collaborateur : faits, chiffres,
@@ -70,6 +85,10 @@ export default function HowWritingWorksPage() {
           pas à entraîner ses modèles.
         </li>
         <li>Seul ce qui est utile à la rédaction lui est transmis : sources, ligne éditoriale, fiche du compte. Jamais vos jetons LinkedIn.</li>
+        <li>
+          Les images générées le sont par un service spécialisé (Higgsfield), à partir d’une courte description de la scène : ni le texte du
+          post, ni vos photos ne lui sont envoyés.
+        </li>
         <li>Les statistiques LinkedIn des profils personnels ne servent à la rédaction qu’avec l’accord du titulaire.</li>
       </ul>
 

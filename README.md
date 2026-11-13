@@ -9,6 +9,7 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 - [Décisions techniques](./docs/decisions/) : un fichier par décision.
 - [Avancement de l'incrément 1a](./docs/avancement-1a.md) : critères de recette, preuves, ce qui reste à brancher.
 - [Avancement de l'incrément 1b](./docs/avancement-1b.md) : planning, rédaction par l'IA, reprises ; ce qui reste à brancher.
+- [Avancement de l'incrément 1c](./docs/avancement-1c.md) : visuels (modèles, médiathèque, images générées) ; ce qui reste à brancher.
 - [API d'échange](./docs/api-echange.md) : comment la tâche Claude actuelle dépose ses posts et lit les décisions (incrément 1a), et comment reprendre ses idées et ses demandes (incrément 1b).
 
 ## Structure
@@ -18,10 +19,11 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 | `packages/core` | Règles métier pures : cycle de vie d'un post, marqueurs bloquants, phrase de départ, calendrier de l'espace (fuseau, plages, jours fériés), créneaux, replanification, règles de rédaction mesurables, affectation des sujets aux créneaux, lecture des CSV du planning. Sans base de données ni réseau. |
 | `packages/db` | Base PostgreSQL : migrations SQL, cloisonnement des clients par la base (RLS), accès typé avec Kysely, contextes `asUser` / `asSystem`. |
 | `packages/ai` | Rédaction par l'IA : modèle Anthropic ou simulé, consignes versionnées, rédaction puis vérification indépendante, garde contre les consignes cachées, coût des appels. |
+| `packages/visuals` | Visuels : modèles à zones nommées, rendu PNG côté serveur (Skia, police Inter embarquée), contrôle de lisibilité, modèles de départ, alternance photo / texte, générateurs d'images (simulé, Higgsfield). |
 | `packages/linkedin` | Client de l'API LinkedIn (posts, images, format « little »), classification des pannes (post créé ou non), faux LinkedIn pour les tests. |
 | `packages/services` | Actions et lectures appelées par l'application : connexion, validation, corrections, créneaux, « Mes posts », vue équipe, avec contrôle des droits. |
-| `packages/worker` | Tâches de fond : publication, replanification, connexions, rappels, e-mails, rédaction hebdomadaire, demandes, reprises, veille RSS, apprentissage ; chiffrement des jetons, stockage des médias. |
-| `apps/web` | Application web Next.js : connexion, « Mes posts », détail et décision, vue équipe, comptes et fiches, ligne éditoriale, planning, idées et demandes, rédaction, API d'échange. |
+| `packages/worker` | Tâches de fond : publication, replanification, connexions, rappels, e-mails, rédaction hebdomadaire (avec les visuels), demandes, reprises, visuels à refaire, veille RSS, apprentissage ; chiffrement des jetons, stockage des médias. |
+| `apps/web` | Application web Next.js : connexion, « Mes posts », détail et décision, vue équipe, comptes et fiches, ligne éditoriale, planning, idées et demandes, rédaction, visuels (modèles, éditeur, charte, médiathèque), API d'échange. |
 
 ## Démarrer
 
@@ -36,11 +38,16 @@ npm run dev -w @posts-auto/web     # http://localhost:3000
 npm run start -w @posts-auto/worker  # tâches de fond : publication, rédaction, reprises, demandes, rappels, e-mails…
 ```
 
-En développement, `LINKEDIN_MODE=fake` simule LinkedIn (connexion et publication) et `AI_MODE=fake` (par défaut) simule l'IA, avec des textes de démonstration marqués comme tels ; les tâches de fond exigent `TOKEN_ENCRYPTION_KEYS` et `TOKEN_ENCRYPTION_KEY_ID` (voir `.env.example`).
+En développement :
+- `LINKEDIN_MODE=fake` simule LinkedIn (connexion et publication) ;
+- `AI_MODE=fake` (par défaut) simule l'IA, avec des textes de démonstration marqués comme tels ;
+- `IMAGE_MODE=fake` simule le générateur d'images ; sans ce réglage, aucune image n'est générée et les visuels prennent une photo de la médiathèque ou sont des visuels texte.
+
+Les tâches de fond exigent `TOKEN_ENCRYPTION_KEYS` et `TOKEN_ENCRYPTION_KEY_ID` (voir `.env.example`).
 
 Connexion : saisir `jp@demo.example.test` (titulaire), `alexis@…` (communication, déléguée sur la page), `claire@…` (formatrice) ou `direction@…` (lecture seule). Le lien de connexion s'affiche dans la console du serveur.
 
-Variables d'environnement (voir `.env.example`) : `DATABASE_URL`, `APP_URL`, `MEDIA_ROOT`, `TOKEN_ENCRYPTION_KEYS`, `TOKEN_ENCRYPTION_KEY_ID`, `AI_MODE`, `ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_USD_TO_EUR`, `SUPPORT_EMAIL`.
+Variables d'environnement (voir `.env.example`) : `DATABASE_URL`, `APP_URL`, `MEDIA_ROOT`, `TOKEN_ENCRYPTION_KEYS`, `TOKEN_ENCRYPTION_KEY_ID`, `AI_MODE`, `ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_USD_TO_EUR`, `SUPPORT_EMAIL`, `IMAGE_MODE`, `HIGGSFIELD_API_KEY_ID`, `HIGGSFIELD_API_KEY_SECRET`, `HIGGSFIELD_MODEL`, `HIGGSFIELD_COST_USD`.
 
 ## Commandes
 

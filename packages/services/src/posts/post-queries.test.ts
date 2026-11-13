@@ -69,13 +69,14 @@ describe('détail d’un post', () => {
     const detail = await getPostDetail(db, people.jp, postId, NOW);
     expect(detail.markers).toEqual([{ start: 13, end: 33, text: '[À COMPLÉTER : date]' }]);
     expect(detail.versions).toHaveLength(1);
-    expect(detail.actions).toEqual({ commands: ['validate', 'requestChanges', 'refuse'], canEdit: true, canReschedule: true });
+    expect(detail.actions).toEqual({ commands: ['validate', 'requestChanges', 'refuse'], canEdit: true, canReschedule: true, canRedoVisual: true });
+    expect(detail.visualTask).toBeNull();
   });
 
   it('un lecteur voit le post mais n’a aucune action', async () => {
     const postId = await createPost(db, workspaceId, jpAccount, { scheduled_at: new Date('2026-11-23T11:00:00Z') });
     const detail = await getPostDetail(db, people.viewer, postId, NOW);
-    expect(detail.actions).toEqual({ commands: [], canEdit: false, canReschedule: false });
+    expect(detail.actions).toEqual({ commands: [], canEdit: false, canReschedule: false, canRedoVisual: false });
     expect(detail.isMine).toBe(false);
   });
 

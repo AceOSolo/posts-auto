@@ -48,3 +48,15 @@ Le schéma du cahier des charges (section 7) s'appuie sur des fonctions propres 
 | `ai_usage` : jetons par catégorie, coût en dollars et en euros, objet de l'appel | Mesure du coût réel (GEN-11) ; le fournisseur facture en dollars |
 | `content_reports` | « Signaler un contenu » (GEN-12) |
 | Photos d'une demande : 9 au plus | Maximum d'images d'un post (VIS-09) ; IDE-03 corrigé |
+
+## Incrément 1c (migrations 018 et 019)
+
+| Écart ou ajout | Raison |
+| --- | --- |
+| Pas de table `template_zones` : zones dans `templates.definition` | Un modèle est toujours édité et rendu en entier ; la définition est validée par `@posts-auto/visuals` (décision 0006) |
+| `templates.has_photo` (colonne calculée), `gallery_key`, `archived_at` ; pas de `is_global` | Alternance photo / texte (VIS-04) ; copie unique de chaque modèle de départ par espace ; un modèle cité par des visuels n'est pas supprimé. La galerie de départ est dans le code, copiée dans chaque espace |
+| `media_assets.in_library`, `label`, `folder`, `uploaded_by` | Médiathèque (VIS-08) : seules des photos y entrent, jamais un visuel rendu |
+| `media_assets.source_asset_id`, `render_content`, clé étrangère `template_id` | Recette d'un visuel rendu (modèle, textes, photo), pour le refaire (VIS-13) |
+| Table `visual_tasks` (`photo_mode` : garder, changer, sans photo) | « Refaire le visuel », traité par le worker avec bail et essais |
+| `workspaces.image_budget_monthly` | Budget d'images générées par mois (VIS-05) |
+| `ai_usage.purpose = 'visual'` | Remplissage d'un modèle par l'IA, compté à part (GEN-11) |

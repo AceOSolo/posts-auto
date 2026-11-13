@@ -429,7 +429,7 @@ Toutes les tables portent `id uuid`, `created_at`, `updated_at` ; les tables mé
 | Planning | planning\_cells, subject\_bank, events |
 | Entrées | ideas, post\_requests |
 | Posts | posts, post\_versions, post\_media, post\_status\_history, publish\_attempts |
-| Visuels | media\_assets, templates, template\_zones |
+| Visuels | media\_assets, templates, template\_zones (le 13/11/2026 : zones rangées dans templates.definition, décision 0006), visual\_tasks |
 | IA et intégrations | generation\_runs, ai\_usage, integrations, sheet\_sync\_maps |
 | Facturation | subscriptions, usage\_counters |
 | Transverse | notifications, notification\_prefs, approval\_links, audit\_log |
@@ -568,7 +568,7 @@ L'application et ses tâches de fond tournent sur la même base TypeScript ; tou
 | Base de données | SQL, cloisonnement par espace | PostgreSQL 16 avec RLS, migrations versionnées (ex. Drizzle ou Prisma) |
 | File d'attente | Tâches planifiées, relances, unicité | pg-boss (dans PostgreSQL) ou BullMQ + Redis |
 | Stockage | Images, exports | Stockage objet compatible S3 en UE (ex. Scaleway, OVHcloud) |
-| Rendu des visuels | Modèles → PNG côté serveur | Rendu HTML/SVG par navigateur sans tête (Playwright) ou Satori |
+| Rendu des visuels | Modèles → PNG côté serveur | Rendu HTML/SVG par navigateur sans tête (Playwright) ou Satori ; retenu le 13/11/2026 : bibliothèque de dessin Skia (@napi-rs/canvas), police embarquée, sans navigateur (décision 0006) |
 | Authentification | Lien magique, Google, Microsoft, sessions sécurisées | Auth.js ou Lucia ; double authentification pour les propriétaires (S) |
 | Hébergement | Union européenne, sauvegardes | Hébergeur français ou UE ; sauvegarde quotidienne chiffrée, rétention 30 jours |
 | Observabilité | Journaux, erreurs, alertes | Sentry (ou équivalent UE), métriques des files |
