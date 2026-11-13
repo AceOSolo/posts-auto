@@ -3,6 +3,7 @@
  * processus, conservée à travers les rechargements à chaud du mode développement.
  */
 import path from 'node:path';
+import { type TextModel, modelFromEnv } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, type Database, createDatabase } from '@posts-auto/db';
 import { FakeLinkedInOAuth, type LinkedInOAuth, LinkedInOAuthClient } from '@posts-auto/linkedin';
 import { FileMediaStore, type MediaStore, TokenCipher } from '@posts-auto/worker';
@@ -12,6 +13,7 @@ interface ServerResources {
   db?: Database;
   media?: MediaStore;
   mailer?: Mailer;
+  model?: TextModel;
 }
 
 const resources = ((globalThis as { __postsAuto?: ServerResources }).__postsAuto ??= {});
@@ -58,4 +60,16 @@ export function tokenCipher(): TokenCipher | null {
 /** Adresse publique de l'application, pour les liens envoyés par e-mail. */
 export function appUrl(): string {
   return (process.env['APP_URL'] ?? 'http://localhost:3000').replace(/\/$/, '');
+}
+
+/** Modèle d'IA (AI_MODE, ANTHROPIC_API_KEY, AI_MODEL) ; simulé sans configuration. */
+export function model(): TextModel {
+  resources.model ??= modelFromEnv(process.env);
+  return resources.model;
+}
+
+/** Conversion du coût de l'IA en euros (GEN-11). */
+export function usdToEur(): number {
+  const rate = Number.parseFloat(process.env['AI_USD_TO_EUR'] ?? '');
+  return Number.isFinite(rate) && rate > 0 ? rate : 0.86;
 }

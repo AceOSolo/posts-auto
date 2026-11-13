@@ -6,7 +6,8 @@ import { Flash } from '../../../../components/flash.tsx';
 import { StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { createRequestAction } from '../actions.ts';
+import { createRequestAction, interpretRequestAction } from '../actions.ts';
+import { RequestForm } from '../request-form.tsx';
 
 export const metadata: Metadata = { title: 'Demandes de post' };
 export const dynamic = 'force-dynamic';
@@ -61,39 +62,11 @@ export default async function RequestsPage({
         <section aria-labelledby="nouvelle">
           <h2 id="nouvelle">Nouvelle demande</h2>
           <p className="hint">Un post précis, sur un ou plusieurs comptes, à une date donnée. Il est rédigé dans l’heure puis soumis à validation.</p>
-          <form action={createRequestAction.bind(null, workspaceId)} className="stack">
-            <label htmlFor="demande">Ce que vous voulez dire</label>
-            <textarea id="demande" name="demande" rows={5} required maxLength={5000} aria-describedby="demande-aide" />
-            <p id="demande-aide" className="hint">
-              Les faits, les chiffres, les noms : l’IA n’invente rien et marquera [À COMPLÉTER] ce qui manque.
-            </p>
-            <fieldset>
-              <legend>Comptes</legend>
-              {accountList.map((a) => (
-                <label key={a.id} className="check">
-                  <input type="checkbox" name="comptes" value={a.id} /> {a.name}
-                </label>
-              ))}
-            </fieldset>
-            <div className="inline-fields">
-              <div>
-                <label htmlFor="date">Date souhaitée</label>
-                <input id="date" name="date" type="date" />
-              </div>
-              <div>
-                <label htmlFor="heure">Heure</label>
-                <input id="heure" name="heure" type="time" step={300} />
-              </div>
-            </div>
-            <p className="hint">Sans date, le post prend le prochain créneau libre. Si le créneau souhaité est pris, il prend le plus proche après.</p>
-            <label htmlFor="liens">Liens (un par ligne)</label>
-            <textarea id="liens" name="liens" rows={2} />
-            <label htmlFor="photos">Photos (9 au plus ; la première est le visuel principal)</label>
-            <input id="photos" name="photos" type="file" accept="image/jpeg,image/png,image/gif" multiple />
-            <button type="submit" className="primary">
-              Envoyer la demande
-            </button>
-          </form>
+          <RequestForm
+            accounts={accountList.map((a) => ({ id: a.id, name: a.name }))}
+            action={createRequestAction.bind(null, workspaceId)}
+            interpret={interpretRequestAction.bind(null, workspaceId)}
+          />
         </section>
       )}
 

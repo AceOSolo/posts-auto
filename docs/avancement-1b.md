@@ -12,7 +12,7 @@ Périmètre et critères : cahier des charges v1.1, sections 5.4 à 5.7 et 11. C
 | 2 | Règles de rédaction mesurables et affectation des sujets (fonctions pures) | EDI-02, RÈG-15 à RÈG-18, GEN-02, GEN-03 | Fait |
 | 3 | Ligne éditoriale, état de l'offre, fiches de compte, exemples (services et écrans) | EDI-01 à EDI-07 | Fait : pages « Ligne éditoriale » et « Fiche du compte » |
 | 4 | Planning, banque de sujets, événements, inventaire de la semaine, import CSV du PAM | PLA-01 à PLA-05, PLA-07, PLA-08 | Fait : pages « Planning », « Inventaire », « Banque de sujets », « Événements », « Importer » |
-| 5 | Idées et demandes de post | IDE-01 à IDE-04, IDE-06 | Saisie et suivi faits (pages « Idées » et « Demandes de post ») ; interprétation par l’IA (IDE-04) et traitement dans l’heure (IDE-06) aux étapes 6 et 7 |
+| 5 | Idées et demandes de post | IDE-01 à IDE-04, IDE-06 | Fait : pages « Idées » et « Demandes de post », pré-remplissage par l’IA (avec JavaScript), traitement dans l’heure (tâche « demandes ») |
 | 6 | Paquet IA : modèle réel et simulé, consignes, vérification, garde contre les consignes cachées, coûts | GEN-04, GEN-05, GEN-11, GEN-13, IDE-04 | Fait : paquet `@posts-auto/ai` (modèle Anthropic et modèle simulé) |
 | 7 | Tâches de fond : génération hebdomadaire, demandes, reprises | GEN-01, GEN-03, GEN-06, GEN-07, IDE-06 | Fait : tâches « redaction », « demandes » et « reprises » |
 | 8 | Transparence : mentions, page « Comment fonctionne la rédaction », signalement | GEN-12, GEN-05, GEN-06, GEN-11 | Fait : origine et mention IA sur chaque post, « Signaler un contenu », page publique « Comment fonctionne la rédaction », pages « Rédaction » (lancer, programmer, coût du mois, rapports) |
