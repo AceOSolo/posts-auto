@@ -1,0 +1,6 @@
+{
+  "dialect": "postgres",
+  "defaultSchemas": ["public"],
+  "excludePattern": "migrations.*",
+  "dateParser": "string"
+}

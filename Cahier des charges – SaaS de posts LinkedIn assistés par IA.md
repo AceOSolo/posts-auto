@@ -419,6 +419,8 @@ Toutes les tables portent `id uuid`, `created_at`, `updated_at` ; les tables mé
 - Les listes d'identifiants (`uuid[]`) restent dans ce schéma de référence pour la lisibilité. SimplX les remplacera par des tables de liaison (ex. `idea_accounts`, `request_photos` avec position) pour garantir l'intégrité référentielle.
 - PostgreSQL 15 au minimum (contraintes `NULLS NOT DISTINCT`).
 
+**Mise en œuvre** : le schéma réellement appliqué est celui des migrations de `packages/db/migrations/` ; il fait foi sur le SQL ci-dessous. Les ajouts faits au développement (date limite des posts d'événement, réglages des créneaux par espace, tables de connexion et de sessions, limites LinkedIn garanties par la base) sont listés dans `docs/decisions/0002-base-de-donnees.md`.
+
 | Domaine | Tables |
 | --- | --- |
 | Comptes et droits | organizations, users, org\_members, workspaces, workspace\_members, account\_delegates, api\_keys |

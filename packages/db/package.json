@@ -1,0 +1,25 @@
+{
+  "name": "@posts-auto/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Base de données : migrations SQL, cloisonnement par espace (RLS), accès typé avec Kysely.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "tsx src/cli/migrate.ts",
+    "codegen": "tsx src/cli/codegen.ts"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "kysely-codegen": "^0.20.0"
+  },
+  "dependencies": {
+    "@posts-auto/core": "*",
+    "kysely": "^0.29.9",
+    "pg": "^8.23.1"
+  }
+}

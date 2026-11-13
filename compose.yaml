@@ -1,0 +1,22 @@
+# Environnement local de développement. Ne sert ni en préproduction ni en production.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres # local uniquement
+      POSTGRES_DB: posts_auto
+    ports:
+      # Port non standard pour ne pas gêner un PostgreSQL déjà installé, et hors des
+      # plages que Windows réserve à Hyper-V (netsh interface ipv4 show excludedportrange).
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d posts_auto"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata: {}

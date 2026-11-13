@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Règles métier pures (sans base de données ni réseau) : cycle de vie des posts, créneaux, replanification.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit"
