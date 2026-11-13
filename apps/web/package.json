@@ -10,7 +10,8 @@
     "start": "next start --port 3000",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed": "tsx scripts/seed.ts",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "api-key": "tsx scripts/api-key.ts"
   },
   "dependencies": {
     "@posts-auto/core": "*",

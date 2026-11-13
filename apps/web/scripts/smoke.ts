@@ -6,7 +6,7 @@
  * comme le ferait un navigateur, y compris l'isolation entre clients et les images.
  */
 import { DEFAULT_DATABASE_URL, asSystem, createDatabase } from '@posts-auto/db';
-import { consumeLoginLink, requestLoginLink } from '@posts-auto/services';
+import { consumeLoginLink, createApiKey, requestLoginLink } from '@posts-auto/services';
 
 const BASE = process.env['APP_URL'] ?? 'http://localhost:3000';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
@@ -117,6 +117,35 @@ try {
       `HTTP ${submitted.status}, statut ${after.status}`,
     );
   }
+
+  // API d'échange (PUB-10), par HTTP.
+  const workspaceId = withMarker.workspace_id;
+  const writer = await createApiKey(db, { workspaceId, name: 'smoke', scopes: ['posts:read', 'posts:write'] });
+  const reader = await createApiKey(db, { workspaceId, name: 'smoke-lecture', scopes: ['posts:read'] });
+  const api = (path: string, key: string, init: RequestInit = {}) =>
+    fetch(`${BASE}/api/v1${path}`, { ...init, headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json', ...init.headers } });
+
+  check('API : clé invalide → 401', (await api('/comptes', 'pa_faux')).status === 401);
+  const accounts = (await (await api('/comptes', writer.key)).json()) as { comptes: { id: string; nom: string }[] };
+  const jpAccount = accounts.comptes.find((a) => a.nom === 'Jean-Pierre Martin');
+  check('API : comptes de l’espace', jpAccount !== undefined);
+
+  const reference = `smoke-${Date.now()}`;
+  const creneau = new Date(Date.now() + 10 * 86_400_000);
+  creneau.setUTCHours(13, 7, 0, 0); // minute inhabituelle : aucun conflit avec les données de démonstration
+  const gifBase64 = Buffer.from('GIF89a-smoke').toString('base64');
+  const payload = JSON.stringify({ reference, compte: jpAccount?.id, creneau: creneau.toISOString(), texte: 'Post déposé par l’API (test de fumée).', images: [{ donnees_base64: gifBase64, generee_par_ia: true }] });
+  const created = await api('/posts', writer.key, { method: 'POST', body: payload });
+  const createdBody = (await created.json()) as { cree: boolean; post: { statut: string } };
+  check('API : dépôt d’un post à valider → 201', created.status === 201 && createdBody.cree && createdBody.post.statut === 'a_valider', `HTTP ${created.status}`);
+  const replay = await api('/posts', writer.key, { method: 'POST', body: payload });
+  check('API : même référence renvoyée → 200, sans doublon (REC-13)', replay.status === 200 && ((await replay.json()) as { cree: boolean }).cree === false);
+  check('API : lecture par référence', (await api(`/posts/${reference}`, writer.key)).status === 200);
+  check('API : clé en lecture seule ne dépose rien → 403', (await api('/posts', reader.key, { method: 'POST', body: payload.replace(reference, `${reference}-b`) })).status === 403);
+  const fakeImage = JSON.stringify({ ...JSON.parse(payload), reference: `${reference}-c`, images: [{ donnees_base64: Buffer.from('<svg/>').toString('base64'), type: 'image/png' }] });
+  check('API : fausse image refusée → 422', (await api('/posts', writer.key, { method: 'POST', body: fakeImage })).status === 422);
+  const sameSlot = JSON.stringify({ ...JSON.parse(payload), reference: `${reference}-d`, images: [] });
+  check('API : créneau déjà pris → 409', (await api('/posts', writer.key, { method: 'POST', body: sameSlot })).status === 409);
 
   // REC-01 : une personne d'un autre client ne voit ni le post ni l'image.
   await asSystem(db, (trx) =>
