@@ -31,3 +31,20 @@ Le schéma du cahier des charges (section 7) s'appuie sur des fonctions propres 
 | `post_versions.revision` | Numéro de révision du texte (distinct du numéro de reprise `posts.version_no`) |
 | Tables `login_tokens`, `sessions` | Connexion par lien e-mail et sessions révocables (ONB-01, SEC-03), absentes du schéma |
 | Limites : 3 000 caractères par texte, 9 images par post, 10 Mo par image | Limites de LinkedIn et SEC-07, garanties par la base |
+
+## Incrément 1b (migrations 011 à 013)
+
+| Écart ou ajout | Raison |
+| --- | --- |
+| Fonction `app.protect_workspace_table` | Toute table créée après 006 reçoit la même protection (RLS, droits, règle d'isolation). Un test vérifie que **toutes** les tables ont la RLS activée |
+| `planning_cells` : une ligne par sujet, avec `position` | Une case du planning peut contenir plusieurs sujets (PLA-02) ; chaque sujet a son post et son état |
+| État d'une case calculé, sauf « mis de côté » (`set_aside_at`, `set_aside_reason`) | L'état (prévu, rédigé, validé, publié) découle des posts : le stocker créerait des incohérences |
+| `offer_items.status` et `offer_items.pricing` séparés | La v1.1 mélangeait disponibilité et prix dans une seule liste |
+| Tables de liaison `event_accounts`, `idea_accounts`, `request_accounts`, `request_photos` | Remplacent les listes `uuid[]`, comme le prévoyait la section 7 |
+| `ideas.event_on`, `ideas.from_post_id` ; pas de `ideas.post_id` | Date d'événement d'IDE-01 ; post d'origine d'un sujet mis en réserve (IDE-02). Le post issu d'une idée se lit par `posts.idea_id` |
+| `posts.event_id` | Événement relayé par le post (PLA-04) |
+| `post_requests.attempts`, `lease_until`, `last_error`, `processed_at` | Traitement des demandes dans l'heure (IDE-06), avec reprise après interruption |
+| `generation_runs.lease_until`, `triggered_by`, `error` | Une génération à la fois par espace, reprise après interruption (décision 0005) |
+| `ai_usage` : jetons par catégorie, coût en dollars et en euros, objet de l'appel | Mesure du coût réel (GEN-11) ; le fournisseur facture en dollars |
+| `content_reports` | « Signaler un contenu » (GEN-12) |
+| Photos d'une demande : 9 au plus | Maximum d'images d'un post (VIS-09) ; IDE-03 corrigé |

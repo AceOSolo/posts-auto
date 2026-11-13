@@ -209,7 +209,7 @@ Deux entrées distinctes, comme aujourd'hui : l'**idée** est un sujet à placer
 | --- | --- | --- |
 | IDE-01 | Idée : titre, détails, lien, dates (début, fin, événement), comptes visés (ou « tous »), auteur ; statuts nouvelle, retenue, utilisée, écartée, avec le suivi écrit par l'IA | M |
 | IDE-02 | Réserve de l'IA : un sujet remplacé par un meilleur n'est jamais perdu ; il devient une idée « réserve » réutilisée en semaine creuse | M |
-| IDE-03 | Demande de post : description libre (texte ou dictée), comptes, date et heure souhaitées, liens, jusqu'à 10 photos dans l'ordre choisi (flèches ou glisser-déposer), la n°1 étant le visuel principal | M |
+| IDE-03 | Demande de post : description libre (texte ou dictée), comptes, date et heure souhaitées, liens, jusqu'à 9 photos dans l'ordre choisi (flèches ou glisser-déposer), la n°1 étant le visuel principal ; 9 est le maximum d'images d'un post (VIS-09), le « 10 » de la v1.1 est corrigé le 13/11/2026 | M |
 | IDE-04 | Interprétation IA de la demande libre : pré-remplissage des champs (comptes, sujet, infos, liens, date) marqués « pré-rempli » ou « à préciser », avant envoi | M |
 | IDE-05 | Dictée vocale intégrée (reconnaissance du navigateur ou transcription serveur) ; fonctionne sur ordinateur et téléphone | S |
 | IDE-06 | La demande est traitée en moins d'une heure : post rédigé, visuel, créneau (souhaité s'il est libre, sinon le prochain), statut « à valider » ; le demandeur voit le suivi | M |

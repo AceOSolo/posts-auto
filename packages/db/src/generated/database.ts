@@ -58,8 +58,30 @@ export interface AccountProfiles {
   sensitivity: Generated<string>;
   tenor: string | null;
   updated_at: Generated<Timestamp>;
+  updated_by: string | null;
   usual_slots: Generated<Json>;
   voice: string | null;
+  workspace_id: string;
+}
+
+export interface AiUsage {
+  account_id: string | null;
+  at: Generated<Timestamp>;
+  cache_read_tokens: Generated<number>;
+  cache_write_tokens: Generated<number>;
+  cost_eur: Generated<Numeric>;
+  cost_usd: Generated<Numeric>;
+  counted_in_quota: Generated<boolean>;
+  id: Generated<Int8>;
+  input_tokens: Generated<number>;
+  kind: string;
+  model: string;
+  output_tokens: Generated<number>;
+  post_id: string | null;
+  provider: string;
+  purpose: string;
+  run_id: string | null;
+  units: Generated<number>;
   workspace_id: string;
 }
 
@@ -99,6 +121,104 @@ export interface AuditLog {
   ip: string | null;
   org_id: string;
   workspace_id: string | null;
+}
+
+export interface ContentReports {
+  created_at: Generated<Timestamp>;
+  handled_at: Timestamp | null;
+  handler_note: string | null;
+  id: Generated<string>;
+  post_id: string;
+  reason: string;
+  reported_by: string | null;
+  status: Generated<string>;
+  workspace_id: string;
+}
+
+export interface EditorialLines {
+  allowed_proofs: string | null;
+  audiences: string | null;
+  banned_phrases: Generated<string[]>;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  is_current: Generated<boolean>;
+  offers: string | null;
+  positioning: string | null;
+  rules: Json;
+  tone: string | null;
+  version: number;
+  workspace_id: string;
+}
+
+export interface EventAccounts {
+  account_id: string;
+  event_id: string;
+  workspace_id: string;
+}
+
+export interface Events {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  details: string | null;
+  ends_on: string | null;
+  id: Generated<string>;
+  link: string | null;
+  starts_on: string;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
+export interface GenerationRuns {
+  error: string | null;
+  finished_at: Timestamp | null;
+  id: Generated<string>;
+  kind: string;
+  lease_until: Timestamp | null;
+  model: string | null;
+  prompt_version: string | null;
+  report: Generated<Json>;
+  started_at: Generated<Timestamp>;
+  status: Generated<string>;
+  triggered_by: string | null;
+  weeks: Generated<string[]>;
+  workspace_id: string;
+}
+
+export interface IdeaAccounts {
+  account_id: string;
+  idea_id: string;
+  workspace_id: string;
+}
+
+export interface Ideas {
+  all_accounts: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  details: string | null;
+  ends_on: string | null;
+  event_on: string | null;
+  followup: string | null;
+  from_post_id: string | null;
+  id: Generated<string>;
+  link: string | null;
+  origin: string;
+  starts_on: string | null;
+  status: Generated<string>;
+  target_week: string | null;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
+export interface LearnedPreferences {
+  account_id: string;
+  edited_by: string | null;
+  learned_until: Timestamp | null;
+  summary: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  workspace_id: string;
 }
 
 export interface LoginTokens {
@@ -151,6 +271,18 @@ export interface Notifications {
   workspace_id: string | null;
 }
 
+export interface OfferItems {
+  created_at: Generated<Timestamp>;
+  description: string | null;
+  id: Generated<string>;
+  name: string;
+  position: Generated<number>;
+  pricing: string | null;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
 export interface Organizations {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
@@ -169,6 +301,24 @@ export interface OrgMembers {
   user_id: string;
 }
 
+export interface PlanningCells {
+  account_id: string | null;
+  content: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  position: Generated<number>;
+  row_kind: string;
+  row_label: string | null;
+  set_aside_at: Timestamp | null;
+  set_aside_reason: string | null;
+  source_ref: string | null;
+  subject_id: string | null;
+  updated_at: Generated<Timestamp>;
+  week_start: string;
+  workspace_id: string;
+}
+
 export interface PostMedia {
   alt_text: string | null;
   asset_id: string;
@@ -176,6 +326,25 @@ export interface PostMedia {
   id: Generated<string>;
   position: number;
   post_id: string;
+  workspace_id: string;
+}
+
+export interface PostRequests {
+  attempts: Generated<number>;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  details: string | null;
+  followup: string | null;
+  id: Generated<string>;
+  last_error: string | null;
+  lease_until: Timestamp | null;
+  links: Generated<string[]>;
+  processed_at: Timestamp | null;
+  raw_text: string | null;
+  status: Generated<string>;
+  title: string | null;
+  updated_at: Generated<Timestamp>;
+  wished_at: Timestamp | null;
   workspace_id: string;
 }
 
@@ -187,6 +356,7 @@ export interface Posts {
   decided_at: Timestamp | null;
   decided_by: string | null;
   decision_note: string | null;
+  event_id: string | null;
   external_post_url: string | null;
   external_post_urn: string | null;
   external_ref: string | null;
@@ -256,6 +426,30 @@ export interface PublishAttempts {
   workspace_id: string;
 }
 
+export interface ReferencePosts {
+  account_id: string;
+  body: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  id: Generated<string>;
+  label: string;
+  note: string | null;
+  workspace_id: string;
+}
+
+export interface RequestAccounts {
+  account_id: string;
+  request_id: string;
+  workspace_id: string;
+}
+
+export interface RequestPhotos {
+  asset_id: string;
+  position: number;
+  request_id: string;
+  workspace_id: string;
+}
+
 export interface Sessions {
   created_at: Generated<Timestamp>;
   expires_at: Timestamp;
@@ -296,6 +490,24 @@ export interface SocialTokens {
   refresh_expires_at: Timestamp | null;
   refresh_token_enc: Buffer | null;
   scopes: string[];
+  updated_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
+export interface SubjectBank {
+  account_id: string | null;
+  angle: string | null;
+  audience: string | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  format: string | null;
+  id: Generated<string>;
+  offer: string | null;
+  position: Generated<number>;
+  published: Generated<boolean>;
+  source_ref: string | null;
+  subject: string;
+  theme: string | null;
   updated_at: Generated<Timestamp>;
   workspace_id: string;
 }
@@ -341,23 +553,39 @@ export interface DB {
   account_consents: AccountConsents;
   account_delegates: AccountDelegates;
   account_profiles: AccountProfiles;
+  ai_usage: AiUsage;
   api_keys: ApiKeys;
   approval_links: ApprovalLinks;
   audit_log: AuditLog;
+  content_reports: ContentReports;
+  editorial_lines: EditorialLines;
+  event_accounts: EventAccounts;
+  events: Events;
+  generation_runs: GenerationRuns;
+  idea_accounts: IdeaAccounts;
+  ideas: Ideas;
+  learned_preferences: LearnedPreferences;
   login_tokens: LoginTokens;
   media_assets: MediaAssets;
   notification_prefs: NotificationPrefs;
   notifications: Notifications;
+  offer_items: OfferItems;
   org_members: OrgMembers;
   organizations: Organizations;
+  planning_cells: PlanningCells;
   post_media: PostMedia;
+  post_requests: PostRequests;
   post_status_history: PostStatusHistory;
   post_versions: PostVersions;
   posts: Posts;
   publish_attempts: PublishAttempts;
+  reference_posts: ReferencePosts;
+  request_accounts: RequestAccounts;
+  request_photos: RequestPhotos;
   sessions: Sessions;
   social_accounts: SocialAccounts;
   social_tokens: SocialTokens;
+  subject_bank: SubjectBank;
   users: Users;
   workspace_members: WorkspaceMembers;
   workspaces: Workspaces;
