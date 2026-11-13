@@ -1,0 +1,58 @@
+# Intégration continue : à chaque envoi et chaque demande de fusion, sur un vrai PostgreSQL 16.
+name: Vérifications
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: posts_auto
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      TEST_DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/posts_auto
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Dépendances
+        run: npm ci --no-fund --no-audit
+
+      - name: Types de la base à jour par rapport aux migrations
+        run: npm run codegen -w @posts-auto/db -- --verify
+
+      - name: Compilation de l'application web (vérifie aussi ses types)
+        run: npm run build -w @posts-auto/web
+
+      - name: Vérification des types
+        run: npm run typecheck
+
+      - name: Tests et couverture (seuil 80 %)
+        run: npm run test:coverage
