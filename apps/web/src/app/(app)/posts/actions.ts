@@ -15,7 +15,9 @@ import {
   movePostPhoto,
   proposeHooks,
   removePostPhoto,
+  requestVisualRedo,
   reschedulePost,
+  type PhotoMode,
   escapeHtml,
   reportContent,
   retryPublication,
@@ -136,6 +138,16 @@ export async function movePhotoAction(postId: string, assetId: string, direction
     if (!UUID.test(assetId)) throw new NotFoundError('Photo');
     await movePostPhoto(database(), userId, postId, assetId, direction, now);
     return 'photos-reordonnees';
+  });
+}
+
+/** VIS-13 : refaire le visuel avec une consigne (ou en ajouter un) ; préparé par le worker. */
+export async function redoVisualAction(postId: string, formData: FormData): Promise<void> {
+  const instruction = String(formData.get('consigne') ?? '');
+  const photoMode = String(formData.get('photo') ?? '') as PhotoMode;
+  await run(postId, formData, async (userId, now) => {
+    await requestVisualRedo(database(), userId, postId, { instruction, photoMode }, now);
+    return 'visuel-demande';
   });
 }
 

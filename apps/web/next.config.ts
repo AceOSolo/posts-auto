@@ -2,9 +2,10 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   // Les paquets du dépôt sont publiés en TypeScript source : Next.js les compile.
-  transpilePackages: ['@posts-auto/ai', '@posts-auto/core', '@posts-auto/db', '@posts-auto/services', '@posts-auto/worker', '@posts-auto/linkedin'],
-  // Pilote PostgreSQL : chargé tel quel côté serveur, jamais empaqueté.
-  serverExternalPackages: ['pg'],
+  transpilePackages: ['@posts-auto/ai', '@posts-auto/core', '@posts-auto/db', '@posts-auto/services', '@posts-auto/worker', '@posts-auto/linkedin', '@posts-auto/visuals'],
+  // Pilote PostgreSQL et moteur de rendu des visuels (module natif) : chargés tels quels
+  // côté serveur, jamais empaquetés.
+  serverExternalPackages: ['pg', '@napi-rs/canvas', '@fontsource/inter'],
   poweredByHeader: false,
   // Ajout de photos depuis le téléphone (REC-11) : plusieurs images de 10 Mo au plus chacune.
   experimental: { serverActions: { bodySizeLimit: '25mb' } },

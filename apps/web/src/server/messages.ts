@@ -139,6 +139,9 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   compte_requis: { tone: 'error', text: 'Choisissez au moins un compte.' },
   date_trop_proche: { tone: 'error', text: 'Choisissez une date à au moins une heure d’ici.' },
   'import-rien': { tone: 'success', text: 'Import terminé : tous ces sujets étaient déjà présents, rien n’a été ajouté.' },
+  'visuel-demande': { tone: 'success', text: 'Nouveau visuel demandé : il sera prêt dans une à deux minutes, cette page se met à jour seule.' },
+  trop_de_visuels: { tone: 'error', text: 'Trop de visuels demandés : réessayez dans une heure.' },
+  photo_mode: { tone: 'error', text: 'Choisissez ce qu’il faut faire de la photo.' },
 };
 
 export function messageFor(code: string | string[] | undefined): { tone: 'success' | 'error'; text: string } | null {

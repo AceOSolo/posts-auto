@@ -14,12 +14,45 @@ import {
 import { type Database, type Tx, asUser } from '@posts-auto/db';
 import { canEditPost, canReschedulePost, loadAccess } from '../access.ts';
 import { NotFoundError } from '../errors.ts';
+import type { VisualTaskState } from '../visuals/visual-requests.ts';
 
 export interface PostMedia {
   readonly assetId: string;
   readonly position: number;
   readonly altText: string | null;
+  /** VIS-12 : image générée par IA, ou visuel qui en contient une. */
   readonly aiGenerated: boolean;
+  readonly kind: 'upload' | 'generated' | 'rendered' | 'canva_export';
+  /** Visuel rendu à partir d'un modèle : ce qu'il faut savoir pour le relire (VIS-11, VIS-13). */
+  readonly visual: VisualInfo | null;
+}
+
+export interface VisualInfo {
+  /** D'où vient la photo du visuel ; null pour un visuel texte. */
+  readonly photo: 'generated' | 'library' | 'kept' | null;
+  /** Problèmes de lisibilité relevés au rendu. */
+  readonly issues: readonly string[];
+  /** Remarques de préparation (budget atteint, générateur indisponible…). */
+  readonly notes: readonly string[];
+  readonly instruction: string | null;
+}
+
+const ISSUE_LABELS: Record<string, (zone: string) => string> = {
+  text_truncated: (zone) => `Texte trop long, coupé (zone « ${zone} »)`,
+  low_contrast: (zone) => `Contraste faible (zone « ${zone} »)`,
+  empty_zone: (zone) => `Zone « ${zone} » restée vide`,
+};
+
+function visualInfo(content: unknown): VisualInfo {
+  const c = (content ?? {}) as Record<string, unknown>;
+  const strings = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []);
+  const issues = Array.isArray(c['issues']) ? (c['issues'] as { code?: unknown; zone?: unknown }[]) : [];
+  return {
+    photo: c['photo'] === 'generated' || c['photo'] === 'library' || c['photo'] === 'kept' ? c['photo'] : null,
+    issues: issues.map((i) => ISSUE_LABELS[String(i.code)]?.(String(i.zone)) ?? String(i.code)),
+    notes: strings(c['notes']),
+    instruction: typeof c['instruction'] === 'string' ? c['instruction'] : null,
+  };
 }
 
 export interface PostCard {
@@ -51,13 +84,20 @@ async function mediaOf(trx: Tx, postIds: readonly string[]): Promise<Map<string,
   const rows = await trx
     .selectFrom('post_media as pm')
     .innerJoin('media_assets as m', 'm.id', 'pm.asset_id')
-    .select(['pm.post_id', 'pm.asset_id', 'pm.position', 'pm.alt_text', 'm.ai_generated'])
+    .select(['pm.post_id', 'pm.asset_id', 'pm.position', 'pm.alt_text', 'm.ai_generated', 'm.kind', 'm.render_content'])
     .where('pm.post_id', 'in', postIds)
     .orderBy('pm.position')
     .execute();
   for (const row of rows) {
     const list = map.get(row.post_id) ?? [];
-    list.push({ assetId: row.asset_id, position: row.position, altText: row.alt_text, aiGenerated: row.ai_generated });
+    list.push({
+      assetId: row.asset_id,
+      position: row.position,
+      altText: row.alt_text,
+      aiGenerated: row.ai_generated,
+      kind: row.kind as PostMedia['kind'],
+      visual: row.kind === 'rendered' ? visualInfo(row.render_content) : null,
+    });
     map.set(row.post_id, list);
   }
   return map;
@@ -180,8 +220,12 @@ export interface PostDetail extends PostCard {
     readonly commands: readonly PostCommandType[];
     readonly canEdit: boolean;
     readonly canReschedule: boolean;
+    /** VIS-13 : refaire (ou ajouter) le visuel. */
+    readonly canRedoVisual: boolean;
   };
   readonly url: string | null;
+  /** VIS-13 : visuel demandé, en préparation ou en échec. */
+  readonly visualTask: VisualTaskState | null;
 }
 
 export async function getPostDetail(db: Database, userId: string, postId: string, now: Date): Promise<PostDetail> {
@@ -207,6 +251,12 @@ export async function getPostDetail(db: Database, userId: string, postId: string
 
     const card = toCard(row, media.get(row.id) ?? [], access.relation !== 'none', now);
     const editableStatuses: readonly PostStatus[] = ['brouillon', 'a_valider', 'modif', 'valide', 'erreur'];
+    const visualStatuses: readonly PostStatus[] = ['brouillon', 'a_valider', 'modif', 'valide'];
+    const task = await trx
+      .selectFrom('visual_tasks')
+      .select(['instruction', 'photo_mode', 'failed_at', 'error', 'created_at'])
+      .where('post_id', '=', postId)
+      .executeTakeFirst();
     return {
       ...card,
       origin: await originOf(trx, postId, versions.some((v) => v.author_kind === 'ai')),
@@ -223,8 +273,19 @@ export async function getPostDetail(db: Database, userId: string, postId: string
         commands: availableCommands({ status: card.status, hasBlockingMarkers: card.hasBlockingMarkers }, access.actor),
         canEdit: canEditPost(access) && editableStatuses.includes(card.status),
         canReschedule: canReschedulePost(access) && (card.status === 'a_valider' || card.status === 'valide'),
+        canRedoVisual: canEditPost(access) && visualStatuses.includes(card.status),
       },
       url: row.external_post_url,
+      visualTask:
+        task === undefined
+          ? null
+          : {
+              status: task.failed_at === null ? 'pending' : 'failed',
+              instruction: task.instruction,
+              photoMode: task.photo_mode as VisualTaskState['photoMode'],
+              error: task.error,
+              requestedAt: task.created_at,
+            },
     };
   });
 }

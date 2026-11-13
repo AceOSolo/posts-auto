@@ -16,6 +16,7 @@ import {
   editTextAction,
   hooksAction,
   movePhotoAction,
+  redoVisualAction,
   refuseAction,
   removePhotoAction,
   requestChangesAction,
@@ -85,6 +86,34 @@ export default async function PostPage({
   }
   const can = new Set(post.actions.commands);
   const hooks = post.actions.canEdit && post.status === 'a_valider' ? await pendingHooks(database(), userId, post.id, new Date()) : [];
+  // VIS-13 : le visuel préparé à partir d'un modèle, et ce qu'on peut faire de sa photo.
+  const visual = post.media.find((m) => m.kind === 'rendered') ?? null;
+  const task = post.visualTask;
+  const photoOptions: readonly (readonly [string, string])[] =
+    visual === null
+      ? [
+          ['keep', 'Au choix de l’outil (une fois sur deux avec photo)'],
+          ['new', 'Avec une photo'],
+          ['none', 'Sans photo (visuel texte)'],
+        ]
+      : visual.visual?.photo
+        ? [
+            ['keep', 'Garder la photo'],
+            ['new', 'Changer de photo'],
+            ['none', 'Sans photo (visuel texte)'],
+          ]
+        : [
+            ['keep', 'Sans photo, comme maintenant'],
+            ['new', 'Avec une photo'],
+          ];
+  const visualOrigin =
+    visual?.visual === null || visual === null
+      ? null
+      : visual.aiGenerated
+        ? 'Visuel préparé à partir d’un modèle de l’espace, avec une image générée par IA (signalée dans le texte alternatif publié).'
+        : visual.visual.photo !== null
+          ? 'Visuel préparé à partir d’un modèle de l’espace, avec une photo de la médiathèque.'
+          : 'Visuel texte préparé à partir d’un modèle de l’espace.';
 
   return (
     <>
@@ -116,6 +145,70 @@ export default async function PostPage({
           Texte rédigé par une IA : elle peut se tromper. Vérifiez les faits, chiffres et noms avant de valider.{' '}
           <Link href="/comment-fonctionne-la-redaction">Comment fonctionne la rédaction</Link>
         </p>
+      )}
+
+      {(visual !== null || task !== null || post.actions.canRedoVisual) && (
+        <section className="visual" aria-labelledby="visuel">
+          <h2 id="visuel">Visuel</h2>
+          {task?.status === 'pending' && (
+            <>
+              {/* La page se recharge seule tant que le visuel est en préparation (sans JavaScript). */}
+              <meta httpEquiv="refresh" content="20" />
+              <p className="flash success" role="status">
+                Nouveau visuel en préparation{task.instruction ? ` (consigne : « ${task.instruction} »)` : ''}. Cette page se met à jour seule.
+              </p>
+            </>
+          )}
+          {task?.status === 'failed' && (
+            <p className="flash error" role="alert">
+              Le visuel n’a pas pu être préparé ({task.error ?? 'erreur inconnue'}). Vous pouvez réessayer ci-dessous.
+            </p>
+          )}
+          {visual?.visual && (
+            <>
+              <p className="hint">
+                {visualOrigin}
+                {visual.visual.instruction && <> Dernière consigne : « {visual.visual.instruction} ».</>}
+              </p>
+              {visual.visual.issues.length > 0 && (
+                <div className="flash error">
+                  À vérifier sur le visuel :
+                  <ul>
+                    {visual.visual.issues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {visual.visual.notes.length > 0 && (
+                <ul className="hint">
+                  {visual.visual.notes.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          {post.actions.canRedoVisual && task?.status !== 'pending' && (
+            <details open={task?.status === 'failed'}>
+              <summary>{visual === null ? 'Ajouter un visuel' : 'Refaire le visuel'}</summary>
+              <form action={redoVisualAction.bind(null, post.id)} className="stack">
+                <label htmlFor="consigne">Consigne (facultative)</label>
+                <textarea id="consigne" name="consigne" rows={2} maxLength={1000} placeholder="Ex. : titre plus court, mettre le chiffre en avant, photo d’atelier…" />
+                <fieldset className="choices">
+                  <legend>Photo</legend>
+                  {photoOptions.map(([value, label], index) => (
+                    <label key={value}>
+                      <input type="radio" name="photo" value={value} defaultChecked={index === 0} /> {label}
+                    </label>
+                  ))}
+                </fieldset>
+                <button type="submit">{visual === null ? 'Préparer un visuel' : 'Refaire le visuel'}</button>
+                <p className="hint">Le nouveau visuel prend la place de l’ancien. Pour mettre votre propre image, ajoutez-la dans « Photos » et retirez le visuel.</p>
+              </form>
+            </details>
+          )}
+        </section>
       )}
 
       {post.actions.canEdit && post.status === 'a_valider' && (
