@@ -1,4 +1,5 @@
 export * from './access.ts';
+export * from './accounts/accounts.ts';
 export * from './auth/auth.ts';
 export * from './errors.ts';
 export * from './exchange/api-keys.ts';

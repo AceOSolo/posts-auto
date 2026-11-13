@@ -87,6 +87,10 @@ button.primary { background: var(--primary); color: var(--primary-text); border-
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.link { border: none; background: none; color: var(--primary); padding: 0; min-height: auto; text-decoration: underline; }
 
+.topbar .nav-group { display: inline-flex; gap: 16px; }
+label.check { font-weight: normal; display: flex; gap: 10px; align-items: flex-start; }
+label.check input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
+
 /* Messages */
 .flash { padding: 10px 14px; border-radius: var(--radius); margin: 12px 0; }
 .flash.success { background: var(--success-bg); color: var(--success-text); }

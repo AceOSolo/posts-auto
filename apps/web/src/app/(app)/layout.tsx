@@ -18,9 +18,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </Link>
           <Link href="/">Mes posts</Link>
           {workspaces.map((workspace) => (
-            <Link key={workspace.id} href={`/equipe/${workspace.id}`}>
-              Équipe · {workspace.name}
-            </Link>
+            <span key={workspace.id} className="nav-group">
+              <Link href={`/equipe/${workspace.id}`}>Équipe · {workspace.name}</Link>
+              <Link href={`/comptes/${workspace.id}`}>Comptes</Link>
+            </span>
           ))}
         </nav>
         <form action={logout}>

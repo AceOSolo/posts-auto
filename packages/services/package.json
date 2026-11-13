@@ -13,6 +13,7 @@
   "dependencies": {
     "@posts-auto/core": "*",
     "@posts-auto/db": "*",
+    "@posts-auto/linkedin": "*",
     "kysely": "^0.29.9"
   }
 }

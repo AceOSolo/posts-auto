@@ -16,6 +16,7 @@
   "dependencies": {
     "@posts-auto/core": "*",
     "@posts-auto/db": "*",
+    "@posts-auto/linkedin": "*",
     "@posts-auto/services": "*",
     "@posts-auto/worker": "*",
     "next": "16.4.6",

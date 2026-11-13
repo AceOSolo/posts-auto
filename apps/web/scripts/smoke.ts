@@ -147,6 +147,50 @@ try {
   const sameSlot = JSON.stringify({ ...JSON.parse(payload), reference: `${reference}-d`, images: [] });
   check('API : créneau déjà pris → 409', (await api('/posts', writer.key, { method: 'POST', body: sameSlot })).status === 409);
 
+  // Connexion d'un profil LinkedIn (LNK-01, LNK-09), avec le serveur en mode simulé (LINKEDIN_MODE=fake).
+  const consentPage = await (await get(`/comptes/${workspaceId}/connecter`, claire)).text();
+  const consentForm = [...consentPage.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].find((m) => (m[1] ?? '').includes('Continuer vers LinkedIn'));
+  const consentFields = new FormData();
+  for (const input of (consentForm?.[1] ?? '').matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) {
+    consentFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+  }
+  consentFields.append('accord', 'oui');
+  const claireCookie = `session=${claire}; __Host-session=${claire}`;
+  const toLinkedIn = await fetch(`${BASE}/comptes/${workspaceId}/connecter`, { method: 'POST', body: consentFields, redirect: 'manual', headers: { cookie: claireCookie, origin: BASE } });
+  const authorizeUrl = toLinkedIn.headers.get('location') ?? '';
+  const stateCookie = toLinkedIn.headers.getSetCookie().find((c) => c.startsWith('li_oauth='))?.split(';')[0] ?? '';
+  if (authorizeUrl.includes('linkedin.com')) {
+    check('connexion LinkedIn : redirection vers LinkedIn (serveur en mode réel, parcours non testé ici)', authorizeUrl.includes('state='));
+  } else {
+    check('connexion LinkedIn : consentement puis redirection avec un état anti-falsification', authorizeUrl.includes('state=') && stateCookie !== '', `HTTP ${toLinkedIn.status}`);
+    const forgedState = authorizeUrl.replace(/state=[^&]+/, 'state=falsifie');
+    const rejected = await fetch(forgedState, { redirect: 'manual', headers: { cookie: `${claireCookie}; ${stateCookie}` } });
+    check('connexion LinkedIn : état falsifié refusé', (rejected.headers.get('location') ?? '').includes('connexion-expiree'));
+
+    // Nouvel essai complet (le cookie d'état est à usage unique).
+    const retry = await fetch(`${BASE}/comptes/${workspaceId}/connecter`, { method: 'POST', body: consentFields, redirect: 'manual', headers: { cookie: claireCookie, origin: BASE } });
+    const retryCookie = retry.headers.getSetCookie().find((c) => c.startsWith('li_oauth='))?.split(';')[0] ?? '';
+    const callback = await fetch(retry.headers.get('location') ?? '', { redirect: 'manual', headers: { cookie: `${claireCookie}; ${retryCookie}` } });
+    const connected = await asSystem(db, (trx) =>
+      trx
+        .selectFrom('social_accounts as a')
+        .innerJoin('social_tokens as t', 't.account_id', 'a.id')
+        .innerJoin('users as u', 'u.id', 'a.holder_user_id')
+        .select(['a.external_urn', 't.oauth_client_id'])
+        .where('u.email', '=', 'claire@demo.example.test')
+        .where('a.workspace_id', '=', workspaceId)
+        .where('a.external_urn', 'like', 'urn:li:person:demo%')
+        .execute(),
+    );
+    check(
+      'connexion LinkedIn : compte connecté, jeton chiffré enregistré',
+      /compte-(re)?connecte/.test(callback.headers.get('location') ?? '') && connected.length === 1,
+      `→ ${callback.headers.get('location')}`,
+    );
+    const accountsPage = await (await get(`/comptes/${workspaceId}`, claire)).text();
+    check('page des comptes : échéance de la connexion affichée (LNK-03)', accountsPage.includes('Connexion valable jusqu’au'));
+  }
+
   // REC-01 : une personne d'un autre client ne voit ni le post ni l'image.
   await asSystem(db, (trx) =>
     trx
