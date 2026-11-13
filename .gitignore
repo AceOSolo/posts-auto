@@ -1,0 +1,20 @@
+# Dépendances et sorties
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Secrets et environnements locaux
+.env
+.env.*
+!.env.example
+
+# Fichiers système
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Éditeurs
+.vscode/*
+!.vscode/extensions.json
+.idea/
