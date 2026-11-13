@@ -242,3 +242,9 @@ ol.hooks form { display: contents; }
 
 /* IDE-05 : dictée. */
 .dictation { display: flex; flex-direction: column; gap: 4px; }
+
+/* GEN-10 : tableau de suivi des 8 semaines. */
+table.tracking { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin: 8px 0 16px; }
+table.tracking caption { text-align: left; font-weight: 600; padding: 4px 0; }
+table.tracking th, table.tracking td { border-bottom: 1px solid var(--border); padding: 4px 6px; text-align: right; }
+table.tracking th[scope='row'], table.tracking thead th:first-child { text-align: left; }

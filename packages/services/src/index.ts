@@ -27,3 +27,4 @@ export * from './exchange/inputs.ts';
 export * from './requests/interpret.ts';
 export * from './editorial/sources.ts';
 export * from './posts/assist.ts';
+export * from './planning/week-document.ts';
