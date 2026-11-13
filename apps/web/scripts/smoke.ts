@@ -181,6 +181,16 @@ try {
   const sameSlot = JSON.stringify({ ...JSON.parse(payload), reference: `${reference}-d`, images: [] });
   check('API : créneau déjà pris → 409', (await api('/posts', writer.key, { method: 'POST', body: sameSlot })).status === 409);
 
+  // Reprise des idées et des demandes de l'outil actuel (incrément 1b).
+  const migrator = await createApiKey(db, { workspaceId, name: 'smoke-reprise', scopes: ['inputs:write'] });
+  const ideaPayload = JSON.stringify({ reference: `idee-${reference}`, titre: 'Idée reprise de l’ancien outil', comptes: [jpAccount?.id], statut: 'retenue' });
+  const ideaCreated = await api('/idees', migrator.key, { method: 'POST', body: ideaPayload });
+  const ideaReplay = await api('/idees', migrator.key, { method: 'POST', body: ideaPayload });
+  check('API : idée reprise (201), même référence sans doublon (200)', ideaCreated.status === 201 && ideaReplay.status === 200, `HTTP ${ideaCreated.status}/${ideaReplay.status}`);
+  const requestPayload = JSON.stringify({ reference: `demande-${reference}`, texte: 'Demande reprise, déjà traitée', comptes: [jpAccount?.id], demandeur_nom: 'Ancien outil', statut: 'traitee' });
+  check('API : demande reprise avec son historique', (await api('/demandes', migrator.key, { method: 'POST', body: requestPayload })).status === 201);
+  check('API : une clé sans le droit de reprise est refusée → 403', (await api('/idees', writer.key, { method: 'POST', body: ideaPayload })).status === 403);
+
   // Connexion d'un profil LinkedIn (LNK-01, LNK-09), avec le serveur en mode simulé (LINKEDIN_MODE=fake).
   const consentPage = await (await get(`/comptes/${workspaceId}/connecter`, claire)).text();
   const consentForm = [...consentPage.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].find((m) => (m[1] ?? '').includes('Continuer vers LinkedIn'));

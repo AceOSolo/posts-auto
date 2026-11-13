@@ -75,7 +75,7 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
     const r = await trx
       .selectFrom('post_requests as r')
       .leftJoin('users as u', 'u.id', 'r.created_by')
-      .select(['r.id', 'r.workspace_id', 'r.raw_text', 'r.title', 'r.details', 'r.links', 'r.wished_at', 'r.attempts', 'r.created_by', 'u.full_name', 'u.email'])
+      .select(['r.id', 'r.workspace_id', 'r.raw_text', 'r.title', 'r.details', 'r.links', 'r.wished_at', 'r.attempts', 'r.created_by', 'r.requester_label', 'u.full_name', 'u.email'])
       .where('r.id', '=', requestId)
       .executeTakeFirstOrThrow();
     const accountIds = (await trx.selectFrom('request_accounts').select('account_id').where('request_id', '=', requestId).execute()).map((a) => a.account_id);
@@ -84,7 +84,8 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
     return { ...r, accountIds, photos: photos.map((p) => p.asset_id), existing };
   });
   const workspaceId = request.workspace_id;
-  const author = request.full_name ?? request.email ?? 'un membre de l’équipe';
+  // Demande reprise de l'ancien outil : le demandeur peut n'avoir qu'un nom.
+  const author = request.full_name ?? request.email ?? request.requester_label ?? 'un membre de l’équipe';
 
   const finish = async (status: 'done' | 'impossible', followup: string, lastError: string | null) => {
     await asSystem(db, async (trx) => {
@@ -93,7 +94,7 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
         .set({ status, followup, last_error: lastError, lease_until: null, processed_at: clock() })
         .where('id', '=', requestId)
         .execute();
-      await notify(trx, [request.created_by], workspaceId, 'demande_traitee', { workspaceId, requestId, impossible: status === 'impossible' }, ['in_app']);
+      if (request.created_by !== null) await notify(trx, [request.created_by], workspaceId, 'demande_traitee', { workspaceId, requestId, impossible: status === 'impossible' }, ['in_app']);
     });
   };
 

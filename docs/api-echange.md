@@ -116,19 +116,75 @@ Au-delà de 3 reprises (version 4), l'API refuse (`too_many_reworks`) et le post
 
 Pour garder le même créneau, renvoyer le même `creneau` : l'ancien post libère le sien. Une reprise demandée moins de 3 heures avant le créneau devrait viser un créneau plus tardif (RÈG-14).
 
+## Reprise des idées et des demandes (incrément 1b)
+
+Quand l'application prend en charge la rédaction, les idées et les demandes de l'outil actuel y sont reprises par deux points d'accès. Ils demandent une clé créée avec `--reprise` (droit `inputs:write`). Comme pour les posts, une **référence** stable rend l'envoi idempotent : renvoyer la même ne crée jamais de doublon (réponse 200 au lieu de 201).
+
+### `POST /idees` : reprendre une idée
+
+```json
+{
+  "reference": "idee-42",
+  "titre": "Salon Preventica",
+  "details": "Stand B12, démonstrations à 11h et 15h.",
+  "lien": "https://www.preventica.com",
+  "debut": "2026-11-20",
+  "fin": "2026-12-10",
+  "evenement": "2026-12-08",
+  "comptes": ["<identifiant de compte>"],
+  "statut": "retenue",
+  "suivi": "Relayée par la page en novembre",
+  "cree_le": "2026-10-28T09:12:00+01:00"
+}
+```
+
+Seuls `reference` et `titre` sont obligatoires. `comptes` vide ou absent : tous les comptes. `statut` : `nouvelle` (par défaut), `retenue`, `utilisee`, `ecartee`. Les dates `debut`, `fin` et `evenement` sont des jours (`AAAA-MM-JJ`).
+
+Réponse : `{ "cree": true, "idee": { "id": "…", "reference": "idee-42" } }`.
+
+### `POST /demandes` : reprendre une demande de post
+
+```json
+{
+  "reference": "demande-17",
+  "texte": "Post sur la nouvelle salle de formation de Lyon, avec les photos de l'inauguration.",
+  "comptes": ["<identifiant de compte>"],
+  "souhaite_le": "2026-11-24T12:00:00+01:00",
+  "liens": ["https://secutop.fr/lyon"],
+  "demandeur_email": "claire@secutop.fr",
+  "demandeur_nom": "Claire Durand",
+  "statut": "traitee",
+  "suivi": "Publié le 3 novembre",
+  "cree_le": "2026-10-30T14:00:00+01:00"
+}
+```
+
+Obligatoires : `reference`, `texte`, `comptes` (au moins un). Le demandeur est reconnu par `demandeur_email` s'il est membre de l'espace ; sinon `demandeur_nom` (ou l'adresse) est gardé tel quel.
+
+`statut` : `traitee` ou `impossible` pour l'historique ; `nouvelle` (par défaut) pour une demande encore à faire. **Attention** : une demande `nouvelle` est rédigée par l'application dans l'heure (IDE-06). Ne l'envoyer qu'une fois la rédaction arrêtée dans l'outil actuel, sinon le post serait rédigé deux fois.
+
+Réponse : `{ "cree": true, "demande": { "id": "…", "reference": "demande-17" } }`.
+
+### Ordre conseillé pour la bascule de la rédaction
+
+1. Arrêter les tâches de rédaction et de reprise de l'outil actuel.
+2. Reprendre les idées (`POST /idees`) et les demandes, traitées ou non (`POST /demandes`).
+3. Importer le planning et les banques de sujets (page « Planning › Importer »).
+4. Dans « Planning › Rédaction » : lancer une première rédaction, la relire, puis activer la rédaction automatique.
+
 ## Erreurs
 
 Format : `{ "erreur": { "code": "…", "message": "…" } }`. Les codes sont stables ; les messages sont en français et peuvent évoluer.
 
 | HTTP | Codes | Que faire |
 | --- | --- | --- |
-| 400 | `json_invalide`, `creneau_invalide`, `origine_invalide`, `reference_manquant`, `compte_manquant`, `texte_manquant`, `images_invalides`, `date_invalide` | Corriger la requête. |
+| 400 | `json_invalide`, `creneau_invalide`, `origine_invalide`, `reference_manquant`, `compte_manquant`, `texte_manquant`, `titre_manquant`, `comptes_invalides`, `liens_invalides`, `statut_invalide`, `images_invalides`, `date_invalide` | Corriger la requête. |
 | 401 | `cle_invalide` | Vérifier la clé (révoquée ?). |
 | 403 | `droit_insuffisant` | La clé n'a pas le droit d'écrire. |
 | 404 | `introuvable` | Référence inconnue. |
 | 409 | `same_account_same_slot`, `account_daily_cap`, `workspace_min_gap`, `workspace_slot_cap`, `not_replaceable`, `too_many_reworks` | Choisir un autre créneau, ou laisser le post à l'humain. |
 | 413 | `requete_trop_grosse` | Requête de plus de 50 Mo : réduire les images. |
-| 422 | `invalid_reference`, `empty_body`, `body_too_long`, `too_many_images`, `image_unsupported`, `image_type_mismatch`, `image_corrupted`, `image_too_large`, `unknown_account`, `unknown_replaced`, `replaced_other_account`, `too_soon`, `after_event`, `window_too_large` | Corriger le contenu. |
+| 422 | `invalid_reference`, `empty_body`, `body_too_long`, `too_many_images`, `image_unsupported`, `image_type_mismatch`, `image_corrupted`, `image_too_large`, `unknown_account`, `unknown_replaced`, `replaced_other_account`, `too_soon`, `after_event`, `window_too_large`, `titre_requis`, `demande_vide`, `compte_requis`, `demandeur_requis` | Corriger le contenu. |
 | 500 | `erreur_interne` | Réessayer plus tard avec la même référence : sans risque de doublon. |
 
 ## Exemple de cycle hebdomadaire (lundi 7h30)

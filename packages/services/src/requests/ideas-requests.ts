@@ -269,7 +269,7 @@ export async function listPostRequests(db: Database, userId: string, workspaceId
     let query = trx
       .selectFrom('post_requests as r')
       .leftJoin('users as u', 'u.id', 'r.created_by')
-      .select(['r.id', 'r.raw_text', 'r.title', 'r.details', 'r.links', 'r.wished_at', 'r.status', 'r.followup', 'r.created_by', 'r.created_at', 'u.full_name', 'u.email'])
+      .select(['r.id', 'r.raw_text', 'r.title', 'r.details', 'r.links', 'r.wished_at', 'r.status', 'r.followup', 'r.created_by', 'r.requester_label', 'r.created_at', 'u.full_name', 'u.email'])
       .where('r.workspace_id', '=', workspaceId)
       .orderBy('r.created_at', 'desc')
       .limit(options.limit ?? 50);
@@ -295,7 +295,7 @@ export async function listPostRequests(db: Database, userId: string, workspaceId
         photoCount: photos.filter((p) => p.request_id === r.id).length,
         status: r.status as RequestStatus,
         followup: r.followup,
-        authorName: r.full_name ?? r.email,
+        authorName: r.full_name ?? r.email ?? r.requester_label,
         isMine: r.created_by === userId,
         createdAt: r.created_at,
         posts: posts.filter((p) => p.request_id === r.id).map((p) => ({ id: p.id, accountId: p.account_id, status: p.status, scheduledAt: p.scheduled_at })),

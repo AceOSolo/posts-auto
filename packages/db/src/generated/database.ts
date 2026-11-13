@@ -199,6 +199,7 @@ export interface Ideas {
   details: string | null;
   ends_on: string | null;
   event_on: string | null;
+  external_ref: string | null;
   followup: string | null;
   from_post_id: string | null;
   id: Generated<string>;
@@ -332,8 +333,9 @@ export interface PostMedia {
 export interface PostRequests {
   attempts: Generated<number>;
   created_at: Generated<Timestamp>;
-  created_by: string;
+  created_by: string | null;
   details: string | null;
+  external_ref: string | null;
   followup: string | null;
   id: Generated<string>;
   last_error: string | null;
@@ -341,6 +343,7 @@ export interface PostRequests {
   links: Generated<string[]>;
   processed_at: Timestamp | null;
   raw_text: string | null;
+  requester_label: string | null;
   status: Generated<string>;
   title: string | null;
   updated_at: Generated<Timestamp>;

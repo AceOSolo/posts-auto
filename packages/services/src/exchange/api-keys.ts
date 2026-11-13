@@ -7,7 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { type Database, asSystem } from '@posts-auto/db';
 import { hashToken } from '../auth/auth.ts';
 
-export const API_SCOPES = ['posts:read', 'posts:write'] as const;
+export const API_SCOPES = ['posts:read', 'posts:write', 'inputs:write'] as const;
 export type ApiScope = (typeof API_SCOPES)[number];
 
 export interface ApiKeyContext {
