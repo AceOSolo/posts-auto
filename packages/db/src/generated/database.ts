@@ -286,6 +286,7 @@ export interface SocialTokens {
   connected_by: string | null;
   created_at: Generated<Timestamp>;
   expires_at: Timestamp;
+  expiry_alerts_sent: Generated<string[]>;
   last_checked_at: Timestamp | null;
   oauth_client_id: string;
   refresh_expires_at: Timestamp | null;

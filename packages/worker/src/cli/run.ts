@@ -3,6 +3,7 @@
  *
  * - Publication : toutes les minutes (PUB-01 à PUB-05).
  * - Replanification : toutes les 15 minutes (RÈG-08 à RÈG-11).
+ * - Connexions LinkedIn : chaque jour (LNK-04 : renouvellement, vérification, alertes).
  *
  * Variables d'environnement :
  * - DATABASE_URL, MEDIA_ROOT, TOKEN_ENCRYPTION_KEYS, TOKEN_ENCRYPTION_KEY_ID ;
@@ -14,7 +15,15 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_DATABASE_URL, createDatabase } from '@posts-auto/db';
-import { FakeLinkedIn, type LinkedInPublisher, LinkedInHttpClient } from '@posts-auto/linkedin';
+import {
+  FakeLinkedIn,
+  FakeLinkedInOAuth,
+  LinkedInHttpClient,
+  type LinkedInOAuth,
+  LinkedInOAuthClient,
+  type LinkedInPublisher,
+} from '@posts-auto/linkedin';
+import { runTokenCheck } from '../accounts/token-check.ts';
 import { FileMediaStore } from '../media/media-store.ts';
 import { runPublicationTick } from '../publication/publication.ts';
 import { startScheduler } from '../runner/scheduler.ts';
@@ -29,8 +38,14 @@ const db = createDatabase(env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConn
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const media = new FileMediaStore(env['MEDIA_ROOT'] ?? path.join(repoRoot, '.media'));
 const cipher = TokenCipher.fromEnv(env);
-const linkedin: LinkedInPublisher =
-  env['LINKEDIN_MODE'] === 'fake' ? new FakeLinkedIn() : new LinkedInHttpClient({ apiVersion: env['LINKEDIN_API_VERSION'] ?? '202610' });
+const fake = env['LINKEDIN_MODE'] === 'fake';
+const linkedin: LinkedInPublisher = fake ? new FakeLinkedIn() : new LinkedInHttpClient({ apiVersion: env['LINKEDIN_API_VERSION'] ?? '202610' });
+const redirectUri = `${(env['APP_URL'] ?? 'http://localhost:3000').replace(/\/$/, '')}/comptes/connecter/retour`;
+const oauth: LinkedInOAuth | null = fake
+  ? new FakeLinkedInOAuth(redirectUri)
+  : env['LINKEDIN_CLIENT_ID'] && env['LINKEDIN_CLIENT_SECRET']
+    ? new LinkedInOAuthClient({ clientId: env['LINKEDIN_CLIENT_ID'], clientSecret: env['LINKEDIN_CLIENT_SECRET'], redirectUri })
+    : null;
 
 log('info', 'demarrage', { linkedin: env['LINKEDIN_MODE'] === 'fake' ? 'faux (développement)' : 'API', cle: cipher.currentKeyId });
 
@@ -38,6 +53,7 @@ const scheduler = startScheduler(
   [
     { name: 'publication', intervalMs: 60_000, run: () => runPublicationTick({ db, linkedin, media, cipher }) },
     { name: 'replanification', intervalMs: 15 * 60_000, run: () => runRescheduleTick({ db }) },
+    { name: 'connexions', intervalMs: 24 * 3_600_000, run: () => runTokenCheck({ db, oauth, cipher }) },
   ],
   { info: (event, details) => log('info', event, details), error: (event, details) => log('error', event, details) },
 );

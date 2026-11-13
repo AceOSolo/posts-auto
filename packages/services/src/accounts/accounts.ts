@@ -101,6 +101,8 @@ export async function connectProfile(
       refresh_expires_at: tokens.refreshExpiresAt,
       last_checked_at: now,
       connected_by: input.userId,
+      // Nouvelle connexion : les alertes d'expiration repartent de zéro (LNK-04).
+      expiry_alerts_sent: [] as string[],
     };
     await trx
       .insertInto('social_tokens')

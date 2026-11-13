@@ -30,6 +30,7 @@ import {
   describeForUser,
 } from '@posts-auto/linkedin';
 import type { MediaStore } from '../media/media-store.ts';
+import { alertRecipients, notify } from '../notifications.ts';
 import type { TokenCipher } from '../secrets/token-cipher.ts';
 
 /** PUB-04 : 3 nouvelles tentatives, à 1, 5 puis 15 minutes. */
@@ -136,40 +137,6 @@ async function audit(trx: Tx, workspaceId: string, action: string, postId: strin
     .insertInto('audit_log')
     .values({ org_id: ws.org_id, workspace_id: workspaceId, actor_kind: 'system', action, entity: 'post', entity_id: postId, details: JSON.stringify(details), at })
     .execute();
-}
-
-/** Titulaire du compte, administrateurs de l'espace, propriétaires de l'organisation. */
-async function alertRecipients(trx: Tx, workspaceId: string, accountId: string): Promise<string[]> {
-  const holder = await trx.selectFrom('social_accounts').select('holder_user_id').where('id', '=', accountId).executeTakeFirst();
-  const admins = await trx
-    .selectFrom('workspace_members')
-    .select('user_id')
-    .where('workspace_id', '=', workspaceId)
-    .where('role', '=', 'admin')
-    .execute();
-  const owners = await trx
-    .selectFrom('org_members as o')
-    .innerJoin('workspaces as w', 'w.org_id', 'o.org_id')
-    .select('o.user_id')
-    .where('w.id', '=', workspaceId)
-    .where('o.role', '=', 'owner')
-    .execute();
-  const ids = [holder?.holder_user_id, ...admins.map((r) => r.user_id), ...owners.map((r) => r.user_id)];
-  return [...new Set(ids.filter((id): id is string => typeof id === 'string'))];
-}
-
-async function notify(
-  trx: Tx,
-  userIds: readonly string[],
-  workspaceId: string,
-  kind: string,
-  payload: Record<string, unknown>,
-  channels: readonly ('email' | 'in_app')[],
-) {
-  const rows = userIds.flatMap((userId) =>
-    channels.map((channel) => ({ user_id: userId, workspace_id: workspaceId, kind, channel, payload: JSON.stringify(payload) })),
-  );
-  if (rows.length > 0) await trx.insertInto('notifications').values(rows).execute();
 }
 
 // ---------------------------------------------------------------------------
