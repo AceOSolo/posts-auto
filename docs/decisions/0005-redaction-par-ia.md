@@ -56,6 +56,8 @@ Deux risques dominent : un post faux ou hors règles qui part sous le nom d'une 
 8. **Pas de visuel à l'incrément 1b** : un post rédigé passe directement « à valider ». Il porte les photos d'une demande s'il en vient une. Les visuels arrivent à l'incrément 1c.
 9. **Une seule génération à la fois par espace**, garantie par un bail en base, comme la file de publication : une génération interrompue est reprise au passage suivant. La génération repart toujours de l'état de la base. La relancer ne crée pas de doublon (REC-04).
 
+10. **Sources de veille (GEN-09) sans ouvrir le réseau interne.** Un flux RSS est une adresse saisie par un client et lue par nos serveurs : c'est une porte classique vers le réseau interne de l'hébergement (SSRF). La relève n'accepte que http et https, sur les ports 80 et 443, sans identifiants dans l'adresse. L'adresse IP contrôlée est celle de la connexion elle-même, par le résolveur d'undici, et ce à chaque redirection (3 au plus) : un nom qui changerait d'adresse entre deux résolutions est refusé aussi. Limites : 2 Mo et 10 secondes. Le lecteur XML ne résout aucune entité externe. Chaque créneau laissé au choix de l'IA reçoit un article différent. Si l'IA le reprend, le post a l'origine « source externe » et l'article ne resert pas.
+
 ## Conséquences
 
 - Les tests de l'affectation et des contrôles n'ont besoin ni de réseau ni de clé.

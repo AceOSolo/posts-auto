@@ -295,6 +295,12 @@ try {
   const example = await submitForm(fichePath, claire, '>Ajouter<', { texte: 'Un post de référence collé par la titulaire.', etiquette: 'imiter' });
   check('fiche : exemple « à imiter » ajouté par le titulaire (EDI-05)', (example.headers.get('location') ?? '').includes('exemple-ajoute'), `HTTP ${example.status}`);
 
+  // GEN-09 : source de veille ajoutée depuis la ligne éditoriale (la relève, réseau compris, est testée à part).
+  const feedUrl = `https://veille.exemple.fr/flux-${Date.now()}.xml`;
+  const addedSource = await submitForm(linePath, alexis, 'Suivre cette source', { adresse: feedUrl, libelle: 'Veille de test' });
+  const sourceRow = await asSystem(db, (trx) => trx.selectFrom('content_sources').select('enabled').where('url', '=', feedUrl).executeTakeFirst());
+  check('source de veille suivie (GEN-09)', (addedSource.headers.get('location') ?? '').includes('source-ajoutee') && sourceRow?.enabled === true, `HTTP ${addedSource.status}`);
+
   // PLA-01 à PLA-05, PLA-08 : planning, case, import, événements, inventaire.
   const today = new Date();
   const monday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - ((today.getUTCDay() + 6) % 7)));

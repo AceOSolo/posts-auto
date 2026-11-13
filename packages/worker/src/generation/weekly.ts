@@ -255,12 +255,17 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
   let costUsd = 0;
   let consecutiveProviderErrors = 0;
   let aborted: string | null = null;
+  // GEN-09 : chaque créneau laissé au choix de l'IA reçoit un article de veille différent, qu'elle peut reprendre.
+  const freeSlots = allocation.assignments.filter((a) => a.subject === null);
+  const articleFor = new Map(freeSlots.flatMap((a, i) => (data.articles[i] ? [[a, data.articles[i]] as const] : [])));
 
   await pool(allocation.assignments, deps.concurrency ?? 3, async (assignment) => {
     if (aborted !== null) return;
     const account = accounts.get(assignment.accountId);
     if (account === undefined) return;
     const info = assignment.subject === null ? null : data.subjectInfo.get(subjectKey(assignment.subject));
+    const article = articleFor.get(assignment) ?? null;
+    const articleDocId = article === null ? null : `article-${article.id.slice(0, 8)}`;
     const sameSubject =
       assignment.subject === null
         ? []
@@ -269,9 +274,15 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
             .map((other) => nameOf(other.accountId) ?? 'Compte');
     const brief: PostBrief = {
       scheduledAtLabel: slotLabel(assignment.at, settings.calendar.timeZone),
-      originLabel: originLabel(assignment),
+      originLabel:
+        article === null
+          ? originLabel(assignment)
+          : `${originLabel(assignment)} ; un article de veille est proposé : s’il est utile à ce compte, tu peux en tirer le post en citant son lien en fin de texte et en indiquant « ${articleDocId} » dans sourcesUsed`,
       subject: info?.title ?? null,
-      documents: info?.documents ?? [],
+      documents:
+        article === null
+          ? (info?.documents ?? [])
+          : [{ type: 'article', id: articleDocId as string, title: article.title, link: article.link, content: [`${article.title} (source : ${article.sourceLabel})`, article.summary].filter(Boolean).join('\n') }],
       links: info?.links ?? [],
       deadlineLabel: deadlineLabel(assignment.subject),
       otherAccountsOnSubject: sameSubject,
@@ -289,10 +300,13 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
         purpose: 'write',
         rules,
         bannedPhrases: editorial.bannedPhrases,
-        externalContents: (info?.documents ?? []).map((d) => d.content),
+        externalContents: brief.documents.map((d) => d.content),
         otherPosts: [...data.otherPosts, ...written],
       });
       consecutiveProviderErrors = 0;
+      const usedArticle = article !== null && outcome.report.sourcesUsed.includes(articleDocId as string) ? article : null;
+      const origin = usedArticle === null ? assignment.origin : 'external_source';
+      const summary = usedArticle?.title ?? info?.title ?? outcome.summary;
       const stored = await asSystem(db, async (trx) => {
         if (assignment.replacesPostId !== null && !(await replacePost(trx, assignment.replacesPostId, assignment.accountId, now))) return null;
         const postId = await insertGeneratedPost(
@@ -304,15 +318,16 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
             at: assignment.at,
             mustPublishBy: assignment.mustPublishBy,
             isOptional: assignment.isOptional,
-            origin: assignment.origin,
+            origin,
             source: info?.source ?? {},
             runId,
             body: outcome.body,
-            summary: info?.title ?? outcome.summary,
-            reason: `Rédigé par l’IA (${brief.originLabel})`,
+            summary,
+            reason: `Rédigé par l’IA (${usedArticle === null ? originLabel(assignment) : `article de veille « ${usedArticle.title} »`})`,
           },
           now,
         );
+        if (usedArticle !== null) await trx.updateTable('source_items').set({ used_post_id: postId }).where('id', '=', usedArticle.id).execute();
         if (assignment.subject?.kind === 'idea') {
           await trx
             .updateTable('ideas')
@@ -333,8 +348,8 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
         postId: stored.postId,
         accountId: assignment.accountId,
         accountName: nameOf(assignment.accountId) ?? 'Compte',
-        origin: assignment.origin,
-        subject: info?.title ?? outcome.summary,
+        origin,
+        subject: summary,
         at: assignment.at.toISOString(),
         replaced: assignment.replacesPostId,
         corrected: outcome.report.corrected,

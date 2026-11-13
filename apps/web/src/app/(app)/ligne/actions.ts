@@ -7,9 +7,12 @@ import {
   type OfferPricing,
   type OfferStatus,
   RefusedError,
+  addSource,
   deleteOfferItem,
+  deleteSource,
   saveEditorialLine,
   saveOfferItem,
+  setSourceEnabled,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
@@ -97,5 +100,29 @@ export async function deleteOfferAction(workspaceId: string, itemId: string): Pr
     if (!UUID.test(itemId)) throw new NotFoundError('Offre');
     await deleteOfferItem(database(), userId, workspaceId, itemId, now);
     return 'offre-supprimee';
+  });
+}
+
+/** GEN-09 : sources de veille (flux RSS ou Atom). */
+export async function addSourceAction(workspaceId: string, form: FormData): Promise<void> {
+  await run(workspaceId, 'sources', async (userId, now) => {
+    await addSource(database(), userId, workspaceId, { url: text(form, 'adresse'), label: text(form, 'libelle') }, now);
+    return 'source-ajoutee';
+  });
+}
+
+export async function toggleSourceAction(workspaceId: string, sourceId: string, enabled: boolean): Promise<void> {
+  await run(workspaceId, 'sources', async (userId, now) => {
+    if (!UUID.test(sourceId)) throw new NotFoundError('Source');
+    await setSourceEnabled(database(), userId, workspaceId, sourceId, enabled, now);
+    return enabled ? 'source-reprise' : 'source-suspendue';
+  });
+}
+
+export async function deleteSourceAction(workspaceId: string, sourceId: string): Promise<void> {
+  await run(workspaceId, 'sources', async (userId, now) => {
+    if (!UUID.test(sourceId)) throw new NotFoundError('Source');
+    await deleteSource(database(), userId, workspaceId, sourceId, now);
+    return 'source-supprimee';
   });
 }

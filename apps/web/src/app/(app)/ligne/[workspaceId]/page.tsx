@@ -1,10 +1,10 @@
-import { NotFoundError, type OfferItem, editorialHistory, getEditorialLine, listOffer } from '@posts-auto/services';
+import { NotFoundError, type OfferItem, editorialHistory, getEditorialLine, listOffer, listSources } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { deleteOfferAction, saveLineAction, saveOfferAction } from '../actions.ts';
+import { addSourceAction, deleteOfferAction, deleteSourceAction, saveLineAction, saveOfferAction, toggleSourceAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Ligne éditoriale' };
 export const dynamic = 'force-dynamic';
@@ -60,12 +60,12 @@ export default async function EditorialLinePage({
   const db = database();
   let data;
   try {
-    data = await Promise.all([getEditorialLine(db, userId, workspaceId), listOffer(db, userId, workspaceId), editorialHistory(db, userId, workspaceId)]);
+    data = await Promise.all([getEditorialLine(db, userId, workspaceId), listOffer(db, userId, workspaceId), editorialHistory(db, userId, workspaceId), listSources(db, userId, workspaceId)]);
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const [{ line, canEdit }, offer, history] = data;
+  const [{ line, canEdit }, offer, history, sources] = data;
   const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Paris' });
   const readOnly = !canEdit;
 
@@ -177,6 +177,54 @@ export default async function EditorialLinePage({
               <OfferFields />
               <button type="submit" className="primary">
                 Ajouter
+              </button>
+            </form>
+          </details>
+        )}
+      </section>
+
+      <section aria-labelledby="sources-titre" id="sources">
+        <h2 id="sources-titre">Sources de veille</h2>
+        <p className="hint">
+          Flux RSS ou Atom (blog de l’entreprise, veille réglementaire…) relevés chaque heure. Quand le planning ne remplit pas une semaine, l’IA
+          peut tirer un post d’un article récent, en citant son lien. Le contenu des articles n’est jamais pris pour une consigne.
+        </p>
+        {sources.sources.length === 0 && <p className="muted">Aucune source suivie.</p>}
+        <ul className="cards">
+          {sources.sources.map((source) => (
+            <li key={source.id} className="card">
+              <p>
+                <strong>{source.label}</strong> {!source.enabled && <span className="badge">Suspendue</span>}
+              </p>
+              <p className="muted pre">{source.url}</p>
+              <p className="muted">
+                {source.lastFetchedAt ? `Relevée le ${dateFormat.format(source.lastFetchedAt)}` : 'Pas encore relevée'} · {source.articles} article
+                {source.articles > 1 ? 's' : ''}, dont {source.unused} disponible{source.unused > 1 ? 's' : ''}
+              </p>
+              {source.lastError && <p className="flash error">Dernière relève : {source.lastError}</p>}
+              {sources.canEdit && (
+                <div className="actions">
+                  <form action={toggleSourceAction.bind(null, workspaceId, source.id, !source.enabled)}>
+                    <button type="submit">{source.enabled ? 'Suspendre' : 'Reprendre'}</button>
+                  </form>
+                  <form action={deleteSourceAction.bind(null, workspaceId, source.id)}>
+                    <button type="submit">Supprimer</button>
+                  </form>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+        {sources.canEdit && (
+          <details open={sources.sources.length === 0}>
+            <summary>Ajouter une source</summary>
+            <form action={addSourceAction.bind(null, workspaceId)} className="stack">
+              <label htmlFor="adresse">Adresse du flux</label>
+              <input id="adresse" name="adresse" type="url" required maxLength={1000} placeholder="https://www.exemple.fr/rss.xml" />
+              <label htmlFor="libelle">Nom de la source</label>
+              <input id="libelle" name="libelle" maxLength={200} />
+              <button type="submit" className="primary">
+                Suivre cette source
               </button>
             </form>
           </details>

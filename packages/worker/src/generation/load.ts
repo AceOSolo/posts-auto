@@ -89,6 +89,35 @@ export interface GenerationData {
   readonly occupied: readonly OccupiedSlot[];
   /** Textes des posts de l'espace sur 8 semaines (RÈG-17). */
   readonly otherPosts: readonly { readonly postId: string; readonly text: string }[];
+  /** GEN-09 : articles récents des sources de veille, pas encore repris (du plus récent au plus ancien). */
+  readonly articles: readonly Article[];
+}
+
+export interface Article {
+  readonly id: string;
+  readonly title: string;
+  readonly link: string | null;
+  readonly summary: string | null;
+  readonly sourceLabel: string;
+}
+
+/** Fraîcheur maximale d'un article proposé à la rédaction. */
+export const ARTICLE_MAX_AGE_DAYS = 30;
+
+export async function loadArticles(trx: Tx, workspaceId: string, now: Date, limit = 10): Promise<Article[]> {
+  const since = new Date(now.getTime() - ARTICLE_MAX_AGE_DAYS * 86_400_000);
+  const rows = await trx
+    .selectFrom('source_items as i')
+    .innerJoin('content_sources as s', 's.id', 'i.source_id')
+    .select(['i.id', 'i.title', 'i.link', 'i.summary', 's.label'])
+    .where('i.workspace_id', '=', workspaceId)
+    .where('s.enabled', '=', true)
+    .where('i.used_post_id', 'is', null)
+    .where(sql<boolean>`coalesce(i.published_at, i.fetched_at) >= ${since}`)
+    .orderBy(sql`coalesce(i.published_at, i.fetched_at)`, 'desc')
+    .limit(limit)
+    .execute();
+  return rows.map((r) => ({ id: r.id, title: r.title, link: r.link, summary: r.summary, sourceLabel: r.label }));
 }
 
 /** Un sujet est traité s'il a donné un post encore en vie, ou remplacé par une reprise (GEN-03, décision 0005). */
@@ -337,5 +366,6 @@ export async function loadGenerationData(trx: Tx, workspaceId: string, now: Date
     windowPosts,
     occupied: await loadOccupied(trx, workspaceId, now, startOfLocalDay(windowEnd, calendar)),
     otherPosts: await loadOtherPosts(trx, workspaceId, now),
+    articles: await loadArticles(trx, workspaceId, now),
   };
 }

@@ -135,6 +135,20 @@ export interface ContentReports {
   workspace_id: string;
 }
 
+export interface ContentSources {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  enabled: Generated<boolean>;
+  id: Generated<string>;
+  kind: Generated<string>;
+  label: string;
+  last_error: string | null;
+  last_fetched_at: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+  url: string;
+  workspace_id: string;
+}
+
 export interface EditorialLines {
   allowed_proofs: string | null;
   audiences: string | null;
@@ -499,6 +513,19 @@ export interface SocialTokens {
   workspace_id: string;
 }
 
+export interface SourceItems {
+  fetched_at: Generated<Timestamp>;
+  guid: string;
+  id: Generated<string>;
+  link: string | null;
+  published_at: Timestamp | null;
+  source_id: string;
+  summary: string | null;
+  title: string;
+  used_post_id: string | null;
+  workspace_id: string;
+}
+
 export interface SubjectBank {
   account_id: string | null;
   angle: string | null;
@@ -565,6 +592,7 @@ export interface DB {
   approval_links: ApprovalLinks;
   audit_log: AuditLog;
   content_reports: ContentReports;
+  content_sources: ContentSources;
   editorial_lines: EditorialLines;
   event_accounts: EventAccounts;
   events: Events;
@@ -592,6 +620,7 @@ export interface DB {
   sessions: Sessions;
   social_accounts: SocialAccounts;
   social_tokens: SocialTokens;
+  source_items: SourceItems;
   subject_bank: SubjectBank;
   users: Users;
   workspace_members: WorkspaceMembers;
