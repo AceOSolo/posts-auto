@@ -10,6 +10,7 @@
  * - Demandes de post : toutes les 5 minutes, traitées dans l'heure (IDE-06).
  * - Reprises : toutes les 5 minutes, posts « à modifier » ou « refusés » (GEN-07).
  * - Veille : toutes les heures, nouveaux articles des flux RSS des espaces (GEN-09).
+ * - Apprentissage : chaque jour, préférences des titulaires tirées de leurs corrections (EDI-06).
  *
  * Variables d'environnement :
  * - DATABASE_URL, MEDIA_ROOT, TOKEN_ENCRYPTION_KEYS, TOKEN_ENCRYPTION_KEY_ID ;
@@ -34,6 +35,7 @@ import {
 import { mailerFromEnv } from '@posts-auto/services';
 import { runTokenCheck } from '../accounts/token-check.ts';
 import { runRequestTick } from '../generation/requests.ts';
+import { runLearningTick } from '../generation/learning.ts';
 import { runReworkTick } from '../generation/reworks.ts';
 import { runSourcesTick } from '../sources/sources-job.ts';
 import { runGenerationTick } from '../generation/weekly.ts';
@@ -79,6 +81,7 @@ const scheduler = startScheduler(
     { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick({ db, model, usdToEur }) },
     { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick({ db, model, usdToEur }) },
     { name: 'veille', intervalMs: 60 * 60_000, run: () => runSourcesTick({ db }) },
+    { name: 'apprentissage', intervalMs: 24 * 3_600_000, run: () => runLearningTick({ db, model, usdToEur }) },
   ],
   { info: (event, details) => log('info', event, details), error: (event, details) => log('error', event, details) },
 );

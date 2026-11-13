@@ -168,7 +168,7 @@ export default async function AccountProfilePage({
 
       <section aria-labelledby="preferences-titre" id="preferences">
         <h2 id="preferences-titre">Préférences apprises</h2>
-        <p className="hint">Résumé de ce que le titulaire corrige ou refuse le plus souvent. Il est utilisé à chaque rédaction ; vous pouvez le modifier.</p>
+        <p className="hint">Résumé de ce que le titulaire corrige ou refuse le plus souvent, mis à jour chaque jour à partir de ses corrections, de ses demandes de modification et de ses refus. Il est utilisé à chaque rédaction ; vous pouvez le modifier, ce que vous écrivez est gardé.</p>
         <form action={savePreferencesAction.bind(null, workspaceId, accountId)} className="stack">
           <label htmlFor="resume" className="visually-hidden">
             Préférences apprises
