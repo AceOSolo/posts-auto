@@ -9,7 +9,8 @@ Le cahier des charges (section 8.1) fixe TypeScript de bout en bout et PostgreSQ
 ## Décisions
 
 1. **Monorepo avec les espaces de travail npm** (`packages/*`, puis `apps/*`). pnpm aurait été possible, mais il demande une installation globale, parfois avec des droits administrateur sous Windows ; npm suffit à ce stade et le passage à pnpm ne touchera pas au code.
-2. **Node.js 24 ou plus (version LTS) et TypeScript 7 en mode strict**, avec `noUncheckedIndexedAccess` et `exactOptionalPropertyTypes`, et des modules ES.
+2. **Node.js 24 ou plus (version LTS) et TypeScript en mode strict**, avec `noUncheckedIndexedAccess` et `exactOptionalPropertyTypes`, et des modules ES.
+   *Mise à jour du 13/11/2026* : le projet est fixé sur **TypeScript 6.0**, et non 7. TypeScript 7, réécrit en Go, n'expose plus l'API JavaScript dont dépendent encore Next.js (vérification des types à la compilation) et kysely-codegen. La version 6.0 est la dernière à la fournir. On passera à la 7 quand ces outils la prendront en charge.
 3. **Un paquet de règles métier pures : `@posts-auto/core`.** Il contient le cycle de vie des posts (6.1), le calendrier de l'espace, l'occupation des créneaux et la replanification (6.2 à 6.5). Il n'accède ni à la base, ni au réseau, ni à l'horloge : on lui passe l'instant présent. L'application web, l'API d'échange (PUB-10) et les tâches de fond l'appellent tous. Les règles sont donc écrites une seule fois et testées sans infrastructure.
 4. **Dates : Luxon pour les fuseaux et l'heure d'été.** Les heures « métier » (créneau habituel du mardi à 12h00, plage de 8h00 à 18h00) sont exprimées en heure locale de l'espace ; les instants sont des `Date` en UTC. Les tests tournent volontairement dans le fuseau `America/New_York`, pour prouver que le code ne dépend pas du fuseau de la machine.
 5. **Tests : Vitest, avec un seuil de couverture de 80 %** (exigence NF-12), qui fait échouer la suite s'il n'est plus atteint.
