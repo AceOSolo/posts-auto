@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <span key={workspace.id} className="nav-group">
               <Link href={`/equipe/${workspace.id}`}>Équipe · {workspace.name}</Link>
               <Link href={`/comptes/${workspace.id}`}>Comptes</Link>
+              <Link href={`/espace/${workspace.id}`}>Réglages</Link>
             </span>
           ))}
         </nav>

@@ -65,6 +65,21 @@ export function loginLinkMail(ctx: TemplateContext, url: string): RenderedMail {
   );
 }
 
+/** ONB-07 : invitation dans un espace, avec un lien de connexion (valable 15 minutes). */
+export function invitationMail(ctx: TemplateContext, url: string, workspaceName: string, inviterName: string | null): RenderedMail {
+  return compose(
+    ctx,
+    `Invitation : posts LinkedIn de ${workspaceName}`,
+    [
+      `${inviterName ?? 'Un administrateur'} vous invite à rejoindre l’espace « ${workspaceName} », où sont préparés les posts LinkedIn de votre entreprise.`,
+      'Vous y recevrez les posts proposés pour votre profil, à valider, corriger ou refuser en quelques secondes depuis votre téléphone. Rien ne part sans validation.',
+      'Ce lien de connexion est valable 15 minutes. Passé ce délai, demandez-en un nouveau sur la page de connexion, avec cette adresse e-mail.',
+    ],
+    { label: 'Rejoindre l’espace', url },
+    null,
+  );
+}
+
 /** E-mail d'une notification enregistrée par les tâches de fond, ou null si ce type ne s'envoie pas par e-mail. */
 export function notificationMail(kind: string, payload: Record<string, unknown>, ctx: TemplateContext): RenderedMail | null {
   const account = str(payload['accountName'], 'votre compte LinkedIn');

@@ -198,6 +198,27 @@ try {
     check('page des comptes : échéance de la connexion affichée (LNK-03)', accountsPage.includes('Connexion valable jusqu’au'));
   }
 
+  // Invitation d'une personne par l'administratrice (ONB-07).
+  const settings = await (await get(`/espace/${workspaceId}`, alexis)).text();
+  const inviteForm = [...settings.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].find((m) => (m[1] ?? '').includes('Envoyer l’invitation'));
+  const inviteFields = new FormData();
+  for (const input of (inviteForm?.[1] ?? '').matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) inviteFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+  inviteFields.append('email', 'nouvelle.recrue@demo.example.test');
+  inviteFields.append('nom', 'Nouvelle recrue');
+  inviteFields.append('role', 'contributor');
+  const invited = await fetch(`${BASE}/espace/${workspaceId}`, { method: 'POST', body: inviteFields, redirect: 'manual', headers: { cookie: `session=${alexis}; __Host-session=${alexis}`, origin: BASE } });
+  const newMember = await asSystem(db, (trx) =>
+    trx
+      .selectFrom('workspace_members as m')
+      .innerJoin('users as u', 'u.id', 'm.user_id')
+      .select('m.role')
+      .where('u.email', '=', 'nouvelle.recrue@demo.example.test')
+      .where('m.workspace_id', '=', workspaceId)
+      .executeTakeFirst(),
+  );
+  check('invitation par le formulaire : membre ajouté avec son rôle (ONB-07)', (invited.headers.get('location') ?? '').includes('message=invite') && newMember?.role === 'contributor', `HTTP ${invited.status}`);
+  check('réglages refusés à un simple contributeur', !(await (await get(`/espace/${workspaceId}`, claire)).text()).includes('Envoyer l’invitation'));
+
   // REC-01 : une personne d'un autre client ne voit ni le post ni l'image.
   await asSystem(db, (trx) =>
     trx

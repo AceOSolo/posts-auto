@@ -91,6 +91,12 @@ button.link { border: none; background: none; color: var(--primary); padding: 0;
 label.check { font-weight: normal; display: flex; gap: 10px; align-items: flex-start; }
 label.check input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
 
+form.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+form.inline select { width: auto; }
+fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin: 8px 0; }
+legend { font-weight: 600; padding: 0 4px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 /* Messages */
 .flash { padding: 10px 14px; border-radius: var(--radius); margin: 12px 0; }
 .flash.success { background: var(--success-bg); color: var(--success-text); }

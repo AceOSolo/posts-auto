@@ -218,6 +218,7 @@ export interface AccountSummary {
   readonly avatarUrl: string | null;
   readonly status: string;
   readonly holderName: string | null;
+  readonly holderUserId: string | null;
   readonly isMine: boolean;
   /** LNK-03 : échéance de la connexion (jeton de renouvellement s'il existe, sinon jeton d'accès). */
   readonly connectionExpiresAt: Date | null;
@@ -272,6 +273,7 @@ export async function listWorkspaceAccounts(db: Database, userId: string, worksp
       avatarUrl: row.avatar_url,
       status: row.status,
       holderName: row.full_name,
+      holderUserId: row.holder_user_id,
       isMine,
       connectionExpiresAt: token ? (token.refresh_expires_at ?? token.expires_at) : null,
       canDisconnect: isMine || accounts.manager,

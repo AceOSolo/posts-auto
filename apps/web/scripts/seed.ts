@@ -54,6 +54,8 @@ const weekStartOf = (at: Date) => localDate(isoWeekBounds(at, calendar).start, c
 
 await asSystem(db, async (trx) => {
   await trx.deleteFrom('organizations').where('name', '=', ORG_NAME).execute();
+  // Personnes ajoutées par les tests de fumée lors d'un passage précédent.
+  await trx.deleteFrom('users').where('email', '=', 'nouvelle.recrue@demo.example.test').execute();
   // Remet à zéro la limite de 5 liens de connexion par quart d'heure (SEC-06) des comptes de démonstration.
   await trx.deleteFrom('login_tokens').where('email', 'like', '%@demo.example.test').execute();
 

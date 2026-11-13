@@ -9,3 +9,4 @@ export * from './mail/templates.ts';
 export * from './media/image-check.ts';
 export * from './posts/post-actions.ts';
 export * from './posts/post-queries.ts';
+export * from './workspaces/members.ts';
