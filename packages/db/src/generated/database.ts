@@ -158,6 +158,15 @@ export interface BillingEvents {
   type: string;
 }
 
+export interface CanvaConnections {
+  access_token_enc: Buffer;
+  connected_at: Generated<Timestamp>;
+  connected_by: string | null;
+  expires_at: Timestamp;
+  refresh_token_enc: Buffer;
+  workspace_id: string;
+}
+
 export interface ContentReports {
   created_at: Generated<Timestamp>;
   handled_at: Timestamp | null;
@@ -751,6 +760,8 @@ export interface SupportGrants {
 export interface Templates {
   account_id: string | null;
   archived_at: Timestamp | null;
+  canva_brand_template_id: string | null;
+  canva_fields: Json | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   definition: Json;
@@ -853,6 +864,7 @@ export interface DB {
   approval_links: ApprovalLinks;
   audit_log: AuditLog;
   billing_events: BillingEvents;
+  canva_connections: CanvaConnections;
   content_reports: ContentReports;
   content_sources: ContentSources;
   demo_requests: DemoRequests;

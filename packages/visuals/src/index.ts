@@ -7,3 +7,5 @@ export * from './preview.ts';
 export * from './render.ts';
 export * from './selection.ts';
 export * from './template.ts';
+export * from './canva.ts';
+export * from './canva-fake.ts';

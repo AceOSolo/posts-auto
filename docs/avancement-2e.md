@@ -81,3 +81,12 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
 - **Usage** : quand un visuel de ce compte doit porter une image générée, l'avatar la remplace. Une photo de la médiathèque qui convient reste préférée. L'avatar porte la mention « image générée par IA ».
 - **Cloisonnement** : l'avatar n'entre pas dans la médiathèque de l'espace. Il ne sert donc jamais sur les posts d'un autre compte.
 - **Retrait** : le titulaire ou un administrateur le retire à tout moment ; les nouveaux visuels ne l'utilisent plus. Déclaration et retrait sont inscrits au journal d'audit.
+
+## VIS-07 : connecteur Canva (fait, 20 novembre 2026)
+
+- **Connexion** : sur la page « Visuels », bouton « Connecter Canva ». L'autorisation passe par OAuth 2 avec PKCE et l'état est vérifié au retour. Les jetons sont chiffrés et renouvelés avant leur échéance. Seul qui gère le contenu de l'espace peut connecter Canva.
+- **Modèles de marque** : la page liste les modèles de marque du Canva du client. « Ajouter » relie leurs champs aux zones du visuel d'après leur nom (titre, sous-titre, points, signature, photo) et range le modèle parmi les modèles de l'espace.
+- **Pour chaque post** : si le modèle choisi est un modèle Canva, une copie est remplie dans le Canva du client (la photo est d'abord envoyée dans ses fichiers), puis exportée en PNG comme visuel. **Les designs restent dans le Canva du client.** Si Canva ne répond pas, le visuel est rendu localement avec une mise en page de secours, et une note le signale.
+- **Mode simulé** : `CANVA_MODE=fake`.
+
+**À faire par SimplX** : créer l'intégration dans le portail développeurs Canva, avec l'adresse de retour `https://<domaine>/visuels/canva/retour` et les autorisations `design:content:read/write`, `design:meta:read`, `asset:write`, `brandtemplate:meta:read` et `brandtemplate:content:read`. La faire valider par Canva, puis définir `CANVA_CLIENT_ID` et `CANVA_CLIENT_SECRET`, pour le serveur web et pour les tâches de fond. Les modèles de marque et le remplissage automatique demandent un abonnement Canva qui les propose.

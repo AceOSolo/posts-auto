@@ -11,6 +11,7 @@ import { sql } from 'kysely';
 import type { MediaStore } from '../media/media-store.ts';
 import {
   type AccountVisual,
+  type CanvaRenderer,
   type PhotoSource,
   type PreparedVisual,
   type PreviousVisual,
@@ -34,13 +35,15 @@ export interface VisualSource {
   readonly model: TextModel;
   readonly media?: MediaStore;
   readonly images?: ImageGenerator | null;
+  /** VIS-07 : rendu des modèles de marque Canva. */
+  readonly canva?: CanvaRenderer | null;
 }
 
 export async function openVisualSession(source: VisualSource, workspaceId: string, accountIds: readonly string[], now: Date): Promise<VisualSession | null> {
   const media = source.media;
   if (media === undefined) return null;
   return asSystem(source.db, async (trx) => ({
-    deps: { model: source.model, media, images: source.images ?? null },
+    deps: { model: source.model, media, images: source.images ?? null, canva: source.canva ?? null },
     ctx: await loadVisualContext(trx, media, workspaceId, now),
     accounts: await loadAccountVisuals(trx, accountIds, now),
   }));

@@ -1,7 +1,7 @@
 import { FakeModel, ModelError } from '@posts-auto/ai';
 import { type Database, asSystem } from '@posts-auto/db';
 import { closeTestDatabase, createAccount, createOrganization, createPost, openTestDatabase } from '@posts-auto/db/testing';
-import { FakeImageGenerator, imageSize } from '@posts-auto/visuals';
+import { FakeCanvaApi, FakeImageGenerator, imageSize } from '@posts-auto/visuals';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MemoryMediaStore } from '../media/media-store.ts';
 import { type AccountVisual, type VisualContext, type VisualDeps, loadAccountVisuals, loadVisualContext, prepareVisual, storeVisual } from './prepare.ts';
@@ -310,5 +310,36 @@ describe('refaire le visuel (VIS-13)', () => {
     const otherAccount = (await asSystem(db, (trx) => loadAccountVisuals(trx, [other], NOW))).get(other) as AccountVisual;
     const foreign = await prepareVisual(deps(), ctx, otherAccount, { accountId: other, postText: POST, summary: 'S', withPhoto: true });
     expect(foreign?.content.photo).toBe('generated');
+  });
+
+  it('VIS-07 : un modèle de marque Canva est rendu par Canva ; Canva en panne : rendu local de secours', async () => {
+    const ctx0 = await context();
+    const local = ctx0.templates.find((t) => t.name === 'Titre et points clés') as VisualContext['templates'][number];
+    await asSystem(db, (trx) => trx.updateTable('templates').set({ archived_at: NOW }).where('workspace_id', '=', workspaceId).execute());
+    await asSystem(db, (trx) =>
+      trx
+        .insertInto('templates')
+        .values({
+          workspace_id: workspaceId,
+          name: 'Annonce (Canva)',
+          format: 'square',
+          definition: JSON.stringify(local.definition),
+          canva_brand_template_id: 'BT-fake-annonce',
+          canva_fields: JSON.stringify({ title: 'titre', bullets: 'points' }),
+        })
+        .execute(),
+    );
+    const api = new FakeCanvaApi('http://localhost');
+    const canva = async (input: Parameters<NonNullable<VisualDeps['canva']>>[0]) =>
+      (await api.renderPng('t', input.brandTemplateId, input.title, { titre: { type: 'text', text: input.content.title } })).png;
+    const prepared = await prepareVisual(deps({ canva }), await context(), await account(), { accountId, postText: POST, summary: 'S', withPhoto: false });
+    expect(api.designs).toEqual([expect.objectContaining({ brandTemplateId: 'BT-fake-annonce' })]);
+    expect(prepared?.content.notes).toEqual([]);
+    const broken = async () => {
+      throw new Error('Canva : HTTP 503');
+    };
+    const fallback = await prepareVisual(deps({ canva: broken }), await context(), await account(), { accountId, postText: POST, summary: 'S', withPhoto: false });
+    expect(fallback?.content.notes).toEqual([expect.stringMatching(/Canva n’a pas pu préparer le visuel/)]);
+    expect(fallback?.width).toBe(1080);
   });
 });

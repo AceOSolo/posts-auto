@@ -713,6 +713,17 @@ try {
   await submitForm(`/tableau/${workspaceId}`, alexis, 'Ne plus recevoir le rapport chaque mois', {});
   check('rapport d’un autre client → 404', (await get(`/tableau/${workspaceId}/rapport`, await sessionFor('exterieur@demo.example.test').catch(() => ''))).status !== 200);
 
+  // VIS-07 : connecteur Canva (serveur lancé avec CANVA_MODE=fake).
+  check('visuels : connexion Canva proposée (VIS-07)', (await (await get(`/visuels/${workspaceId}`, alexis)).text()).includes('Connecter Canva'));
+  const canvaStart = await get(`/visuels/${workspaceId}/canva`, alexis);
+  const canvaCookie = /canva_oauth=([^;]+)/.exec(canvaStart.headers.get('set-cookie') ?? '')?.[1] ?? '';
+  const canvaBack = await fetch(canvaStart.headers.get('location') ?? `${BASE}/`, { redirect: 'manual', headers: { cookie: `session=${alexis}; __Host-session=${alexis}; canva_oauth=${canvaCookie}` } });
+  check('Canva : autorisation avec état vérifié, espace connecté', (canvaBack.headers.get('location') ?? '').includes('canva-connecte'), `HTTP ${canvaBack.status} → ${canvaBack.headers.get('location')}`);
+  const addedCanva = await submitForm(`/visuels/${workspaceId}`, alexis, 'Ajouter « Annonce (Canva) »', {});
+  const canvaRow = await asSystem(db, (trx) => trx.selectFrom('templates').select('canva_fields').where('workspace_id', '=', workspaceId).where('canva_brand_template_id', '=', 'BT-fake-annonce').executeTakeFirst());
+  check('Canva : modèle de marque ajouté, champs reliés aux zones', (addedCanva.headers.get('location') ?? '').includes('modele-canva-ajoute') && (canvaRow?.canva_fields as { title?: string } | undefined)?.title === 'titre', `HTTP ${addedCanva.status}`);
+  await submitForm(`/visuels/${workspaceId}`, alexis, 'Déconnecter Canva', {});
+
   // VIS-06 : avatar de marque, proposé au titulaire sur la fiche de son compte.
   if (jpAccount) {
     const ficheHtml = await (await get(`/comptes/${workspaceId}/fiche/${jpAccount.id}`, jp)).text();

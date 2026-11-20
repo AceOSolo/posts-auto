@@ -17,7 +17,7 @@ import { allowanceForWorkspace } from '@posts-auto/services';
 import type { ImageGenerator } from '@posts-auto/visuals';
 import type { MediaStore } from '../media/media-store.ts';
 import { notify } from '../notifications/recipients.ts';
-import { storeVisual } from '../visuals/prepare.ts';
+import { type CanvaRenderer, storeVisual } from '../visuals/prepare.ts';
 import { type VisualSummary, openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
 import { type AccountData, type GenerationData, loadGenerationData, subjectKey } from './load.ts';
 import { materializeRecurringEvents } from './recurring-events.ts';
@@ -35,6 +35,8 @@ export interface GenerationDeps {
   readonly media?: MediaStore;
   /** Générateur d'images (VIS-05) ; sans lui, photo de la médiathèque ou visuel texte. */
   readonly images?: ImageGenerator | null;
+  /** VIS-07 : rendu des modèles de marque Canva. */
+  readonly canva?: CanvaRenderer | null;
 }
 
 /** Durée du bail d'une rédaction, prolongé à chaque post. */

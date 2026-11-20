@@ -5,7 +5,9 @@ import {
   ForbiddenError,
   NotFoundError,
   RefusedError,
+  addCanvaTemplate,
   addLibraryPhotos,
+  disconnectCanva,
   proposeBrandFromWebsite,
   duplicateTemplate,
   recolorGalleryTemplates,
@@ -18,7 +20,7 @@ import {
 import type { FontKey } from '@posts-auto/visuals';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database, mediaStore } from '../../../server/context.ts';
+import { canvaApi, database, mediaStore, tokenCipher } from '../../../server/context.ts';
 import { brandProposalKey } from '../../../server/drafts.ts';
 import { requireUserId } from '../../../server/session.ts';
 import { definitionFromForm } from '../../../server/template-form.ts';
@@ -153,5 +155,23 @@ export async function proposeBrandAction(workspaceId: string, form: FormData): P
     const id = randomUUID();
     await mediaStore().write(brandProposalKey(workspaceId, id), new TextEncoder().encode(JSON.stringify(proposal)));
     return { message: 'charte-proposee', result: id };
+  });
+}
+
+/** VIS-07 : ajoute un modèle de marque Canva aux modèles de l'espace. */
+export async function addCanvaTemplateAction(workspaceId: string, brandTemplateId: string): Promise<void> {
+  await run([workspaceId], () => `/visuels/${workspaceId}#canva`, async (userId, now) => {
+    const api = canvaApi();
+    const cipher = tokenCipher();
+    if (api === null || cipher === null) throw new RefusedError('canva-non-configure', 'Canva non configuré.');
+    await addCanvaTemplate(database(), api, cipher, userId, workspaceId, brandTemplateId.slice(0, 100), now);
+    return { message: 'modele-canva-ajoute' };
+  });
+}
+
+export async function disconnectCanvaAction(workspaceId: string): Promise<void> {
+  await run([workspaceId], () => `/visuels/${workspaceId}#canva`, async (userId, now) => {
+    await disconnectCanva(database(), userId, workspaceId, now);
+    return { message: 'canva-deconnecte' };
   });
 }

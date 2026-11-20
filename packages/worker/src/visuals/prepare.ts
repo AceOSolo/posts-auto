@@ -17,6 +17,7 @@ import { startOfLocalMonth } from '@posts-auto/core';
 import type { Tx } from '@posts-auto/db';
 import { type Branding, allowanceForWorkspace, ensureGalleryTemplates, loadBranding } from '@posts-auto/services';
 import {
+  type CanvaFieldMap,
   type ImageGenerator,
   type RenderIssue,
   type RenderResult,
@@ -50,10 +51,23 @@ export interface VisualDeps {
   readonly media: MediaStore;
   /** Générateur d'images (VIS-05) ; sans lui : photo de la médiathèque ou visuel texte. */
   readonly images: ImageGenerator | null;
+  /** VIS-07 : rendu par Canva des modèles de marque Canva ; sans lui, rendu local de secours. */
+  readonly canva?: CanvaRenderer | null;
 }
+
+/** Rendu d'un modèle de marque Canva : copie remplie dans le Canva du client, exportée en PNG. */
+export type CanvaRenderer = (input: {
+  readonly workspaceId: string;
+  readonly brandTemplateId: string;
+  readonly fields: CanvaFieldMap;
+  readonly title: string;
+  readonly content: { readonly title: string; readonly subtitle: string | null; readonly bullets: readonly string[]; readonly signature: string; readonly photo: Uint8Array | null };
+}) => Promise<Uint8Array>;
 
 export interface VisualTemplate extends TemplateCandidate {
   readonly name: string;
+  /** VIS-07 : modèle de marque Canva (sa définition locale sert au choix et au secours). */
+  readonly canva?: { readonly brandTemplateId: string; readonly fields: CanvaFieldMap } | null;
 }
 
 interface StoredPhoto extends LibraryPhoto {
@@ -102,14 +116,21 @@ export async function loadVisualContext(trx: Tx, media: MediaStore, workspaceId:
 
   const rows = await trx
     .selectFrom('templates')
-    .select(['id', 'account_id', 'name', 'definition', 'created_at'])
+    .select(['id', 'account_id', 'name', 'definition', 'created_at', 'canva_brand_template_id', 'canva_fields'])
     .where('workspace_id', '=', workspaceId)
     .where('archived_at', 'is', null)
     .execute();
   const templates: VisualTemplate[] = [];
   for (const row of rows) {
     try {
-      templates.push({ id: row.id, accountId: row.account_id, name: row.name, definition: parseTemplate(row.definition), createdAt: row.created_at });
+      templates.push({
+        id: row.id,
+        accountId: row.account_id,
+        name: row.name,
+        definition: parseTemplate(row.definition),
+        createdAt: row.created_at,
+        canva: row.canva_brand_template_id === null ? null : { brandTemplateId: row.canva_brand_template_id, fields: (row.canva_fields ?? {}) as CanvaFieldMap },
+      });
     } catch {
       // Définition invalide (modifiée hors de l'application) : modèle ignoré.
     }
@@ -421,7 +442,23 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
   };
   let best: { template: VisualTemplate; result: RenderResult } | null = null;
   for (const template of candidates.slice(0, 2)) {
-    const result = await renderTemplate(template.definition, content);
+    let result: RenderResult | null = null;
+    if (template.canva && deps.canva) {
+      try {
+        const png = await deps.canva({
+          workspaceId: ctx.workspaceId,
+          brandTemplateId: template.canva.brandTemplateId,
+          fields: template.canva.fields,
+          title: `${account.name} · ${fill.title}`,
+          content: { title: fill.title, subtitle: fill.subtitle, bullets: fill.bullets, signature: account.name, photo: photo?.bytes ?? null },
+        });
+        const size = await imageSize(png).catch(() => ({ width: 1080, height: 1080 }));
+        result = { png, width: size.width, height: size.height, issues: [] };
+      } catch (error) {
+        notes.push(`Canva n’a pas pu préparer le visuel (${error instanceof Error ? error.message : String(error)}) : rendu local du modèle.`);
+      }
+    }
+    result ??= await renderTemplate(template.definition, content);
     if (best === null || severity(result.issues) < severity(best.result.issues)) best = { template, result };
     if (result.issues.length === 0) break;
   }

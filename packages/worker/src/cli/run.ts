@@ -44,7 +44,7 @@ import {
   LinkedInStatsClient,
 } from '@posts-auto/linkedin';
 import { type BillingProvider, FakeBilling, StripeBilling, mailerFromEnv } from '@posts-auto/services';
-import { imageGeneratorFromEnv } from '@posts-auto/visuals';
+import { type CanvaApi, CanvaConnectClient, FakeCanvaApi, imageGeneratorFromEnv } from '@posts-auto/visuals';
 import { runTokenCheck } from '../accounts/token-check.ts';
 import { runBillingTick } from '../billing/billing-job.ts';
 import { runRequestTick } from '../generation/requests.ts';
@@ -62,6 +62,7 @@ import { runPublicationTick } from '../publication/publication.ts';
 import { startScheduler } from '../runner/scheduler.ts';
 import { runRescheduleTick } from '../scheduling/reschedule-job.ts';
 import { TokenCipher } from '../secrets/token-cipher.ts';
+import { canvaRenderer } from '../visuals/canva-renderer.ts';
 import { runVisualTick } from '../visuals/visual-job.ts';
 
 const env = process.env;
@@ -83,8 +84,15 @@ const usdToEur = Number.parseFloat(env['AI_USD_TO_EUR'] ?? '0.86');
 const images = imageGeneratorFromEnv(env);
 const billing: BillingProvider | null =
   env['BILLING_MODE'] === 'fake' ? new FakeBilling(appUrl) : env['STRIPE_SECRET_KEY'] ? new StripeBilling({ secretKey: env['STRIPE_SECRET_KEY'] }) : null;
+// VIS-07 : Canva du client (CANVA_CLIENT_ID, CANVA_CLIENT_SECRET), ou simulé (CANVA_MODE=fake).
+const canvaApi: CanvaApi | null =
+  env['CANVA_MODE'] === 'fake'
+    ? new FakeCanvaApi(appUrl)
+    : env['CANVA_CLIENT_ID'] && env['CANVA_CLIENT_SECRET']
+      ? new CanvaConnectClient({ clientId: env['CANVA_CLIENT_ID'], clientSecret: env['CANVA_CLIENT_SECRET'] })
+      : null;
 // Rédaction avec visuels (1c) : les posts sont déposés avec leur visuel.
-const writing = { db, model, usdToEur, media, images };
+const writing = { db, model, usdToEur, media, images, canva: canvaApi === null ? null : canvaRenderer(db, canvaApi, cipher) };
 const oauth: LinkedInOAuth | null = fake
   ? new FakeLinkedInOAuth(redirectUri)
   : env['LINKEDIN_CLIENT_ID'] && env['LINKEDIN_CLIENT_SECRET']

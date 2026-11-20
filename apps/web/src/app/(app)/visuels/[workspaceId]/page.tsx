@@ -1,13 +1,13 @@
-import { type BrandProposal, NotFoundError, getTemplateLibrary } from '@posts-auto/services';
+import { type BrandProposal, type CanvaTemplateChoice, NotFoundError, canvaStatus, getTemplateLibrary, listCanvaBrandTemplates } from '@posts-auto/services';
 import { FONTS } from '@posts-auto/visuals';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
-import { database, mediaStore } from '../../../../server/context.ts';
+import { canvaApi, database, mediaStore, tokenCipher } from '../../../../server/context.ts';
 import { brandProposalKey } from '../../../../server/drafts.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { archiveTemplateAction, duplicateTemplateAction, proposeBrandAction, recolorAction, saveBrandingAction } from '../actions.ts';
+import { addCanvaTemplateAction, archiveTemplateAction, disconnectCanvaAction, duplicateTemplateAction, proposeBrandAction, recolorAction, saveBrandingAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Visuels' };
 export const dynamic = 'force-dynamic';
@@ -47,6 +47,18 @@ export default async function VisualsPage({
       proposal = JSON.parse(new TextDecoder().decode(await mediaStore().read(brandProposalKey(workspaceId, charte)))) as BrandProposal;
     } catch {
       proposal = null;
+    }
+  }
+  // VIS-07 : connecteur Canva.
+  const canvaConfigured = canvaApi() !== null && tokenCipher() !== null;
+  const canva = canManage && canvaConfigured ? await canvaStatus(database(), userId, workspaceId) : null;
+  let canvaTemplates: CanvaTemplateChoice[] | null = null;
+  let canvaError = false;
+  if (canva?.connected) {
+    try {
+      canvaTemplates = await listCanvaBrandTemplates(database(), canvaApi() as NonNullable<ReturnType<typeof canvaApi>>, tokenCipher() as NonNullable<ReturnType<typeof tokenCipher>>, userId, workspaceId, new Date());
+    } catch {
+      canvaError = true;
     }
   }
   const branding = proposal === null ? library.branding : { ...library.branding, primary: proposal.primary, secondary: proposal.secondary, light: proposal.light, dark: proposal.dark, font: proposal.font };
@@ -112,6 +124,45 @@ export default async function VisualsPage({
           </details>
         )}
       </section>
+
+      {canManage && (
+        <section aria-labelledby="canva-titre" id="canva">
+          <h2 id="canva-titre">Modèles Canva</h2>
+          <p className="hint">
+            Reliez le Canva de l’entreprise pour utiliser ses modèles de marque : pour chaque post, une copie du modèle est remplie dans votre Canva (titre, points, photo), puis
+            exportée en PNG comme visuel. Vos designs restent dans votre Canva. Les modèles de marque demandent un abonnement Canva qui les propose.
+          </p>
+          {!canvaConfigured ? (
+            <p className="muted">La connexion à Canva n’est pas configurée sur ce serveur.</p>
+          ) : canva?.connected ? (
+            <>
+              {canvaError && <p className="flash error">Canva ne répond pas : réessayez plus tard, ou reconnectez Canva.</p>}
+              {canvaTemplates !== null && canvaTemplates.length === 0 && <p className="muted">Aucun modèle de marque dans ce Canva.</p>}
+              <ul>
+                {(canvaTemplates ?? []).map((t) => (
+                  <li key={t.id}>
+                    {t.title}{' '}
+                    {t.added ? (
+                      <span className="muted">(ajouté aux modèles)</span>
+                    ) : (
+                      <form action={addCanvaTemplateAction.bind(null, workspaceId, t.id)} className="inline-fields">
+                        <button type="submit">{`Ajouter « ${t.title} »`}</button>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <form action={disconnectCanvaAction.bind(null, workspaceId)}>
+                <button type="submit">Déconnecter Canva</button>
+              </form>
+            </>
+          ) : (
+            <a href={`/visuels/${workspaceId}/canva`} className="button">
+              Connecter Canva
+            </a>
+          )}
+        </section>
+      )}
 
       <section aria-labelledby="charte">
         <h2 id="charte">Charte visuelle</h2>

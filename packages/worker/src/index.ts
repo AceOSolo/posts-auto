@@ -21,3 +21,4 @@ export * from './stats/stats-job.ts';
 export * from './visuals/prepare.ts';
 export * from './visuals/session.ts';
 export * from './visuals/visual-job.ts';
+export * from './visuals/canva-renderer.ts';

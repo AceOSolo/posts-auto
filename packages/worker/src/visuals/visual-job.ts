@@ -13,7 +13,7 @@ import { addMinutes } from '@posts-auto/core';
 import { type Database, asSystem } from '@posts-auto/db';
 import type { ImageGenerator } from '@posts-auto/visuals';
 import type { MediaStore } from '../media/media-store.ts';
-import { type AccountVisual, prepareVisual, storeVisual } from './prepare.ts';
+import { type AccountVisual, type CanvaRenderer, prepareVisual, storeVisual } from './prepare.ts';
 import { imagesGeneratedFor, loadPreviousVisual, openVisualSession, photoPlan } from './session.ts';
 
 export const VISUAL_TASK_MAX_ATTEMPTS = 3;
@@ -27,6 +27,7 @@ export interface VisualJobDeps {
   readonly model: TextModel;
   readonly media: MediaStore;
   readonly images?: ImageGenerator | null;
+  readonly canva?: CanvaRenderer | null;
   readonly clock?: () => Date;
   readonly usdToEur?: number;
 }
@@ -90,7 +91,7 @@ async function processTask(deps: VisualJobDeps, postId: string, clock: () => Dat
   try {
     const previous = await asSystem(db, (trx) => loadPreviousVisual(trx, postId));
     const imagesForPost = await asSystem(db, (trx) => imagesGeneratedFor(trx, postId));
-    const session = await openVisualSession({ db, model: deps.model, media: deps.media, images: deps.images ?? null }, task.workspace_id, [task.account_id], now);
+    const session = await openVisualSession({ db, model: deps.model, media: deps.media, images: deps.images ?? null, canva: deps.canva ?? null }, task.workspace_id, [task.account_id], now);
     const account = session?.accounts.get(task.account_id) as AccountVisual | undefined;
     if (session === null || account === undefined) throw new Error('Compte introuvable.');
     const withPhoto =

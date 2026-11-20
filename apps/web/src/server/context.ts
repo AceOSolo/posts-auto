@@ -7,6 +7,7 @@ import { type TextModel, modelFromEnv } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, type Database, createDatabase } from '@posts-auto/db';
 import { FakeLinkedInOAuth, FakeLinkedInPages, type LinkedInOAuth, LinkedInOAuthClient, type LinkedInPages, LinkedInPagesClient } from '@posts-auto/linkedin';
 import { FileMediaStore, type MediaStore, TokenCipher } from '@posts-auto/worker';
+import { type CanvaApi, CanvaConnectClient, FakeCanvaApi } from '@posts-auto/visuals';
 import { type BillingProvider, FakeBilling, FakeSsoProvider, type Mailer, type SsoProvider, StripeBilling, googleProvider, mailerFromEnv, microsoftProvider } from '@posts-auto/services';
 
 interface ServerResources {
@@ -79,6 +80,14 @@ export function ssoProviders(): SsoProvider[] {
   if (env['GOOGLE_CLIENT_ID'] && env['GOOGLE_CLIENT_SECRET']) providers.push(googleProvider(env['GOOGLE_CLIENT_ID'], env['GOOGLE_CLIENT_SECRET']));
   if (env['MICROSOFT_CLIENT_ID'] && env['MICROSOFT_CLIENT_SECRET']) providers.push(microsoftProvider(env['MICROSOFT_CLIENT_ID'], env['MICROSOFT_CLIENT_SECRET']));
   return providers;
+}
+
+/** VIS-07 : Canva (CANVA_CLIENT_ID, CANVA_CLIENT_SECRET), ou simulé (CANVA_MODE=fake). */
+export function canvaApi(): CanvaApi | null {
+  if (process.env['CANVA_MODE'] === 'fake') return new FakeCanvaApi(appUrl());
+  const id = process.env['CANVA_CLIENT_ID'];
+  const secret = process.env['CANVA_CLIENT_SECRET'];
+  return id && secret ? new CanvaConnectClient({ clientId: id, clientSecret: secret }) : null;
 }
 
 /** Chiffrement des jetons (SEC-02) ; null si les clés ne sont pas configurées. */
