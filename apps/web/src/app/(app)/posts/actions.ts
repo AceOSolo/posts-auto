@@ -22,12 +22,14 @@ import {
   requestVisualRedo,
   reschedulePost,
   retryPublication,
+  resolvePageMention,
+  setFirstComment,
   setManualPostUrl,
   withdrawPost,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { appUrl, database, mailer, mediaStore, model, usdToEur } from '../../../server/context.ts';
+import { appUrl, database, linkedinPages, mailer, mediaStore, model, tokenCipher, usdToEur } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -226,4 +228,31 @@ export async function setManualUrlAction(postId: string, formData: FormData): Pr
     await setManualPostUrl(database(), userId, postId, String(formData.get('lien') ?? ''), now);
     return 'lien-enregistre';
   });
+}
+
+/** PUB-07 : premier commentaire du post. */
+export async function setFirstCommentAction(postId: string, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    await setFirstComment(database(), userId, postId, String(formData.get('commentaire') ?? ''), now);
+    return 'commentaire-enregistre';
+  });
+}
+
+/** PUB-08 : mention d'une page d'entreprise, à placer dans le texte. */
+export async function mentionAction(postId: string, formData: FormData): Promise<void> {
+  if (!UUID.test(postId)) notFound();
+  const userId = await requireUserId();
+  const cipher = tokenCipher();
+  let target: string;
+  try {
+    if (cipher === null) throw new RefusedError('mention_indisponible', 'Chiffrement non configuré.');
+    const found = await resolvePageMention(database(), { pages: linkedinPages(), cipher }, userId, postId, String(formData.get('page') ?? ''));
+    target = `/posts/${postId}?message=mention-prete&mention=${encodeURIComponent(found.mention)}#mention`;
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    if (error instanceof ForbiddenError) target = `/posts/${postId}?message=interdit`;
+    else if (error instanceof RefusedError) target = `/posts/${postId}?message=${encodeURIComponent(error.code)}#mention`;
+    else throw error;
+  }
+  redirect(target);
 }

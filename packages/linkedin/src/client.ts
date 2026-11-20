@@ -35,6 +35,8 @@ export interface PublishedPost {
 /** Ce dont la file de publication a besoin. Lève une LinkedInError en cas d'échec. */
 export interface LinkedInPublisher {
   publish(accessToken: string, request: PublishRequest): Promise<PublishedPost>;
+  /** PUB-07 : premier commentaire sous le post, au nom de son auteur (profil ou page). */
+  comment?(accessToken: string, request: { readonly postUrn: string; readonly actorUrn: string; readonly text: string }): Promise<void>;
 }
 
 export const LINKEDIN_API_BASE = 'https://api.linkedin.com/rest';
@@ -104,6 +106,15 @@ export class LinkedInHttpClient implements LinkedInPublisher {
       });
     }
     return { postUrn, url: postUrl(postUrn) };
+  }
+
+  /** PUB-07 : POST /rest/socialActions/{post}/comments (w_member_social ou w_organization_social). */
+  async comment(accessToken: string, request: { postUrn: string; actorUrn: string; text: string }): Promise<void> {
+    await this.#call('post_create', `${this.#baseUrl}/socialActions/${encodeURIComponent(request.postUrn)}/comments`, {
+      method: 'POST',
+      headers: this.#headers(accessToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ actor: request.actorUrn, object: request.postUrn, message: { text: request.text } }),
+    });
   }
 
   async #uploadImage(accessToken: string, ownerUrn: string, image: PublishImage): Promise<string> {

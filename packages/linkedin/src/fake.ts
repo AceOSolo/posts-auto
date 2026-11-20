@@ -19,6 +19,17 @@ export type FakeFailure =
 
 export class FakeLinkedIn implements LinkedInPublisher {
   readonly published: FakePublishedPost[] = [];
+  readonly comments: { readonly postUrn: string; readonly actorUrn: string; readonly text: string }[] = [];
+  /** PUB-07 : le prochain commentaire est refusé (permission absente, par exemple). */
+  failNextComment = false;
+
+  async comment(_accessToken: string, request: { postUrn: string; actorUrn: string; text: string }): Promise<void> {
+    if (this.failNextComment) {
+      this.failNextComment = false;
+      throw new LinkedInError({ kind: 'permission', phase: 'post_create', outcome: 'not_created', status: 403, message: 'Commentaire refusé par LinkedIn' });
+    }
+    this.comments.push(request);
+  }
   readonly #failures: FakeFailure[] = [];
   #sequence = 7_300_000_000_000_000_000n;
 

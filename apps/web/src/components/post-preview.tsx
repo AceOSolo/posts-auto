@@ -40,7 +40,7 @@ function foldAt(text: string): number {
 export function PostPreview({
   accountName,
   accountKind,
-  body,
+  body: rawBody,
   media,
   expanded = false,
 }: {
@@ -50,6 +50,8 @@ export function PostPreview({
   media: readonly PostMedia[];
   expanded?: boolean;
 }) {
+  // PUB-08 : une mention s'affiche comme sur LinkedIn, « @Nom de la page ».
+  const body = rawBody.replace(/@\[([^\]\n]{1,100})\]\(urn:li:(?:organization|person):[A-Za-z0-9_-]{1,40}\)/g, '@$1');
   const cut = expanded ? body.length : foldAt(body);
   const initials = accountName
     .split(/\s+/)

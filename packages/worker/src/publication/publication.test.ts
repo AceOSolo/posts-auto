@@ -358,3 +358,20 @@ describe('publication par un scénario du client (LNK-08)', () => {
     expect(await postRow(other)).toMatchObject({ status: 'erreur' });
   });
 });
+
+describe('premier commentaire (PUB-07)', () => {
+  it('publié juste après le post ; refusé par LinkedIn : noté, le post reste publié', async () => {
+    const s = await scene();
+    const postId = await validatedPost(s, { first_comment: 'Le lien vers notre guide : https://exemple.fr/guide' });
+    await runPublicationTick(s.deps(() => minutes(1)));
+    await runPublicationTick(s.deps(() => minutes(2)));
+    expect(await postRow(postId)).toMatchObject({ status: 'publie', first_comment_status: 'posted' });
+    expect(s.linkedin.comments).toEqual([expect.objectContaining({ postUrn: (await postRow(postId)).external_post_urn, text: expect.stringContaining('guide') })]);
+
+    s.linkedin.failNextComment = true;
+    const other = await validatedPost(s, { scheduled_at: minutes(60), first_comment: 'Complément' });
+    await runPublicationTick(s.deps(() => minutes(61)));
+    await runPublicationTick(s.deps(() => minutes(62)));
+    expect(await postRow(other)).toMatchObject({ status: 'publie', first_comment_status: 'failed', first_comment_error: expect.any(String) });
+  });
+});

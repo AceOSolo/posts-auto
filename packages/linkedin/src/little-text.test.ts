@@ -31,3 +31,10 @@ describe('format little (champ commentary)', () => {
     expect(toLittleText('C#', { linkHashtags: true })).toBe('C\\#');
   });
 });
+
+describe('mentions structurées (PUB-08)', () => {
+  it('une mention préparée devient une mention LinkedIn ; un @ isolé reste du texte', async () => {
+    const { toLittleText } = await import('./little-text.ts');
+    expect(toLittleText('Merci @[Secutop (Lyon)](urn:li:organization:123) et @jp !')).toBe('Merci @[Secutop \\(Lyon\\)](urn:li:organization:123) et \\@jp !');
+  });
+});

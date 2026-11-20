@@ -520,6 +520,9 @@ export interface Posts {
   external_post_url: string | null;
   external_post_urn: string | null;
   external_ref: string | null;
+  first_comment: string | null;
+  first_comment_error: string | null;
+  first_comment_status: string | null;
   generation_run_id: string | null;
   id: Generated<string>;
   idea_id: string | null;

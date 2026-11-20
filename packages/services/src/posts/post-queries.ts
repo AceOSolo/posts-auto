@@ -227,13 +227,17 @@ export interface PostDetail extends PostCard {
   /** PUB-09 : envoyé par e-mail pour publication manuelle ; le lien peut être ajouté ensuite. */
   readonly publishedManually: boolean;
   readonly canSetManualUrl: boolean;
+  /** PUB-07 : premier commentaire et ce qu'il est devenu à la publication. */
+  readonly firstComment: string | null;
+  readonly firstCommentStatus: 'posted' | 'failed' | 'skipped' | null;
+  readonly firstCommentError: string | null;
   /** VIS-13 : visuel demandé, en préparation ou en échec. */
   readonly visualTask: VisualTaskState | null;
 }
 
 export async function getPostDetail(db: Database, userId: string, postId: string, now: Date): Promise<PostDetail> {
   return asUser(db, userId, async (trx) => {
-    const row = await baseQuery(trx).select(['p.external_post_url', 'p.published_manually']).where('p.id', '=', postId).executeTakeFirst();
+    const row = await baseQuery(trx).select(['p.external_post_url', 'p.published_manually', 'p.first_comment', 'p.first_comment_status', 'p.first_comment_error']).where('p.id', '=', postId).executeTakeFirst();
     if (row === undefined) throw new NotFoundError('Post');
     const access = await loadAccess(trx, userId, row.workspace_id, row.account_id);
     const media = await mediaOf(trx, [row.id]);
@@ -280,6 +284,9 @@ export async function getPostDetail(db: Database, userId: string, postId: string
       },
       url: row.external_post_url,
       publishedManually: row.published_manually,
+      firstComment: row.first_comment,
+      firstCommentStatus: row.first_comment_status as 'posted' | 'failed' | 'skipped' | null,
+      firstCommentError: row.first_comment_error,
       canSetManualUrl: row.published_manually && (access.relation === 'holder' || access.actor.kind === 'user' && access.actor.isWorkspaceManager),
       visualTask:
         task === undefined
@@ -442,6 +449,28 @@ export async function setManualPostUrl(db: Database, userId: string, postId: str
     await trx
       .insertInto('audit_log')
       .values({ org_id: ws.org_id, workspace_id: post.workspace_id, actor_user_id: userId, actor_kind: 'user', action: 'post.lien_manuel', entity: 'post', entity_id: postId, details: JSON.stringify({ url }), at: now })
+      .execute();
+  });
+}
+
+/** PUB-07 : premier commentaire publié juste après le post (vide : aucun). */
+export async function setFirstComment(db: Database, userId: string, postId: string, rawText: string, now: Date): Promise<void> {
+  const text = rawText.replace(/\r\n/g, '\n').trim();
+  if (text.length > 1250) throw new RefusedError('commentaire_trop_long', 'Le commentaire doit faire 1 250 caractères au plus.');
+  const post = await asUser(db, userId, async (trx) => {
+    const row = await trx.selectFrom('posts').select(['workspace_id', 'account_id', 'status']).where('id', '=', postId).executeTakeFirst();
+    if (row === undefined) throw new NotFoundError('Post');
+    const access = await loadAccess(trx, userId, row.workspace_id, row.account_id);
+    if (!canEditPost(access)) throw new ForbiddenError('firstComment');
+    if (!['brouillon', 'a_valider', 'modif', 'valide', 'erreur'].includes(row.status)) throw new RefusedError('post_parti', 'Ce post est déjà publié ou en cours de publication.');
+    return row;
+  });
+  await asSystem(db, async (trx) => {
+    await trx.updateTable('posts').set({ first_comment: text === '' ? null : text }).where('id', '=', postId).execute();
+    const ws = await trx.selectFrom('workspaces').select('org_id').where('id', '=', post.workspace_id).executeTakeFirstOrThrow();
+    await trx
+      .insertInto('audit_log')
+      .values({ org_id: ws.org_id, workspace_id: post.workspace_id, actor_user_id: userId, actor_kind: 'user', action: 'post.premier_commentaire', entity: 'post', entity_id: postId, details: JSON.stringify({ length: text.length }), at: now })
       .execute();
   });
 }

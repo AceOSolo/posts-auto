@@ -457,9 +457,32 @@ async function processNextAttempt(deps: PublicationDeps, clock: () => Date, repo
   }
 
   const finishedAt = clock();
-  if (outcome.ok) await recordSuccess(deps, claimed, outcome, finishedAt, report);
-  else await recordFailure(deps, claimed, outcome.error, finishedAt, report);
+  if (outcome.ok) {
+    await recordSuccess(deps, claimed, outcome, finishedAt, report);
+    // PUB-07 : premier commentaire, par l'API seulement ; son échec ne touche pas au post.
+    if (claimed.webhook === null && outcome.postUrn !== null && prepared.ok && 'token' in prepared) await postFirstComment(deps, claimed, String(prepared.token), outcome.postUrn);
+  } else await recordFailure(deps, claimed, outcome.error, finishedAt, report);
   return true;
+}
+
+async function postFirstComment(deps: PublicationDeps, claimed: ClaimedAttempt, token: string, postUrn: string): Promise<void> {
+  const row = await asSystem(deps.db, (trx) => trx.selectFrom('posts').select('first_comment').where('id', '=', claimed.post.id).executeTakeFirst());
+  const text = row?.first_comment?.trim();
+  if (!text) return;
+  let status: 'posted' | 'failed' | 'skipped' = 'posted';
+  let error: string | null = null;
+  if (deps.linkedin.comment === undefined) {
+    status = 'skipped';
+    error = 'Commentaires non pris en charge';
+  } else {
+    try {
+      await deps.linkedin.comment(token, { postUrn, actorUrn: claimed.authorUrn, text });
+    } catch (e) {
+      status = 'failed';
+      error = e instanceof LinkedInError ? describeForUser(e) : String(e);
+    }
+  }
+  await asSystem(deps.db, (trx) => trx.updateTable('posts').set({ first_comment_status: status, first_comment_error: error }).where('id', '=', claimed.post.id).execute());
 }
 
 async function prepare(

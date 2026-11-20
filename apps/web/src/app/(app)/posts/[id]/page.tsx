@@ -23,6 +23,8 @@ import {
   rescheduleAction,
   reportContentAction,
   retryAction,
+  mentionAction,
+  setFirstCommentAction,
   setManualUrlAction,
   validateAction,
   withdrawAction,
@@ -30,6 +32,8 @@ import {
 
 export const metadata: Metadata = { title: 'Post' };
 export const dynamic = 'force-dynamic';
+
+const MENTION_FORMAT = /^@\[[^\]\n]{1,100}\]\(urn:li:organization:\d+\)$/;
 
 /** GEN-08 : retouches proposées au moment de valider. */
 const ASSIST_BUTTONS = [
@@ -71,7 +75,11 @@ export default async function PostPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
-  const { message } = await searchParams;
+  const query = await searchParams;
+  const message = query['message'];
+  // PUB-08 : mention préparée (seul le format exact est affiché).
+  const rawMention = typeof query['mention'] === 'string' ? query['mention'] : '';
+  const mention = MENTION_FORMAT.test(rawMention) ? rawMention : null;
   if (!UUID.test(id)) notFound();
   const userId = await requireUserId();
 
@@ -374,6 +382,44 @@ export default async function PostPage({
           </form>
         )}
       </section>
+
+      {/* PUB-08 : mention d'une page d'entreprise, au format de l'API LinkedIn. */}
+      {post.actions.canEdit && (
+        <section aria-labelledby="mention-titre" id="mention">
+          <h2 id="mention-titre">Mentionner une page</h2>
+          {mention !== null && (
+            <p className="flash success" role="status">
+              Copiez cette mention à l’endroit voulu du texte : <code>{mention}</code> (elle s’affichera « @{mention.slice(2, mention.indexOf(']'))} » sur LinkedIn).
+            </p>
+          )}
+          <p className="hint">Collez l’adresse de la page LinkedIn de l’entreprise à mentionner. Un « @ » tapé à la main n’est pas transmis à LinkedIn et bloque la validation.</p>
+          <form action={mentionAction.bind(null, post.id)} className="inline-fields">
+            <label>
+              Adresse de la page
+              <input name="page" type="url" inputMode="url" placeholder="https://www.linkedin.com/company/…" required />
+            </label>
+            <button type="submit">Préparer la mention</button>
+          </form>
+        </section>
+      )}
+
+      {/* PUB-07 : premier commentaire, publié juste après le post. */}
+      {(post.actions.canEdit || post.firstComment !== null) && (
+        <section aria-labelledby="premier-commentaire" id="commentaire">
+          <h2 id="premier-commentaire">Premier commentaire</h2>
+          {post.firstCommentStatus === 'posted' && <p className="muted">Publié sous le post.</p>}
+          {post.firstCommentStatus === 'failed' && <p className="flash error">Le commentaire n’a pas pu être publié : {post.firstCommentError}</p>}
+          {post.actions.canEdit ? (
+            <form action={setFirstCommentAction.bind(null, post.id)} className="stack">
+              <label htmlFor="commentaire-texte">Publié automatiquement juste après le post (un lien, un complément). Vide : pas de commentaire.</label>
+              <textarea id="commentaire-texte" name="commentaire" rows={3} maxLength={1250} defaultValue={post.firstComment ?? ''} />
+              <button type="submit">Enregistrer le commentaire</button>
+            </form>
+          ) : (
+            <p className="pre">{post.firstComment}</p>
+          )}
+        </section>
+      )}
 
       <section aria-labelledby="history">
         <h2 id="history">Historique</h2>

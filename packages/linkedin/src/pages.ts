@@ -24,6 +24,8 @@ export interface AdministeredPage {
 
 export interface LinkedInPages {
   administeredPages(accessToken: string): Promise<AdministeredPage[]>;
+  /** PUB-08 : page d'entreprise d'après son adresse (linkedin.com/company/<nom>), pour la mentionner. */
+  lookupOrganization?(accessToken: string, vanityName: string): Promise<{ readonly urn: string; readonly name: string } | null>;
 }
 
 const pagesError = (message: string, status: number | null = null) => new LinkedInError({ kind: 'auth', phase: 'image_upload', outcome: 'not_created', status, message });
@@ -45,6 +47,17 @@ export class LinkedInPagesClient implements LinkedInPages {
     if (response.status === 401 || response.status === 403) throw pagesError('LinkedIn refuse la lecture des pages : accès à la Community Management API requis.', response.status);
     if (!response.ok) throw pagesError(`Pages LinkedIn illisibles (HTTP ${response.status})`, response.status);
     return (await response.json()) as Record<string, unknown>;
+  }
+
+  async lookupOrganization(accessToken: string, vanityName: string): Promise<{ urn: string; name: string } | null> {
+    try {
+      const body = await this.#get(`https://api.linkedin.com/rest/organizations?q=vanityName&vanityName=${encodeURIComponent(vanityName)}`, accessToken);
+      const org = (Array.isArray(body['elements']) ? (body['elements'] as Record<string, unknown>[]) : [])[0];
+      if (org === undefined || typeof org['id'] !== 'number') return null;
+      return { urn: `urn:li:organization:${org['id']}`, name: typeof org['localizedName'] === 'string' ? org['localizedName'] : vanityName };
+    } catch {
+      return null;
+    }
   }
 
   async administeredPages(accessToken: string): Promise<AdministeredPage[]> {
@@ -72,6 +85,12 @@ export class LinkedInPagesClient implements LinkedInPages {
 
 /** Pages simulées (développement, tests) : deux pages, propres au jeton. */
 export class FakeLinkedInPages implements LinkedInPages {
+  async lookupOrganization(_accessToken: string, vanityName: string): Promise<{ urn: string; name: string } | null> {
+    if (vanityName === 'inconnue') return null;
+    const id = [...vanityName].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 1_000_000, 7) + 1000;
+    return { urn: `urn:li:organization:${id}`, name: vanityName.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase()) };
+  }
+
   async administeredPages(accessToken: string): Promise<AdministeredPage[]> {
     const seed = accessToken.replace(/\W/g, '').slice(-6);
     return [

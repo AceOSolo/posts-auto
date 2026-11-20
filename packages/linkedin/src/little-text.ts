@@ -24,7 +24,25 @@ export interface LittleTextOptions {
 /** Un hashtag : « # » en début de texte ou après un blanc, suivi de lettres, chiffres ou « _ ». */
 const HASHTAG = /(^|\s)#([\p{L}\p{N}_]+)/gu;
 
+/**
+ * PUB-08 : mention structurée, saisie avec l'aide de l'éditeur : « @[Nom](urn:li:organization:123) ».
+ * Le nom doit être celui de la page ; l'URN est repris tel quel. Un « @ » isolé reste du texte.
+ */
+export const STRUCTURED_MENTION = /@\[([^\]\n]{1,100})\]\((urn:li:(?:organization|person):[A-Za-z0-9_-]{1,40})\)/g;
+
 export function toLittleText(text: string, options: LittleTextOptions = {}): string {
+  let result = '';
+  let last = 0;
+  for (const match of text.matchAll(STRUCTURED_MENTION)) {
+    const [whole, name = '', urn = ''] = match;
+    result += plainToLittleText(text.slice(last, match.index), options);
+    result += '@[' + escapeLittleText(name) + '](' + urn + ')';
+    last = match.index + whole.length;
+  }
+  return result + plainToLittleText(text.slice(last), options);
+}
+
+function plainToLittleText(text: string, options: LittleTextOptions): string {
   if (!options.linkHashtags) return escapeLittleText(text);
 
   let result = '';

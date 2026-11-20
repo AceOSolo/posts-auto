@@ -758,6 +758,13 @@ try {
   );
   check('SSO : adresse sans compte refusée (pas d’inscription par ce biais)', (unknown.headers.get('location') ?? '').includes('sso-compte-inconnu'), `HTTP ${unknown.status}`);
 
+  // PUB-07, PUB-08 : premier commentaire et mention d'une page.
+  const commented = await submitForm(`/posts/${withPhotos.id}`, alexis, 'Enregistrer le commentaire', { commentaire: 'Le guide complet : https://exemple.fr/guide' });
+  const commentRow = await asSystem(db, (trx) => trx.selectFrom('posts').select('first_comment').where('id', '=', withPhotos.id).executeTakeFirstOrThrow());
+  check('PUB-07 : premier commentaire enregistré pour la publication', (commented.headers.get('location') ?? '').includes('commentaire-enregistre') && commentRow.first_comment?.includes('guide') === true, `HTTP ${commented.status}`);
+  const badMention = await submitForm(`/posts/${withPhotos.id}`, alexis, 'Préparer la mention', { page: 'https://exemple.fr/pas-linkedin' });
+  check('PUB-08 : mention d’une page proposée ; adresse qui n’est pas une page LinkedIn refusée', (badMention.headers.get('location') ?? '').includes('page_mention_invalide'), `HTTP ${badMention.status}`);
+
   // LNK-08 : publication par un scénario du client (webhook).
   const toWebhook = await submitForm(`/comptes/${workspaceId}`, alexis, 'Enregistrer le webhook', { webhook: 'https://hook.example.test/scenario' });
   const webhookCookie = /secret-webhook=([^;]+)/.exec(toWebhook.headers.get('set-cookie') ?? '')?.[1] ?? '';

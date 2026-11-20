@@ -97,3 +97,9 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
 - **Au créneau** : le post validé est envoyé en JSON (texte, images en base64, compte, clé d'idempotence), signé par l'en-tête `X-Signature: t=<secondes>,v1=<HMAC-SHA256 de "t.corps">`. Une connexion LinkedIn valable n'est pas nécessaire.
 - **Réponse** : une réponse 2xx marque le post publié. Le scénario peut renvoyer en JSON l'`urn` et l'`url` du post LinkedIn, pour les statistiques et le lien.
 - **Erreurs** : une 4xx est un échec, avec de nouvelles tentatives selon la règle habituelle. Une absence de réponse ou une 5xx est une **issue incertaine**, comme pour LinkedIn : pas de nouvelle tentative automatique, pour éviter un doublon.
+
+## PUB-07 et PUB-08 : premier commentaire et mentions de pages (fait, 20 novembre 2026)
+
+- **Premier commentaire (PUB-07)** : sur la page du post, un champ « Premier commentaire » (un lien, un complément, 1 250 caractères au plus). Il est publié par l’API juste après le post, au nom de l’auteur, profil ou page. S’il échoue, par exemple faute de permission, le post reste publié et l’échec est affiché avec sa raison. Avec un webhook ou en publication manuelle, le commentaire n’est pas publié par l’outil.
+- **Mentions de pages (PUB-08)** : « Mentionner une page » sur la page du post. On colle l’adresse de la page (linkedin.com/company/…), l’outil la recherche avec la connexion du compte et prépare la mention au format de l’API, `@[Nom](urn:li:organization:123)`. Elle s’affiche « @Nom » dans l’aperçu et devient une vraie mention sur LinkedIn.
+- **Limite** : l’API de LinkedIn ne permet pas de rechercher des personnes. Un « @ » tapé à la main reste interdit et signalé (RÈG-15), seules les mentions préparées passent.
