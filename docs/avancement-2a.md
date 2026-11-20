@@ -34,8 +34,4 @@ Périmètre : lot 2 (« Commercialisation », section 11 du cahier des charges),
 
 ## Reste du lot 2
 
-- ~~**Facturation** (FAC-01 à FAC-07)~~ : faite, voir `avancement-2b.md` ; les prix restent à fixer.
-- **Connexion Google et Microsoft** (ONB-01b), **double authentification** (SEC-04).
-- **Espace Agence** : plusieurs clients, refacturation (FAC-07).
-- **Statistiques**, **administration** (ADM-01 à ADM-04), **site vitrine**, **test d'intrusion** (SEC-10).
-- **Charte extraite du site** (ONB-05, S), **import d'un planning pendant l'assistant** (ONB-09, S : l'import CSV existe déjà dans « Planning »).
+Tout le lot 2 est développé (incréments 2b à 2e). Ne reste que le **test d’intrusion externe (SEC-10)**, à confier à un prestataire avant l’ouverture commerciale : voir `docs/test-intrusion.md`.
