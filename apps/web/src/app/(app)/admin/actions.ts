@@ -6,6 +6,7 @@ import {
   endAnnouncement,
   openSupportSession,
   saveGalleryEntry,
+  saveSiteTestimonial,
   setGalleryEntryActive,
   updatePlatformSettings,
 } from '@posts-auto/services';
@@ -98,4 +99,13 @@ export async function openSupportSessionAction(grantId: string): Promise<void> {
     else throw error;
   }
   redirect(target);
+}
+
+/** SIT-08 : témoignage client du site vitrine. */
+export async function saveTestimonialAction(form: FormData): Promise<void> {
+  const text = (name: string) => String(form.get(name) ?? '');
+  await run('/admin/site', async (adminId, now) => {
+    await saveSiteTestimonial(database(), adminId, { quote: text('citation'), author: text('auteur'), role: text('fonction'), company: text('entreprise'), consentOn: text('accord') }, now);
+    return 'temoignage-enregistre';
+  });
 }

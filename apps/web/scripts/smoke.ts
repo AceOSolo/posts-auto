@@ -68,9 +68,30 @@ try {
   const health = await get('/sante');
   check('/sante répond', health.status === 200 && ((await health.json()) as { ok: boolean }).ok);
 
-  const anonymous = await get('/');
+  const anonymous = await get('/notifications');
   check('sans session : redirection vers /connexion', anonymous.status === 307 && (anonymous.headers.get('location') ?? '').includes('/connexion'));
   check('en-têtes de sécurité présents', anonymous.headers.get('x-frame-options') === 'DENY');
+
+  // SIT-01 à SIT-06 : site vitrine à la racine pour les visiteurs.
+  const landing = await get('/');
+  const landingHtml = (await landing.text()).replace(/<!-- -->/g, '');
+  check(
+    'site vitrine à la racine : promesse, 4 étapes, tarifs, FAQ, essai et démo (SIT-01, SIT-02)',
+    landing.status === 200 && landingHtml.includes('Comment ça marche') && landingHtml.includes('Tarifs') && landingHtml.includes('Questions fréquentes') && landingHtml.includes('Essai gratuit 14 jours') && landingHtml.includes('Demander une démonstration'),
+    `HTTP ${landing.status}`,
+  );
+  check('site vitrine indexable, données structurées SoftwareApplication et FAQPage (SIT-06)', landingHtml.includes('"@type":"SoftwareApplication"') && landingHtml.includes('"@type":"FAQPage"') && !/<meta name="robots" content="noindex/.test(landingHtml));
+  const simulated = (await (await get('/?profils=4&pages=2')).text()).replace(/<!-- -->/g, '');
+  check('simulateur de prix : 6 comptes (SIT-03)', simulated.includes('Pour 6 comptes'));
+  const sitemapXml = await (await get('/sitemap.xml')).text();
+  const llms = await get('/llms.txt');
+  check('sitemap, robots et llms.txt (SIT-06)', sitemapXml.includes('/mentions-legales') && (await (await get('/robots.txt')).text()).includes('Disallow: /api/') && (await llms.text()).startsWith('# Posts LinkedIn'));
+  const legal = await Promise.all(['/mentions-legales', '/cgu', '/cgv', '/confidentialite', '/cookies', '/sous-traitants'].map(async (path) => (await get(path)).status));
+  check('pages légales (SIT-04)', legal.every((s) => s === 200), legal.join(','));
+  const demoEmail = `prospect-${Date.now()}@demo.example.test`;
+  const demo = await submitForm('/', '', 'Envoyer la demande', { nom: 'Prospect Démo', entreprise: 'Prospect SAS', email: demoEmail, telephone: '0102030405', comptes: '5', message: 'Test', site: '' });
+  const demoRow = await asSystem(db, (trx) => trx.selectFrom('demo_requests').select(['company', 'accounts']).where('email', '=', demoEmail).executeTakeFirst());
+  check('demande de démonstration enregistrée et transmise (SIT-02)', (demo.headers.get('location') ?? '').includes('demo-envoyee') && demoRow?.accounts === 5, `HTTP ${demo.status}`);
 
   const loginPage = await get('/connexion');
   const loginHtml = await loginPage.text();

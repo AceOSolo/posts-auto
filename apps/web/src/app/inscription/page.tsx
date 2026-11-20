@@ -35,6 +35,10 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             <input type="radio" name="type" value="agence" /> Une agence : les posts de plusieurs clients, chacun dans son espace
           </label>
         </fieldset>
+        <p className="hint">
+          En créant un compte, vous acceptez les <Link href="/cgu">conditions d’utilisation</Link> et les <Link href="/cgv">conditions de vente</Link>. Vos données sont traitées comme
+          indiqué dans la <Link href="/confidentialite">politique de confidentialité</Link>.
+        </p>
         <button type="submit" className="primary">
           Recevoir mon lien de confirmation
         </button>

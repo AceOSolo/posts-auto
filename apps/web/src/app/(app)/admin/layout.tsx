@@ -13,6 +13,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <Link href="/admin/parametres">Paramètres et IA</Link>
         <Link href="/admin/galerie">Galerie de départ</Link>
         <Link href="/admin/annonces">Annonces</Link>
+        <Link href="/admin/site">Site et démos</Link>
       </nav>
       {children}
     </>

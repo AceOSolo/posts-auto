@@ -44,3 +44,33 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
 
   Le formulaire est pré-rempli. Rien n'est enregistré avant « Enregistrer la charte ».
 - **Import de planning dans l'assistant (ONB-09)** : l'assistant de démarrage propose, en facultatif, d'importer un planning existant. L'import accepte maintenant, en plus du fichier CSV, l'adresse d'une **feuille Google Sheets partagée par lien** : l'onglet ouvert est lu en CSV. Depuis l'assistant, on y revient après l'import.
+
+## SIT-01 à SIT-08 : site vitrine (fait, 20 novembre 2026)
+
+- **Page unique à la racine (SIT-01)** : pour les visiteurs non connectés ; les personnes connectées arrivent sur « Mes posts », à la même adresse. Elle présente :
+  - la promesse ;
+  - « Comment ça marche » en 4 étapes ;
+  - les fonctionnalités ;
+  - « Pour qui » (PME et ETI, agences) ;
+  - les tarifs, lus dans les formules en base ;
+  - les questions fréquentes ;
+  - les appels à l'action.
+
+  Rendu serveur, sans JavaScript, sans cookie ni police téléchargée, pour la rapidité (SIT-07).
+- **Essai gratuit et démonstration (SIT-02)** : le bouton « Essai gratuit » mène à l'inscription. Le formulaire « Demander une démonstration » (nom, entreprise, e-mail, téléphone, nombre de comptes) :
+  - est enregistré et envoyé par e-mail à `SALES_EMAIL` ;
+  - est transmis au CRM si `DEMO_WEBHOOK_URL` est défini (POST JSON, en-tête `X-Demo-Secret`) ;
+  - est protégé par un champ piège et limité à 5 demandes par heure et par adresse IP ;
+  - est listé dans le back-office (« Site et démos »).
+- **Simulateur de prix (SIT-03)** : nombre de profils et de pages, puis prix mensuel, équivalent en annuel et posts rédigés inclus, pour chaque formule. Il fonctionne sans JavaScript.
+- **Pages légales (SIT-04)** : mentions légales, conditions d'utilisation, conditions de vente, confidentialité, cookies, sous-traitants. Ce sont des **projets**, à relire par un juriste. Les informations propres à SimplX sont marquées « À compléter » : raison sociale, SIREN, adresse, hébergeur, durées, responsabilité. L'inscription renvoie aux conditions.
+- **Cookies (SIT-05)** : seuls des cookies strictement nécessaires, exemptés de consentement. Il n'y a donc pas de bandeau, comme le prévoit la section 9 du cahier. La page « Cookies » les liste.
+- **Référencement (SIT-06)** : titre et description, données structurées (Organization, SoftwareApplication avec les offres, FAQPage), `sitemap.xml`, `robots.txt` (l'application et l'API exclues), `llms.txt`.
+- **Témoignage (SIT-08)** : saisi dans le back-office avec la date de l'accord écrit du client, et affiché seulement s'il existe. Aucun témoignage n'est inventé.
+
+**À faire par SimplX** :
+
+- compléter et faire valider les pages légales ;
+- obtenir l'accord écrit de Secutop et saisir le témoignage ;
+- définir `SALES_EMAIL`, et `DEMO_WEBHOOK_URL` si les demandes doivent aller au CRM ;
+- mesurer le score Lighthouse sur le domaine définitif.

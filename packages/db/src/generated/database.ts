@@ -172,6 +172,20 @@ export interface ContentSources {
   workspace_id: string;
 }
 
+export interface DemoRequests {
+  accounts: number | null;
+  company: string;
+  created_at: Generated<Timestamp>;
+  email: string;
+  forward_error: string | null;
+  forwarded_at: Timestamp | null;
+  full_name: string;
+  id: Generated<string>;
+  message: string | null;
+  phone: string | null;
+  requested_ip: string | null;
+}
+
 export interface EditorialLines {
   allowed_proofs: string | null;
   audiences: string | null;
@@ -828,6 +842,7 @@ export interface DB {
   billing_events: BillingEvents;
   content_reports: ContentReports;
   content_sources: ContentSources;
+  demo_requests: DemoRequests;
   editorial_lines: EditorialLines;
   event_accounts: EventAccounts;
   events: Events;
