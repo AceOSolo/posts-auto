@@ -22,6 +22,7 @@ import {
   requestVisualRedo,
   reschedulePost,
   retryPublication,
+  makeCarousel,
   resolvePageMention,
   setFirstComment,
   setManualPostUrl,
@@ -255,4 +256,12 @@ export async function mentionAction(postId: string, formData: FormData): Promise
     else throw error;
   }
   redirect(target);
+}
+
+/** VIS-10 : carrousel PDF à partir des points clés du visuel. */
+export async function carouselAction(postId: string, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    await makeCarousel(database(), mediaStore(), userId, postId, now);
+    return 'carrousel-pret';
+  });
 }

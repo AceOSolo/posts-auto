@@ -442,6 +442,7 @@ async function processNextAttempt(deps: PublicationDeps, clock: () => Date, repo
         authorUrn: claimed.authorUrn,
         text: prepared.text,
         images: prepared.images,
+        ...('document' in prepared && prepared.document !== undefined && { document: prepared.document as { bytes: Uint8Array; title: string } }),
       });
       outcome = { ok: true, ...result };
     } catch (error) {
@@ -488,7 +489,7 @@ async function postFirstComment(deps: PublicationDeps, claimed: ClaimedAttempt, 
 async function prepare(
   deps: PublicationDeps,
   claimed: ClaimedAttempt,
-): Promise<{ ok: true; token: string; text: string; images: PublishImage[] } | { ok: false; error: LinkedInError }> {
+): Promise<{ ok: true; token: string; text: string; images: PublishImage[]; document?: { bytes: Uint8Array; title: string } } | { ok: false; error: LinkedInError }> {
   if (claimed.encryptedToken === null) {
     return { ok: false, error: localFailure('Aucune connexion LinkedIn enregistrée pour ce compte', false, 'auth') };
   }
@@ -501,9 +502,15 @@ async function prepare(
   if (claimed.body === null) return { ok: false, error: localFailure('Le post n’a pas de texte', false) };
 
   const images: PublishImage[] = [];
+  let document: { bytes: Uint8Array; title: string } | undefined;
   try {
     for (const item of claimed.media) {
       const bytes = await deps.media.read(item.storage_key);
+      // VIS-10 : carrousel PDF, publié comme document.
+      if (item.mime === 'application/pdf') {
+        document = { bytes, title: item.alt_text ?? 'Carrousel' };
+        continue;
+      }
       images.push({
         bytes,
         mime: item.mime as LinkedInImageMime,
@@ -514,7 +521,7 @@ async function prepare(
     // Stockage momentanément indisponible : sans danger, nouvel essai.
     return { ok: false, error: localFailure(`Image illisible : ${error instanceof Error ? error.message : String(error)}`, true) };
   }
-  return { ok: true, token, text: claimed.body, images };
+  return { ok: true, token, text: claimed.body, images: document === undefined ? images : [], ...(document !== undefined && { document }) };
 }
 
 /** LNK-08 : texte et images, sans jeton LinkedIn. */

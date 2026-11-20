@@ -103,3 +103,9 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
 - **Premier commentaire (PUB-07)** : sur la page du post, un champ « Premier commentaire » (un lien, un complément, 1 250 caractères au plus). Il est publié par l’API juste après le post, au nom de l’auteur, profil ou page. S’il échoue, par exemple faute de permission, le post reste publié et l’échec est affiché avec sa raison. Avec un webhook ou en publication manuelle, le commentaire n’est pas publié par l’outil.
 - **Mentions de pages (PUB-08)** : « Mentionner une page » sur la page du post. On colle l’adresse de la page (linkedin.com/company/…), l’outil la recherche avec la connexion du compte et prépare la mention au format de l’API, `@[Nom](urn:li:organization:123)`. Elle s’affiche « @Nom » dans l’aperçu et devient une vraie mention sur LinkedIn.
 - **Limite** : l’API de LinkedIn ne permet pas de rechercher des personnes. Un « @ » tapé à la main reste interdit et signalé (RÈG-15), seules les mentions préparées passent.
+
+## VIS-10 : carrousel PDF (fait, 20 novembre 2026)
+
+- **Création** : « Faire un carrousel PDF », sur la page d’un post dont le visuel a au moins deux points clés. Le PDF commence par une page de couverture (titre), puis une page par point, au plus 9, avec le modèle « Citation » aux couleurs de la charte et le logo.
+- **Publication** : le carrousel remplace le visuel du post et part comme **document LinkedIn natif**, par l’API Documents : envoi du PDF, puis post avec le document. « Refaire le visuel » revient à une image.
+- **Aperçu** : le PDF s’ouvre depuis l’aperçu du post. Avec un webhook (LNK-08), le PDF est transmis au scénario comme les images.

@@ -23,6 +23,8 @@ export interface PostMedia {
   /** VIS-12 : image générée par IA, ou visuel qui en contient une. */
   readonly aiGenerated: boolean;
   readonly kind: 'upload' | 'generated' | 'rendered' | 'canva_export';
+  /** VIS-10 : carrousel PDF plutôt qu'une image. */
+  readonly isDocument: boolean;
   /** Visuel rendu à partir d'un modèle : ce qu'il faut savoir pour le relire (VIS-11, VIS-13). */
   readonly visual: VisualInfo | null;
 }
@@ -84,7 +86,7 @@ async function mediaOf(trx: Tx, postIds: readonly string[]): Promise<Map<string,
   const rows = await trx
     .selectFrom('post_media as pm')
     .innerJoin('media_assets as m', 'm.id', 'pm.asset_id')
-    .select(['pm.post_id', 'pm.asset_id', 'pm.position', 'pm.alt_text', 'm.ai_generated', 'm.kind', 'm.render_content'])
+    .select(['pm.post_id', 'pm.asset_id', 'pm.position', 'pm.alt_text', 'm.ai_generated', 'm.kind', 'm.render_content', 'm.mime'])
     .where('pm.post_id', 'in', postIds)
     .orderBy('pm.position')
     .execute();
@@ -96,7 +98,8 @@ async function mediaOf(trx: Tx, postIds: readonly string[]): Promise<Map<string,
       altText: row.alt_text,
       aiGenerated: row.ai_generated,
       kind: row.kind as PostMedia['kind'],
-      visual: row.kind === 'rendered' ? visualInfo(row.render_content) : null,
+      isDocument: row.mime === 'application/pdf',
+      visual: row.kind === 'rendered' && row.mime !== 'application/pdf' ? visualInfo(row.render_content) : null,
     });
     map.set(row.post_id, list);
   }

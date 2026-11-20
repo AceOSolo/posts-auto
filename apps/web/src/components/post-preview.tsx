@@ -84,8 +84,17 @@ export function PostPreview({
         <div className={`li-media count-${Math.min(media.length, 5)}`}>
           {media.slice(0, 5).map((item, index) => (
             <figure key={item.assetId} className={index === 0 ? 'cover' : undefined}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- images privées servies par /media */}
-              <img src={`/media/${item.assetId}`} alt={item.altText ?? `Photo ${index + 1}`} loading="lazy" />
+              {item.isDocument ? (
+                // VIS-10 : carrousel PDF, ouvert dans un nouvel onglet.
+                <a href={`/media/${item.assetId}`} target="_blank" rel="noopener noreferrer" className="document-link">
+                  Carrousel PDF : {item.altText ?? 'document'}
+                </a>
+              ) : (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- images privées servies par /media */}
+                  <img src={`/media/${item.assetId}`} alt={item.altText ?? `Photo ${index + 1}`} loading="lazy" />
+                </>
+              )}
               {index === 4 && media.length > 5 && <span className="more">+{media.length - 5}</span>}
               {item.aiGenerated && <span className="ai-badge">Image générée par IA</span>}
             </figure>

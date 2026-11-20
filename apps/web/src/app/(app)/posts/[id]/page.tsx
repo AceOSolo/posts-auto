@@ -23,6 +23,7 @@ import {
   rescheduleAction,
   reportContentAction,
   retryAction,
+  carouselAction,
   mentionAction,
   setFirstCommentAction,
   setManualUrlAction,
@@ -227,6 +228,13 @@ export default async function PostPage({
                 <p className="hint">Le nouveau visuel prend la place de l’ancien. Pour mettre votre propre image, ajoutez-la dans « Photos » et retirez le visuel.</p>
               </form>
             </details>
+          )}
+          {/* VIS-10 : carrousel PDF à partir des points clés du visuel. */}
+          {post.actions.canRedoVisual && visual !== null && !visual.isDocument && (
+            <form action={carouselAction.bind(null, post.id)}>
+              <button type="submit">Faire un carrousel PDF</button>
+              <p className="hint">Une page de couverture puis une page par point clé, aux couleurs de la charte. Le carrousel remplace le visuel ; « Refaire le visuel » revient à une image.</p>
+            </form>
           )}
         </section>
       )}

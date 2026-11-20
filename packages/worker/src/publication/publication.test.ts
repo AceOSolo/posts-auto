@@ -375,3 +375,20 @@ describe('premier commentaire (PUB-07)', () => {
     expect(await postRow(other)).toMatchObject({ status: 'publie', first_comment_status: 'failed', first_comment_error: expect.any(String) });
   });
 });
+
+describe('carrousel PDF (VIS-10)', () => {
+  it('un PDF du post part comme document LinkedIn, sans image', async () => {
+    const s = await scene();
+    const postId = await validatedPost(s);
+    await asSystem(db, async (trx) => {
+      const key = `${s.workspaceId}/visuels/c.pdf`;
+      await s.media.write(key, new Uint8Array([0x25, 0x50, 0x44, 0x46]));
+      const asset = await trx.insertInto('media_assets').values({ workspace_id: s.workspaceId, kind: 'rendered', storage_key: key, mime: 'application/pdf' }).returning('id').executeTakeFirstOrThrow();
+      await trx.insertInto('post_media').values({ workspace_id: s.workspaceId, post_id: postId, asset_id: asset.id, position: 1, alt_text: 'Trois réflexes' }).execute();
+    });
+    await runPublicationTick(s.deps(() => minutes(1)));
+    await runPublicationTick(s.deps(() => minutes(2)));
+    expect(await postRow(postId)).toMatchObject({ status: 'publie' });
+    expect(s.linkedin.published[0]?.request).toMatchObject({ images: [], document: { title: 'Trois réflexes' } });
+  });
+});

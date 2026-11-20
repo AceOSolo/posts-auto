@@ -25,6 +25,8 @@ export interface PublishRequest {
   /** Dans l'ordre d'affichage ; la première est la couverture. */
   readonly images: readonly PublishImage[];
   readonly textOptions?: LittleTextOptions;
+  /** VIS-10 : carrousel (document PDF) ; remplace les images. */
+  readonly document?: { readonly bytes: Uint8Array; readonly title: string };
 }
 
 export interface PublishedPost {
@@ -88,6 +90,7 @@ export class LinkedInHttpClient implements LinkedInPublisher {
     };
     if (imageIds.length === 1) body['content'] = { media: imageIds[0] };
     if (imageIds.length > 1) body['content'] = { multiImage: { images: imageIds } };
+    if (request.document !== undefined) body['content'] = { media: { id: await this.#uploadDocument(accessToken, request.authorUrn, request.document.bytes), title: request.document.title.slice(0, 200) } };
 
     const response = await this.#call('post_create', `${this.#baseUrl}/posts`, {
       method: 'POST',
@@ -115,6 +118,21 @@ export class LinkedInHttpClient implements LinkedInPublisher {
       headers: this.#headers(accessToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ actor: request.actorUrn, object: request.postUrn, message: { text: request.text } }),
     });
+  }
+
+  /** VIS-10 : POST /rest/documents?action=initializeUpload, puis envoi du PDF. */
+  async #uploadDocument(accessToken: string, ownerUrn: string, bytes: Uint8Array): Promise<string> {
+    const init = await this.#call('image_upload', `${this.#baseUrl}/documents?action=initializeUpload`, {
+      method: 'POST',
+      headers: this.#headers(accessToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ initializeUploadRequest: { owner: ownerUrn } }),
+    });
+    const value = ((await init.json()) as { value?: { uploadUrl?: unknown; document?: unknown } }).value;
+    if (typeof value?.uploadUrl !== 'string' || typeof value.document !== 'string') {
+      throw new LinkedInError({ kind: 'server', phase: 'image_upload', outcome: 'not_created', status: init.status, message: 'Réponse inattendue de LinkedIn à la préparation de l’envoi du document' });
+    }
+    await this.#call('image_upload', value.uploadUrl, { method: 'PUT', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/pdf' }, body: new Uint8Array(bytes) });
+    return value.document;
   }
 
   async #uploadImage(accessToken: string, ownerUrn: string, image: PublishImage): Promise<string> {
@@ -173,4 +191,6 @@ function validate(request: PublishRequest): void {
   if (request.text.trim().length === 0) throw reject('Le texte du post est vide');
   if (request.text.length > MAX_COMMENTARY_LENGTH) throw reject(`Le texte dépasse ${MAX_COMMENTARY_LENGTH} caractères`);
   if (request.images.length > MAX_IMAGES_PER_POST) throw reject(`Au plus ${MAX_IMAGES_PER_POST} images par post`);
+  if (request.document !== undefined && request.images.length > 0) throw reject('Un carrousel PDF ne s’accompagne pas d’images');
+  if (request.document !== undefined && request.document.bytes.length > 100 * 1024 * 1024) throw reject('Document de plus de 100 Mo');
 }
