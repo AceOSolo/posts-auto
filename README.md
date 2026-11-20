@@ -15,6 +15,8 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 - [Avancement de l'incrément 2c](./docs/avancement-2c.md) : double authentification (TOTP), connexion Google et Microsoft.
 - [Avancement de l'incrément 2d](./docs/avancement-2d.md) : back-office de l'éditeur (organisations, supervision, paramètres, galerie, annonces, support).
 - [Avancement de l'incrément 2e](./docs/avancement-2e.md) : fonctions complémentaires du lot 2 (publication manuelle, statistiques, rapports, connecteurs…).
+- [Après le lot 2](./docs/avancement-3.md) : mise en production, tests dans le navigateur, améliorations (meilleurs moments, post d'exemple, Slack et Teams, déclinaison d'articles) et ce qui reste à faire de votre côté.
+- [Mise en production](./docs/deploiement.md) et [recette des intégrations](./docs/recette-integrations.md).
 - [API d'échange](./docs/api-echange.md) : comment la tâche Claude actuelle dépose ses posts et lit les décisions (incrément 1a), et comment reprendre ses idées et ses demandes (incrément 1b).
 
 ## Structure
@@ -67,5 +69,6 @@ npm run codegen -w @posts-auto/db              # régénère les types de la bas
 npm run codegen -w @posts-auto/db -- --verify  # vérifie que les types sont à jour
 npm run build -w @posts-auto/web               # compile l'application
 npm run smoke -w @posts-auto/web               # test de fumée de l'application lancée (après seed)
+npm run e2e -w @posts-auto/web                 # tests dans le navigateur, ordinateur et téléphone (après seed, APP_URL)
 npm run api-key -w @posts-auto/web -- --espace <uuid> --nom "Tâche Claude"  # clé de l'API d'échange
 ```
