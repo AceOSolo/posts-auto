@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+.github
+.media
+coverage
+apps/web/.next
+**/*.test.ts
+**/.env
+**/.env.*
+!**/.env.example
+docs
+desktop.ini
+*.md

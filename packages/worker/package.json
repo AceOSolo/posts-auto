@@ -9,7 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "tsx src/cli/run.ts"
+    "start": "tsx src/cli/run.ts",
+    "verifier-integrations": "tsx src/cli/verify-integrations.ts"
   },
   "dependencies": {
     "@posts-auto/ai": "*",

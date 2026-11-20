@@ -108,3 +108,12 @@ export function toModelError(error: unknown): ModelError {
   }
   return new ModelError('unavailable', error instanceof Error ? error.message : 'Erreur inconnue du fournisseur d’IA.', { cause: error });
 }
+
+/**
+ * Recette (docs/recette-integrations.md) : la clé est valable et le modèle configuré existe.
+ * Lecture seule et gratuite : aucun message n'est envoyé au modèle.
+ */
+export async function verifyAnthropicModel(apiKey: string, model: string, client?: Anthropic): Promise<{ readonly id: string; readonly name: string }> {
+  const info = await (client ?? new Anthropic({ apiKey, maxRetries: 1 })).models.retrieve(model);
+  return { id: info.id, name: info.display_name };
+}
