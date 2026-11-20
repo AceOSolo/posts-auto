@@ -123,6 +123,12 @@ export interface AuditLog {
   workspace_id: string | null;
 }
 
+export interface BillingEvents {
+  id: string;
+  received_at: Generated<Timestamp>;
+  type: string;
+}
+
 export interface ContentReports {
   created_at: Generated<Timestamp>;
   handled_at: Timestamp | null;
@@ -358,6 +364,22 @@ export interface PlanningCells {
   workspace_id: string;
 }
 
+export interface Plans {
+  active: Generated<boolean>;
+  features: Generated<string[]>;
+  images_per_account: number | null;
+  key: string;
+  max_workspaces: number | null;
+  name: string;
+  position: Generated<number>;
+  posts_per_account: number;
+  price_monthly_cents: number | null;
+  price_yearly_cents: number | null;
+  stripe_price_monthly: string | null;
+  stripe_price_yearly: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface PostMedia {
   alt_text: string | null;
   asset_id: string;
@@ -466,6 +488,29 @@ export interface PublishAttempts {
   outcome: string | null;
   post_id: string;
   started_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
+export interface QuotaPackOffers {
+  active: Generated<boolean>;
+  images: Generated<number>;
+  key: string;
+  name: string;
+  posts: Generated<number>;
+  price_cents: number | null;
+  stripe_price: string | null;
+}
+
+export interface QuotaPacks {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  images: number;
+  offer_key: string;
+  period_end: Timestamp;
+  period_start: Timestamp;
+  posts: number;
+  purchased_by: string | null;
+  stripe_ref: string | null;
   workspace_id: string;
 }
 
@@ -580,6 +625,22 @@ export interface SubjectBank {
   workspace_id: string;
 }
 
+export interface Subscriptions {
+  billing_interval: Generated<string>;
+  cancel_at_period_end: Generated<boolean>;
+  current_period_end: Timestamp;
+  current_period_start: Timestamp;
+  org_id: string;
+  overage_policy: Generated<string>;
+  past_due_since: Timestamp | null;
+  plan_key: string;
+  quantity: Generated<number>;
+  reminders_sent: Generated<string[]>;
+  status: string;
+  stripe_subscription_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Templates {
   account_id: string | null;
   archived_at: Timestamp | null;
@@ -592,6 +653,13 @@ export interface Templates {
   id: Generated<string>;
   name: string;
   updated_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
+export interface UsageAlerts {
+  kind: string;
+  period_start: Timestamp;
+  sent_at: Generated<Timestamp>;
   workspace_id: string;
 }
 
@@ -659,6 +727,7 @@ export interface DB {
   api_keys: ApiKeys;
   approval_links: ApprovalLinks;
   audit_log: AuditLog;
+  billing_events: BillingEvents;
   content_reports: ContentReports;
   content_sources: ContentSources;
   editorial_lines: EditorialLines;
@@ -677,12 +746,15 @@ export interface DB {
   organizations: Organizations;
   page_connections: PageConnections;
   planning_cells: PlanningCells;
+  plans: Plans;
   post_media: PostMedia;
   post_requests: PostRequests;
   post_status_history: PostStatusHistory;
   post_versions: PostVersions;
   posts: Posts;
   publish_attempts: PublishAttempts;
+  quota_pack_offers: QuotaPackOffers;
+  quota_packs: QuotaPacks;
   reference_posts: ReferencePosts;
   request_accounts: RequestAccounts;
   request_photos: RequestPhotos;
@@ -692,7 +764,9 @@ export interface DB {
   social_tokens: SocialTokens;
   source_items: SourceItems;
   subject_bank: SubjectBank;
+  subscriptions: Subscriptions;
   templates: Templates;
+  usage_alerts: UsageAlerts;
   users: Users;
   visual_tasks: VisualTasks;
   workspace_members: WorkspaceMembers;

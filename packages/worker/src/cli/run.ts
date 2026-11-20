@@ -12,6 +12,7 @@
  * - Veille : toutes les heures, nouveaux articles des flux RSS des espaces (GEN-09).
  * - Apprentissage : chaque jour, préférences des titulaires tirées de leurs corrections (EDI-06).
  * - Rendez-vous récurrents : chaque jour, occurrences des 60 prochains jours (EDI-08).
+ * - Facturation : toutes les heures (quantités, relances d'impayé, alertes de quota, FAC-02 à FAC-06).
  * - Visuels à refaire : toutes les minutes (VIS-13). Les visuels des nouveaux posts sont
  *   préparés avec eux par la rédaction, les demandes et les reprises (VIS-03).
  *
@@ -20,7 +21,8 @@
  * - LINKEDIN_MODE : « api » (par défaut) ou « fake » (développement : rien ne part chez LinkedIn) ;
  * - LINKEDIN_API_VERSION : version AAAAMM de l'API LinkedIn (par défaut 202610) ;
  * - AI_MODE (« anthropic » ou « fake »), ANTHROPIC_API_KEY, AI_MODEL, AI_USD_TO_EUR ;
- * - IMAGE_MODE : « fake » (images simulées) ; absent, pas d'image générée.
+ * - IMAGE_MODE : « fake » (images simulées) ; absent, pas d'image générée ;
+ * - BILLING_MODE=fake (paiement simulé) ou STRIPE_SECRET_KEY.
  *
  * Journal : une ligne JSON par événement, sur la sortie standard.
  */
@@ -36,9 +38,10 @@ import {
   LinkedInOAuthClient,
   type LinkedInPublisher,
 } from '@posts-auto/linkedin';
-import { mailerFromEnv } from '@posts-auto/services';
+import { type BillingProvider, FakeBilling, StripeBilling, mailerFromEnv } from '@posts-auto/services';
 import { imageGeneratorFromEnv } from '@posts-auto/visuals';
 import { runTokenCheck } from '../accounts/token-check.ts';
+import { runBillingTick } from '../billing/billing-job.ts';
 import { runRequestTick } from '../generation/requests.ts';
 import { runLearningTick } from '../generation/learning.ts';
 import { materializeRecurringEvents } from '../generation/recurring-events.ts';
@@ -70,6 +73,8 @@ const mailer = mailerFromEnv(env);
 const model = modelFromEnv(env);
 const usdToEur = Number.parseFloat(env['AI_USD_TO_EUR'] ?? '0.86');
 const images = imageGeneratorFromEnv(env);
+const billing: BillingProvider | null =
+  env['BILLING_MODE'] === 'fake' ? new FakeBilling(appUrl) : env['STRIPE_SECRET_KEY'] ? new StripeBilling({ secretKey: env['STRIPE_SECRET_KEY'] }) : null;
 // Rédaction avec visuels (1c) : les posts sont déposés avec leur visuel.
 const writing = { db, model, usdToEur, media, images };
 const oauth: LinkedInOAuth | null = fake
@@ -82,6 +87,7 @@ log('info', 'demarrage', {
   linkedin: env['LINKEDIN_MODE'] === 'fake' ? 'faux (développement)' : 'API',
   ia: model.provider === 'simulation' ? 'simulée (développement)' : model.model,
   images: images === null ? 'aucune image générée' : images.provider,
+  paiement: billing === null ? 'non configuré' : billing.name,
   cle: cipher.currentKeyId,
 });
 
@@ -96,6 +102,7 @@ const scheduler = startScheduler(
     { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick(writing) },
     { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick(writing) },
     { name: 'visuels', intervalMs: 60_000, run: () => runVisualTick(writing) },
+    { name: 'facturation', intervalMs: 60 * 60_000, run: () => runBillingTick({ db, provider: billing, media }) },
     { name: 'veille', intervalMs: 60 * 60_000, run: () => runSourcesTick({ db }) },
     { name: 'apprentissage', intervalMs: 24 * 3_600_000, run: () => runLearningTick({ db, model, usdToEur }) },
     { name: 'evenements', intervalMs: 24 * 3_600_000, run: async () => ({ crees: await materializeRecurringEvents(db, new Date()) }) },

@@ -11,7 +11,7 @@
 import { ModelError, PROMPT_VERSION, renderBrief, writePost } from '@posts-auto/ai';
 import { addMinutes, firstFreeSlot, isSlotFree } from '@posts-auto/core';
 import { asSystem, weekStartOf } from '@posts-auto/db';
-import { currentEditorialLine, offerItems, remainingTrialPosts, trialLimitReason, trialStateForWorkspace } from '@posts-auto/services';
+import { allowanceForWorkspace, currentEditorialLine, offerItems } from '@posts-auto/services';
 import { notify } from '../notifications/recipients.ts';
 import { storeVisual } from '../visuals/prepare.ts';
 import { openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
@@ -129,11 +129,11 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
     for (const account of accounts) {
       const accountId = account.profile.accountId;
       if (request.existing.some((p) => p.account_id === accountId)) continue;
-      // ONB-06 : pendant l'essai gratuit, 10 posts au plus, et rien après la fin de l'essai.
-      const trial = await asSystem(db, (trx) => trialStateForWorkspace(trx, workspaceId, now));
-      if (remainingTrialPosts(trial) === 0) {
+      // ONB-06, FAC-04, FAC-06 : essai, quota de la période, impayé.
+      const allowance = await asSystem(db, (trx) => allowanceForWorkspace(trx, workspaceId, now));
+      if (allowance.posts.remaining === 0) {
         trialBlocked = true;
-        followups.push(`${account.profile.displayName ?? 'Compte'} : ${trialLimitReason(trial)}`);
+        followups.push(`${account.profile.displayName ?? 'Compte'} : ${allowance.reason ?? allowance.limitReason}`);
         continue;
       }
       // Créneau : celui souhaité s'il est libre, sinon le prochain créneau libre (IDE-06).

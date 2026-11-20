@@ -187,6 +187,49 @@ export function notificationMail(kind: string, payload: Record<string, unknown>,
         postAction,
         footer,
       );
+    case 'impaye': {
+      // FAC-06 : relances à J+3 et J+7, suspension à J+14.
+      const billingAction = { label: 'Mettre à jour le paiement', url: `${ctx.appUrl}/abonnement/${encodeURIComponent(workspaceId)}` };
+      return payload['step'] === 'j14'
+        ? compose(
+            ctx,
+            'Abonnement suspendu pour impayé',
+            [
+              'Le paiement de votre abonnement n’a toujours pas abouti : la rédaction et la publication des posts sont suspendues.',
+              'Vos données sont conservées 90 jours. Tout reprend dès le règlement.',
+            ],
+            billingAction,
+            footer,
+          )
+        : compose(
+            ctx,
+            'Le paiement de votre abonnement a échoué',
+            [
+              'Le dernier prélèvement de votre abonnement n’a pas abouti.',
+              `Sans règlement, la rédaction et la publication seront suspendues ${payload['step'] === 'j7' ? 'dans 7 jours' : 'dans 11 jours'}. Vérifiez votre moyen de paiement.`,
+            ],
+            billingAction,
+            footer,
+          );
+    }
+    case 'quota_alerte': {
+      // FAC-04, RÈG-20 : alerte à 80 %, puis au plafond.
+      const full = String(payload['kind']).endsWith('_100');
+      const what = String(payload['kind']).startsWith('images') ? 'images' : 'posts';
+      const counts = `${String(payload['used'])} ${what} sur ${String(payload['limit'])} ce mois-ci pour ${str(payload['workspaceName'], 'votre espace')}.`;
+      const next = full
+        ? payload['packs'] === true
+          ? 'Ajoutez un pack pour continuer ce mois-ci ; sinon, la rédaction reprend au début du mois de quota suivant.'
+          : 'La rédaction reprend au début du mois de quota suivant. Les posts déjà validés partent toujours.'
+        : 'Au plafond, la rédaction s’arrête jusqu’au mois suivant, sauf si vous avez choisi les packs supplémentaires.';
+      return compose(
+        ctx,
+        full ? `Quota de ${what} du mois atteint` : `80 % du quota de ${what} utilisé`,
+        [counts, next],
+        { label: 'Voir l’usage', url: `${ctx.appUrl}/abonnement/${encodeURIComponent(workspaceId)}` },
+        footer,
+      );
+    }
     default:
       return null; // ex. « post_publie », « post_replanifie » : notifications dans l'application seulement
   }

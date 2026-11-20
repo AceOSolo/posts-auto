@@ -7,7 +7,7 @@ import { type TextModel, modelFromEnv } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, type Database, createDatabase } from '@posts-auto/db';
 import { FakeLinkedInOAuth, FakeLinkedInPages, type LinkedInOAuth, LinkedInOAuthClient, type LinkedInPages, LinkedInPagesClient } from '@posts-auto/linkedin';
 import { FileMediaStore, type MediaStore, TokenCipher } from '@posts-auto/worker';
-import { type Mailer, mailerFromEnv } from '@posts-auto/services';
+import { type BillingProvider, FakeBilling, type Mailer, StripeBilling, mailerFromEnv } from '@posts-auto/services';
 
 interface ServerResources {
   db?: Database;
@@ -52,6 +52,20 @@ export function linkedinOAuth(): LinkedInOAuth | null {
 export function linkedinPages(): LinkedInPages {
   if (process.env['LINKEDIN_MODE'] === 'fake') return new FakeLinkedInPages();
   return new LinkedInPagesClient({ apiVersion: process.env['LINKEDIN_API_VERSION'] ?? '202610' });
+}
+
+/**
+ * Paiement (FAC-01) : Stripe (STRIPE_SECRET_KEY), ou simulé (BILLING_MODE=fake : aucune
+ * somme n'est prélevée). Null tant que rien n'est configuré.
+ */
+export function billing(): BillingProvider | null {
+  if (billingSimulated()) return new FakeBilling(appUrl());
+  const secretKey = process.env['STRIPE_SECRET_KEY'];
+  return secretKey ? new StripeBilling({ secretKey }) : null;
+}
+
+export function billingSimulated(): boolean {
+  return process.env['BILLING_MODE'] === 'fake';
 }
 
 /** Chiffrement des jetons (SEC-02) ; null si les clés ne sont pas configurées. */

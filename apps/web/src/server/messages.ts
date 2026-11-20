@@ -182,6 +182,22 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   trop_de_propositions: { tone: 'error', text: 'Trop de propositions demandées : réessayez dans une heure.' },
   essai_comptes: { tone: 'error', text: 'L’essai gratuit est limité à 3 comptes LinkedIn.' },
   essai_termine: { tone: 'error', text: 'L’essai gratuit est terminé : un nouveau compte se connecte avec l’abonnement.' },
+  'abonnement-paye': { tone: 'success', text: 'Paiement reçu : l’abonnement est actif. La facture vous est envoyée par e-mail.' },
+  'paiement-en-cours': { tone: 'success', text: 'Paiement en cours de confirmation : l’abonnement s’affichera dans quelques instants.' },
+  'paiement-annule': { tone: 'error', text: 'Paiement annulé : rien n’a été prélevé.' },
+  'pack-paye': { tone: 'success', text: 'Pack ajouté : le quota de la période est augmenté.' },
+  'depassement-enregistre': { tone: 'success', text: 'Choix enregistré pour le dépassement du quota.' },
+  'portail-retour': { tone: 'success', text: 'Retour du portail de facturation.' },
+  'paiement-non-configure': { tone: 'error', text: 'Le paiement n’est pas encore configuré sur ce serveur.' },
+  'paiement-indisponible': { tone: 'error', text: 'Le service de paiement ne répond pas. Réessayez dans quelques minutes.' },
+  formule_indisponible: { tone: 'error', text: 'Cette formule n’est pas encore proposée à la souscription.' },
+  deja_abonne: { tone: 'error', text: 'L’organisation a déjà un abonnement : changez de formule depuis le portail de facturation.' },
+  pas_de_client: { tone: 'error', text: 'Aucun abonnement à gérer pour l’instant.' },
+  pas_abonne: { tone: 'error', text: 'Ce réglage s’applique à un abonnement en cours.' },
+  packs_non_choisis: { tone: 'error', text: 'Choisissez d’abord « packs supplémentaires » en cas de dépassement.' },
+  pack_indisponible: { tone: 'error', text: 'Ce pack n’est pas encore proposé.' },
+  choix_inconnu: { tone: 'error', text: 'Choix inconnu.' },
+  simulation_invalide: { tone: 'error', text: 'Paiement simulé incomplet.' },
 };
 
 export function messageFor(code: string | string[] | undefined): { tone: 'success' | 'error'; text: string } | null {

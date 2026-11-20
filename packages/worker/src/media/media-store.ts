@@ -2,12 +2,14 @@
  * Stockage des images (photos, visuels rendus). En production : stockage objet compatible
  * S3 hébergé dans l'UE (section 8.1) ; en développement : un dossier local ; en test : la mémoire.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export interface MediaStore {
   read(storageKey: string): Promise<Uint8Array>;
   write(storageKey: string, bytes: Uint8Array): Promise<void>;
+  /** Supprime le fichier ; sans effet s'il n'existe pas. */
+  remove(storageKey: string): Promise<void>;
 }
 
 /** Clé de stockage : segments séparés par « / », sans « .. », sans chemin absolu. */
@@ -30,6 +32,11 @@ export class MemoryMediaStore implements MediaStore {
   async write(storageKey: string, bytes: Uint8Array): Promise<void> {
     assertStorageKey(storageKey);
     this.#files.set(storageKey, bytes);
+  }
+
+  async remove(storageKey: string): Promise<void> {
+    assertStorageKey(storageKey);
+    this.#files.delete(storageKey);
   }
 }
 
@@ -55,5 +62,9 @@ export class FileMediaStore implements MediaStore {
     const target = this.#pathOf(storageKey);
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, bytes);
+  }
+
+  async remove(storageKey: string): Promise<void> {
+    await rm(this.#pathOf(storageKey), { force: true });
   }
 }

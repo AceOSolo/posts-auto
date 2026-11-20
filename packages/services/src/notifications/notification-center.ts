@@ -71,6 +71,18 @@ export function describeNotification(kind: string, payload: Record<string, unkno
       };
     case 'reprise_manuelle':
       return { title: `Un post de ${account} doit être repris à la main (3 reprises déjà faites)`, href: post };
+    case 'impaye':
+      return {
+        title: payload['step'] === 'j14' ? 'Abonnement impayé : rédaction et publication suspendues' : 'Paiement de l’abonnement en échec : mettez à jour votre moyen de paiement',
+        href: str(payload['workspaceId']) ? `/abonnement/${encodeURIComponent(str(payload['workspaceId']))}` : null,
+      };
+    case 'quota_alerte':
+      return {
+        title: String(payload['kind']).endsWith('_100')
+          ? `Quota du mois atteint (${String(payload['kind']).startsWith('images') ? 'images' : 'posts'}) : ${str(payload['workspaceName'])}`
+          : `80 % du quota du mois utilisé (${String(payload['kind']).startsWith('images') ? 'images' : 'posts'}) : ${str(payload['workspaceName'])}`,
+        href: str(payload['workspaceId']) ? `/abonnement/${encodeURIComponent(str(payload['workspaceId']))}` : null,
+      };
     default:
       return { title: 'Notification', href: null };
   }

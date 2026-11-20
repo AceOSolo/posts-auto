@@ -9,6 +9,7 @@ import { FakeModel } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, asSystem, createDatabase } from '@posts-auto/db';
 import { FakeImageGenerator } from '@posts-auto/visuals';
 import { FileMediaStore, runGenerationTick, runVisualTick } from '@posts-auto/worker';
+import { createHmac } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink, requestSignup } from '@posts-auto/services';
@@ -573,6 +574,58 @@ try {
       `HTTP ${proposed.status} → ${proposedAt}`,
     );
     check('la proposition n’enregistre aucune version de la ligne', (await asSystem(db, (trx) => trx.selectFrom('editorial_lines').select('id').where('workspace_id', '=', newWorkspace).execute())).length === 0);
+
+    // Lot 2, FAC-01 à FAC-07 : abonnement (serveur lancé avec BILLING_MODE=fake).
+    const billingPath = `/abonnement/${newWorkspace}`;
+    await asSystem(db, (trx) =>
+      trx.updateTable('plans').set({ stripe_price_monthly: 'price_smoke_essentiel', price_monthly_cents: 2900 }).where('key', '=', 'essentiel').where('stripe_price_monthly', 'is', null).execute(),
+    );
+    const billingHtml = (await (await get(billingPath, newSession)).text()).replace(/<!-- -->/g, '');
+    check(
+      'page d’abonnement : essai en cours, formules, usage du mois (FAC-03, FAC-04)',
+      billingHtml.includes('Essai gratuit en cours') && billingHtml.includes('Souscrire à Essentiel') && billingHtml.includes('29,00') && billingHtml.includes('Usage du mois'),
+      billingHtml.includes('pas encore configuré') ? 'serveur lancé sans BILLING_MODE=fake' : '',
+    );
+    const toCheckout = await submitForm(billingPath, newSession, 'Souscrire à Essentiel', { periodicite: 'month' });
+    const checkoutAt = toCheckout.headers.get('location') ?? '';
+    check('« Souscrire » : redirection vers la page de paiement (FAC-01)', checkoutAt.includes('/abonnement/simulation?mode=subscription'), `HTTP ${toCheckout.status} → ${checkoutAt}`);
+    const checkoutPath = checkoutAt.replace(BASE, '');
+    const paid = await submitForm(checkoutPath, newSession, 'Payer (simulation)', {});
+    const subscriptionRow = await asSystem(db, (trx) =>
+      trx.selectFrom('subscriptions as s').innerJoin('workspaces as w', 'w.org_id', 's.org_id').select(['s.status', 's.plan_key']).where('w.id', '=', newWorkspace).executeTakeFirst(),
+    );
+    check('paiement simulé : abonnement actif, retour sur la page (FAC-01)', (paid.headers.get('location') ?? '').includes('abonnement-paye') && subscriptionRow?.status === 'active' && subscriptionRow.plan_key === 'essentiel', `HTTP ${paid.status}`);
+    const subscribedHtml = (await (await get(billingPath, newSession)).text()).replace(/<!-- -->/g, '');
+    check('page d’abonnement : formule, échéance, choix au plafond', subscribedHtml.includes('Abonnement en cours') && subscribedHtml.includes('Prochaine échéance') && subscribedHtml.includes('Au plafond du quota'));
+    check('plus de bandeau d’essai une fois abonné', !(await (await get('/', newSession)).text()).includes('Essai gratuit</strong>'));
+    const overage = await submitForm(billingPath, newSession, '>Enregistrer<', { depassement: 'packs' });
+    check('au plafond : packs supplémentaires choisis (FAC-04)', (overage.headers.get('location') ?? '').includes('depassement-enregistre') && (await (await get(billingPath, newSession)).text()).includes('Pack de 20 posts'), `HTTP ${overage.status}`);
+    const toPortal = await submitForm(billingPath, newSession, 'Moyen de paiement, factures et résiliation', {});
+    const portalPath = (toPortal.headers.get('location') ?? '').replace(BASE, '');
+    check('portail de facturation (FAC-05)', portalPath.includes('/abonnement/simulation?mode=portail'), `HTTP ${toPortal.status}`);
+    await submitForm(portalPath, newSession, 'Appliquer', { action: 'echec_paiement' });
+    const pastDueHtml = (await (await get(billingPath, newSession)).text()).replace(/<!-- -->/g, '');
+    check('prélèvement en échec affiché, publication maintenue jusqu’à J+14 (FAC-06)', pastDueHtml.includes('Paiement en échec depuis') && pastDueHtml.includes('Abonnement en cours'));
+    await submitForm(portalPath, newSession, 'Appliquer', { action: 'paiement' });
+    check('règlement : l’impayé disparaît', !(await (await get(billingPath, newSession)).text()).includes('Paiement en échec depuis'));
+    const usageCsv = await get(`${billingPath}/export`, newSession);
+    check('export de l’usage par espace et par mois (FAC-07)', usageCsv.headers.get('content-type')?.startsWith('text/csv') === true && (await usageCsv.text()).includes('"Espace";"Mois"'), `HTTP ${usageCsv.status}`);
+    check('abonnement d’un autre client → 404', (await get(`/abonnement/${newWorkspace}`, alexis)).status === 404 && (await get(`${billingPath}/export`, alexis)).status === 404);
+
+    // Événements Stripe : signature exigée, chaque événement appliqué une seule fois.
+    const unsigned = await fetch(`${BASE}/api/stripe/webhook`, { method: 'POST', body: '{"id":"evt_x"}', headers: { 'content-type': 'application/json' } });
+    const webhookSecret = process.env['STRIPE_WEBHOOK_SECRET'];
+    if (webhookSecret) {
+      const payload = JSON.stringify({ id: `evt_smoke_${Date.now()}`, type: 'customer.created', data: { object: {} } });
+      const t = Math.floor(Date.now() / 1000);
+      const signature = createHmac('sha256', webhookSecret).update(`${t}.${payload}`).digest('hex');
+      const send = () => fetch(`${BASE}/api/stripe/webhook`, { method: 'POST', body: payload, headers: { 'content-type': 'application/json', 'stripe-signature': `t=${t},v1=${signature}` } });
+      const first = (await (await send()).json()) as { received?: boolean; duplicate?: boolean };
+      const second = (await (await send()).json()) as { duplicate?: boolean };
+      check('webhook Stripe : sans signature refusé, signé accepté une seule fois', unsigned.status === 400 && first.received === true && first.duplicate === false && second.duplicate === true, `HTTP ${unsigned.status}`);
+    } else {
+      check('webhook Stripe : refusé tant que STRIPE_WEBHOOK_SECRET n’est pas configuré', unsigned.status === 503, `HTTP ${unsigned.status}`);
+    }
   } else {
     check('inscription : jeton de confirmation obtenu', false, signup.kind);
   }

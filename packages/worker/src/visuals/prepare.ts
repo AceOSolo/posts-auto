@@ -15,7 +15,7 @@ import { randomUUID } from 'node:crypto';
 import { type LibraryPhoto, ModelError, type TextModel, type UsageRecord, type VisualFill, VISUAL_LIMITS, fillVisual, inspectImage } from '@posts-auto/ai';
 import { startOfLocalMonth } from '@posts-auto/core';
 import type { Tx } from '@posts-auto/db';
-import { type Branding, ensureGalleryTemplates, loadBranding } from '@posts-auto/services';
+import { type Branding, allowanceForWorkspace, ensureGalleryTemplates, loadBranding } from '@posts-auto/services';
 import {
   type ImageGenerator,
   type RenderIssue,
@@ -96,6 +96,8 @@ export async function loadVisualContext(trx: Tx, media: MediaStore, workspaceId:
     .where('at', '>=', startOfLocalMonth(now, settings.calendar))
     .executeTakeFirstOrThrow();
 
+  const imageQuota = (await allowanceForWorkspace(trx, workspaceId, now)).images.remaining;
+
   const rows = await trx
     .selectFrom('templates')
     .select(['id', 'account_id', 'name', 'definition', 'created_at'])
@@ -132,7 +134,8 @@ export async function loadVisualContext(trx: Tx, media: MediaStore, workspaceId:
     logo,
     templates,
     library: library.map((p) => ({ id: p.id, label: p.label, folder: p.folder, tags: p.tags, storageKey: p.storage_key, aiGenerated: p.ai_generated })),
-    imagesLeft: Math.max(0, workspace.image_budget_monthly - used.n),
+    // Budget de l'espace (VIS-05) et, pour un abonné, quota d'images de sa formule (FAC-04).
+    imagesLeft: Math.min(Math.max(0, workspace.image_budget_monthly - used.n), imageQuota ?? Number.POSITIVE_INFINITY),
   };
 }
 

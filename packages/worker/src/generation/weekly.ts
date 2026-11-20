@@ -13,7 +13,7 @@
 import { ModelError, PROMPT_VERSION, type PostBrief, type TextModel, renderBrief, writePost } from '@posts-auto/ai';
 import { type Assignment, type Subject, allocateSubjects, isoWeekNumber, lastCronOccurrence, parseCron } from '@posts-auto/core';
 import { type Database, type Tx, asSystem, weekStartOf } from '@posts-auto/db';
-import { remainingTrialPosts, trialLimitReason, trialStateForWorkspace } from '@posts-auto/services';
+import { allowanceForWorkspace } from '@posts-auto/services';
 import type { ImageGenerator } from '@posts-auto/visuals';
 import type { MediaStore } from '../media/media-store.ts';
 import { notify } from '../notifications/recipients.ts';
@@ -267,10 +267,10 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
     slots: { calendar: settings.calendar, rules: settings.slotRules, occupied: [...data.occupied] },
   });
 
-  // ONB-06 : pendant l'essai gratuit, la rédaction s'arrête à 10 posts et à la fin de l'essai.
+  // ONB-06, FAC-04, FAC-06 : essai (10 posts), quota de la formule sur la période, impayé.
   // Les premiers créneaux sont servis ; les autres sujets sont signalés au rapport.
-  const trial = await asSystem(db, (trx) => trialStateForWorkspace(trx, workspaceId, now));
-  const allowed = remainingTrialPosts(trial);
+  const allowance = await asSystem(db, (trx) => allowanceForWorkspace(trx, workspaceId, now));
+  const allowed = allowance.posts.remaining;
   const kept = new Set(allowed === null ? allocation.assignments : [...allocation.assignments].sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, allowed));
   const assignments = allocation.assignments.filter((a) => kept.has(a));
   const cutByTrial = allocation.assignments.filter((a) => !kept.has(a));
@@ -422,7 +422,7 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
         label: a.subject === null ? 'Créneau du rythme du compte' : (data.subjectInfo.get(subjectKey(a.subject))?.title ?? ''),
         accountName: nameOf(a.accountId),
         weekStart: weekStartOf(a.at, settings.calendar),
-        reason: trialLimitReason(trial),
+        reason: allowance.reason ?? allowance.limitReason,
       })),
     ],
     errors,

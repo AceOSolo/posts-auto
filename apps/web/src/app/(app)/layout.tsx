@@ -32,6 +32,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               <Link href={`/ligne/${workspace.id}`}>Ligne éditoriale</Link>
               <Link href={`/visuels/${workspace.id}`}>Visuels</Link>
               <Link href={`/espace/${workspace.id}`}>Réglages</Link>
+              <Link href={`/abonnement/${workspace.id}`}>Abonnement</Link>
             </span>
           ))}
         </nav>
@@ -49,13 +50,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <p key={trial.orgId} className={`trial-banner${trial.expired ? ' expired' : ''}`} role="status">
           {trial.expired ? (
             <>
-              <strong>Essai gratuit terminé</strong> : la rédaction par l’IA est en pause ; les posts déjà validés partent toujours.
+              <strong>Essai gratuit terminé</strong> : la rédaction par l’IA est en pause ; les posts déjà validés partent toujours.{' '}
+              <Link href={`/abonnement/${trial.workspaceId}`}>{trial.canSubscribe ? 'Choisir une formule' : 'Voir l’abonnement'}</Link>
             </>
           ) : (
             <>
               <strong>Essai gratuit</strong> · {trial.daysLeft} jour{trial.daysLeft > 1 ? 's' : ''} restant{trial.daysLeft > 1 ? 's' : ''} · {trial.posts} post
               {trial.posts > 1 ? 's' : ''} rédigé{trial.posts > 1 ? 's' : ''} sur {TRIAL_MAX_POSTS} · {trial.accounts} compte{trial.accounts > 1 ? 's' : ''} LinkedIn sur{' '}
-              {TRIAL_MAX_ACCOUNTS}
+              {TRIAL_MAX_ACCOUNTS} · <Link href={`/abonnement/${trial.workspaceId}`}>{trial.canSubscribe ? 'Souscrire' : 'Voir les formules'}</Link>
             </>
           )}
         </p>

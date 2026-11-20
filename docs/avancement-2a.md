@@ -30,11 +30,11 @@ Périmètre : lot 2 (« Commercialisation », section 11 du cahier des charges),
 2. **SimplX — avant d'ouvrir l'inscription au public** :
    - rédiger les conditions générales, la politique de confidentialité et les mentions légales, puis les lier depuis la page d'inscription ;
    - configurer l'envoi d'e-mails (Brevo, domaine authentifié), sans quoi les liens de confirmation arrivent en indésirables.
-3. **Message de fin d'essai** : il dit « la rédaction reprendra avec l'abonnement ». Il faudra le lier à la souscription quand elle existera.
+3. ~~**Message de fin d'essai**~~ : il mène maintenant à la page « Abonnement » (incrément 2b).
 
 ## Reste du lot 2
 
-- **Facturation** (FAC-01 à FAC-07), selon les décisions de prix.
+- ~~**Facturation** (FAC-01 à FAC-07)~~ : faite, voir `avancement-2b.md` ; les prix restent à fixer.
 - **Connexion Google et Microsoft** (ONB-01b), **double authentification** (SEC-04).
 - **Espace Agence** : plusieurs clients, refacturation (FAC-07).
 - **Statistiques**, **administration** (ADM-01 à ADM-04), **site vitrine**, **test d'intrusion** (SEC-10).
