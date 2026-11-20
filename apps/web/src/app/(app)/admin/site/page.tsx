@@ -25,7 +25,7 @@ export default async function SiteAdminPage({ searchParams }: { searchParams: Pr
         {requests.length === 0 ? (
           <p className="muted">Aucune demande.</p>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
             <table>
               <thead>
                 <tr>

@@ -76,7 +76,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </label>
         <button type="submit">Filtrer</button>
       </form>
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
         <table>
           <thead>
             <tr>

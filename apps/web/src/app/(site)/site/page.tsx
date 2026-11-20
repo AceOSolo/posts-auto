@@ -231,7 +231,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           </label>
           <button type="submit">Calculer</button>
         </form>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
           <table>
             <thead>
               <tr>

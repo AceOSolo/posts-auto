@@ -30,3 +30,8 @@ Thumbs.db
 # Caches Python des outils de la marque
 __pycache__/
 !**/.env.production.example
+
+# Tests dans le navigateur
+apps/web/e2e/.sessions.json
+apps/web/test-results/
+apps/web/playwright-report/

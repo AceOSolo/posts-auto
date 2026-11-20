@@ -147,7 +147,7 @@ export default async function EnglishLandingPage({ searchParams }: { searchParam
           </label>
           <button type="submit">Calculate</button>
         </form>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
           <table>
             <thead>
               <tr>

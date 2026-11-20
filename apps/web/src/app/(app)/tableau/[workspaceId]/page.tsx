@@ -114,7 +114,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         {dashboard.tracking.length === 0 ? (
           <p className="muted">Pas encore de post sur la période.</p>
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
             <table>
               <thead>
                 <tr>

@@ -44,7 +44,7 @@ export default async function WorkspacesPage({
           ? 'Chaque client a son espace : sa ligne éditoriale, ses comptes LinkedIn, son planning et son équipe. Une personne invitée dans l’espace d’un client ne voit que celui-ci. La facturation est celle de l’agence, tous clients confondus.'
           : 'Chaque espace a sa ligne éditoriale, ses comptes LinkedIn, son planning et son équipe.'}
       </p>
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
         <table>
           <thead>
             <tr>

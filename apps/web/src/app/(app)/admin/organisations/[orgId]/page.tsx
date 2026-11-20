@@ -44,7 +44,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
       </ul>
 
       <h2>Espaces</h2>
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
         <table>
           <thead>
             <tr>
@@ -68,7 +68,7 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
       </div>
 
       <h2>Personnes</h2>
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
         <table>
           <thead>
             <tr>
