@@ -235,3 +235,19 @@ describe('rendez-vous récurrents (EDI-08)', () => {
     expect((await listEvents(db, people.editor, workspaceId)).events.find((e) => e.id === relayed.id)?.recurrence).toBe('none');
   });
 });
+
+describe('import depuis Google Sheets (ONB-09)', () => {
+  it('adresse d’une feuille partagée → export CSV de l’onglet ; feuille privée refusée', async () => {
+    const { googleSheetCsv } = await import('./planning.ts');
+    const seen: string[] = [];
+    const fetchText = async (url: string) => {
+      seen.push(url);
+      return { text: 'Compte;S47\nJP;Sujet', url };
+    };
+    expect(await googleSheetCsv('https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit#gid=42', fetchText)).toContain('Sujet');
+    expect(seen[0]).toBe('https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/export?format=csv&gid=42');
+    await expect(googleSheetCsv('https://exemple.fr/feuille.csv', fetchText)).rejects.toMatchObject({ code: 'feuille_invalide' });
+    const login = async (url: string) => ({ text: '<!DOCTYPE html><html>Connexion</html>', url });
+    await expect(googleSheetCsv('https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit', login)).rejects.toMatchObject({ code: 'feuille_privee' });
+  });
+});

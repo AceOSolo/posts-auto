@@ -10,6 +10,7 @@ import { type Database, type Tx, asUser, calendarOf, weekStartOf } from '@posts-
 import { canManageContent, workspaceRole } from '../access.ts';
 import { audit, cleanText } from '../audit.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
+import { SafeFetchError, safeFetchText } from '../net/safe-fetch.ts';
 
 /** Ligne du planning : un compte, ou une ligne libre (événements, autre canal). */
 export type RowKey = { readonly kind: 'account'; readonly accountId: string } | { readonly kind: 'event' | 'channel'; readonly label: string };
@@ -379,4 +380,25 @@ export async function importPlanning(db: Database, userId: string, workspaceId: 
     await audit(trx, { workspaceId, actorUserId: userId, action: 'planning.import', entity: 'workspace', entityId: workspaceId, details: { created, skipped }, at: now });
     return { created, skipped };
   });
+}
+
+/**
+ * ONB-09, PLA-05 : contenu CSV d'une feuille Google Sheets partagée par lien (« Toute personne
+ * disposant du lien peut consulter »). L'onglet est celui de l'adresse (gid). Lecture protégée
+ * comme les flux RSS.
+ */
+export async function googleSheetCsv(rawUrl: string, fetchText: typeof safeFetchText = safeFetchText): Promise<string> {
+  const match = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/([\w-]{20,})(?:\/[^?#]*)?(?:\?[^#]*)?(?:#gid=(\d+))?$/.exec(rawUrl.trim());
+  if (match === null) throw new RefusedError('feuille_invalide', 'Collez l’adresse d’une feuille Google Sheets (docs.google.com/spreadsheets/…).');
+  const gid = match[2] ?? /[?&]gid=(\d+)/.exec(rawUrl)?.[1] ?? '0';
+  let result: { text: string };
+  try {
+    result = await fetchText(`https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&gid=${gid}`, { accept: 'text/csv', userAgent: 'PostsLinkedIn/1.0 (import de planning)', maxBytes: 1_000_000 });
+  } catch (error) {
+    if (error instanceof SafeFetchError) throw new RefusedError('feuille_illisible', 'La feuille n’a pas pu être lue : vérifiez qu’elle est partagée « à toute personne disposant du lien ».');
+    throw error;
+  }
+  // Feuille non partagée : Google renvoie sa page de connexion.
+  if (/^\s*<(!doctype|html)/i.test(result.text)) throw new RefusedError('feuille_privee', 'La feuille n’est pas partagée par lien : partagez-la « à toute personne disposant du lien », en lecture.');
+  return result.text;
 }

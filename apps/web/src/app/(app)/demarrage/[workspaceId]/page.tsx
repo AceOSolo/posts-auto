@@ -93,6 +93,20 @@ export default async function OnboardingPage({
         ))}
       </ol>
 
+      {/* ONB-05, ONB-09 : aides facultatives du démarrage. */}
+      <section aria-labelledby="facultatif" className="card">
+        <h2 id="facultatif">Pour aller plus vite (facultatif)</h2>
+        <ul>
+          <li>
+            <Link href={`/planning/${workspaceId}/import?depuis=demarrage`}>Importer votre planning existant</Link> : fichier CSV ou feuille Google Sheets partagée par lien ; les sujets
+            sont placés sur la grille, à revoir avant la rédaction.
+          </li>
+          <li>
+            <Link href={`/visuels/${workspaceId}#proposer-charte`}>Proposer la charte à partir de votre site</Link> : couleurs, police des titres et logo, à relire avant d’enregistrer.
+          </li>
+        </ul>
+      </section>
+
       {canManage &&
         (onboarding.closed ? (
           <form action={closeOnboardingAction.bind(null, workspaceId, false)}>

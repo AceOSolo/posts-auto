@@ -50,6 +50,7 @@ export default async function ImportPage({
   if (role === null) notFound();
   const canEdit = canManageContent(role);
   const accounts = (await listWorkspaceAccounts(database(), userId, workspaceId)).map((a) => ({ id: a.id, name: a.name }));
+  const fromWizard = query['depuis'] === 'demarrage';
   const draftId = typeof query['brouillon'] === 'string' && UUID.test(query['brouillon']) ? query['brouillon'] : null;
   const kind = query['type'] === 'banque' ? 'banque' : 'planning';
   const year = Number.parseInt(typeof query['annee'] === 'string' ? query['annee'] : '', 10) || new Date().getFullYear();
@@ -79,7 +80,11 @@ export default async function ImportPage({
               <input type="radio" name="type" value="banque" /> Banque de sujets : une ligne par sujet (onglets « Edito »)
             </label>
           </fieldset>
-          <label htmlFor="fichier">Fichier CSV</label>
+          {fromWizard && <input type="hidden" name="depuis" value="demarrage" />}
+          <label htmlFor="feuille">Adresse d’une feuille Google Sheets partagée par lien</label>
+          <input id="feuille" name="feuille" type="url" inputMode="url" placeholder="https://docs.google.com/spreadsheets/d/…" />
+          <p className="hint">Ouvrez l’onglet à importer avant de copier l’adresse. La feuille doit être partagée « à toute personne disposant du lien », en lecture.</p>
+          <label htmlFor="fichier">… ou fichier CSV</label>
           <input id="fichier" name="fichier" type="file" accept=".csv,text/csv,text/plain" />
           <label htmlFor="contenu">… ou contenu collé</label>
           <textarea id="contenu" name="contenu" rows={4} />
@@ -99,6 +104,7 @@ export default async function ImportPage({
 
       {csv !== null && draftId !== null && layout !== null && (
         <form action={runImportAction.bind(null, workspaceId, draftId, 'planning', year)} className="stack">
+          {fromWizard && <input type="hidden" name="depuis" value="demarrage" />}
           <p>
             {layout.weekColumns.length} semaines reconnues, du {mondayLabel(layout.weekColumns[0]?.weekStart ?? '')} au{' '}
             {mondayLabel(layout.weekColumns.at(-1)?.weekStart ?? '')}. Choisissez à quoi correspond chaque ligne.
@@ -134,6 +140,7 @@ export default async function ImportPage({
 
       {csv !== null && draftId !== null && subjects !== null && (
         <form action={runImportAction.bind(null, workspaceId, draftId, 'banque', year)} className="stack">
+          {fromWizard && <input type="hidden" name="depuis" value="demarrage" />}
           <p>
             {subjects.length} sujet{subjects.length > 1 ? 's' : ''} reconnu{subjects.length > 1 ? 's' : ''}, dont {subjects.filter((s) => s.published).length} déjà publié
             {subjects.filter((s) => s.published).length > 1 ? 's' : ''}.

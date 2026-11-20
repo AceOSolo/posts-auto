@@ -34,3 +34,13 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
   Envoi automatique facultatif, en début de mois, aux administrateurs, aux responsables de la communication et aux propriétaires.
 
 **Mode simulé** : avec `LINKEDIN_MODE=fake`, des statistiques simulées, stables pour un même post, alimentent le tableau de bord et le rapport.
+
+## ONB-05 et ONB-09 : charte depuis le site, import de planning dans l'assistant (fait, 20 novembre 2026)
+
+- **Charte proposée à partir du site (ONB-05)** : sur la page « Visuels », bouton « Proposer la charte ». La lecture du site est protégée comme celle des flux RSS. L'outil cherche trois choses :
+  - **couleurs** : balise theme-color, variables CSS de marque, puis couleurs les plus fréquentes. Les gris sont écartés et la couleur principale est assombrie si un texte blanc n'y serait pas lisible ;
+  - **police des titres** : rapprochée d'Inter, de Montserrat ou de Lora ;
+  - **logo** : image marquée « logo », sinon icône Apple, sinon image de partage. Il est gardé dans la médiathèque sous l'étiquette « Logo du site ».
+
+  Le formulaire est pré-rempli. Rien n'est enregistré avant « Enregistrer la charte ».
+- **Import de planning dans l'assistant (ONB-09)** : l'assistant de démarrage propose, en facultatif, d'importer un planning existant. L'import accepte maintenant, en plus du fichier CSV, l'adresse d'une **feuille Google Sheets partagée par lien** : l'onglet ouvert est lu en CSV. Depuis l'assistant, on y revient après l'import.

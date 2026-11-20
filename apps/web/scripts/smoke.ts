@@ -575,6 +575,16 @@ try {
     );
     check('la proposition n’enregistre aucune version de la ligne', (await asSystem(db, (trx) => trx.selectFrom('editorial_lines').select('id').where('workspace_id', '=', newWorkspace).execute())).length === 0);
 
+    // ONB-05, ONB-09 : aides facultatives du démarrage.
+    const wizardExtras = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('assistant : import du planning et charte depuis le site proposés (ONB-05, ONB-09)', wizardExtras.includes('Importer votre planning existant') && wizardExtras.includes('Proposer la charte à partir de votre site'));
+    const importFromWizard = await (await get(`/planning/${newWorkspace}/import?depuis=demarrage`, newSession)).text();
+    check('import depuis l’assistant : feuille Google Sheets acceptée (ONB-09)', importFromWizard.includes('feuille Google Sheets partagée par lien') && importFromWizard.includes('name="depuis"'));
+    const privateSheet = await submitForm(`/planning/${newWorkspace}/import?depuis=demarrage`, newSession, 'Voir l’aperçu', { type: 'planning', feuille: 'https://exemple.fr/pas-une-feuille', annee: '2026' });
+    check('adresse qui n’est pas une feuille Google Sheets refusée, retour à l’import de l’assistant', (privateSheet.headers.get('location') ?? '').includes('feuille_invalide') && (privateSheet.headers.get('location') ?? '').includes('depuis=demarrage'), `HTTP ${privateSheet.status}`);
+    const brandFromSite = await submitForm(`/visuels/${newWorkspace}`, newSession, 'Proposer la charte', { site: 'http://127.0.0.1/' });
+    check('charte depuis le site : adresse interne refusée (ONB-05)', (brandFromSite.headers.get('location') ?? '').includes('site_illisible'), `HTTP ${brandFromSite.status}`);
+
     // Lot 2, FAC-01 à FAC-07 : abonnement (serveur lancé avec BILLING_MODE=fake).
     const billingPath = `/abonnement/${newWorkspace}`;
     await asSystem(db, (trx) =>

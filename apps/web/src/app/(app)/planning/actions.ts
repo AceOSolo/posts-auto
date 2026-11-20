@@ -2,19 +2,20 @@
 
 import { type PlannedEntry, type RowTarget, pamEntries, parseCsv, readPamLayout, readSubjectSheet } from '@posts-auto/core';
 import {
-  ForbiddenError,
-  NotFoundError,
-  RefusedError,
   addPlanningEntry,
   canManageContent,
   configureGeneration,
   deleteEvent,
   deletePlanningEntry,
   deleteSubject,
+  ForbiddenError,
+  googleSheetCsv,
   importPlanning,
   importSubjects,
+  NotFoundError,
   parseRowKey,
   placeSubject,
+  RefusedError,
   requestGeneration,
   saveEvent,
   saveSubject,
@@ -206,17 +207,30 @@ export async function previewImportAction(workspaceId: string, form: FormData): 
     if (file.size > IMPORT_MAX_BYTES) redirect(`/planning/${workspaceId}/import?message=fichier_trop_gros`);
     content = await file.text();
   }
-  if (content.trim() === '') redirect(`/planning/${workspaceId}/import?message=fichier_vide`);
+  const fromWizard = text(form, 'depuis') === 'demarrage' ? '&depuis=demarrage' : '';
+  // ONB-09 : feuille Google Sheets partagée par lien.
+  const sheet = text(form, 'feuille').trim();
+  if (content.trim() === '' && sheet !== '') {
+    try {
+      content = await googleSheetCsv(sheet);
+    } catch (error) {
+      if (error instanceof RefusedError) redirect(`/planning/${workspaceId}/import?message=${encodeURIComponent(error.code)}${fromWizard}`);
+      throw error;
+    }
+  }
+  if (content.trim() === '') redirect(`/planning/${workspaceId}/import?message=fichier_vide${fromWizard}`);
   const kind = text(form, 'type') === 'banque' ? 'banque' : 'planning';
   const year = Number.parseInt(text(form, 'annee'), 10);
   const draftId = randomUUID();
   await mediaStore().write(draftKey(workspaceId, draftId), new TextEncoder().encode(content.slice(0, IMPORT_MAX_BYTES)));
-  redirect(`/planning/${workspaceId}/import?brouillon=${draftId}&type=${kind}&annee=${Number.isNaN(year) ? new Date().getFullYear() : year}`);
+  redirect(`/planning/${workspaceId}/import?brouillon=${draftId}&type=${kind}&annee=${Number.isNaN(year) ? new Date().getFullYear() : year}${fromWizard}`);
 }
 
 /** Étape 2 : applique le choix fait pour chaque ligne et crée les sujets. */
 export async function runImportAction(workspaceId: string, draftId: string, kind: 'planning' | 'banque', year: number, form: FormData): Promise<void> {
-  await run(workspaceId, `/planning/${workspaceId}`, async (userId, now) => {
+  // ONB-09 : depuis l'assistant de démarrage, on y revient.
+  const back = text(form, 'depuis') === 'demarrage' ? `/demarrage/${workspaceId}` : `/planning/${workspaceId}`;
+  await run(workspaceId, back, async (userId, now) => {
     if (!UUID.test(draftId)) throw new NotFoundError('Brouillon');
     const csv = new TextDecoder().decode(await mediaStore().read(draftKey(workspaceId, draftId)));
     const table = parseCsv(csv);

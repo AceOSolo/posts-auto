@@ -233,6 +233,8 @@ export interface BrandingInput {
   readonly font?: FontKey;
   /** Nouveau logo ; null : retirer le logo ; absent : garder l'actuel. */
   readonly logo?: { readonly bytes: Uint8Array; readonly mime?: string } | null;
+  /** ONB-05 : logo déjà dans la médiathèque de l'espace (logo trouvé sur le site). */
+  readonly logoAssetId?: string;
   /** Images générées par mois (propriétaire et admins seulement). */
   readonly imageBudgetMonthly?: number;
 }
@@ -258,6 +260,11 @@ export async function saveBranding(db: Database, media: MediaWriter, userId: str
     const current = await loadBranding(trx, workspaceId);
     let logoAssetId = current.logoAssetId;
     if (logo === null) logoAssetId = null;
+    if (input.logoAssetId !== undefined && logo === undefined) {
+      const asset = await trx.selectFrom('media_assets').select('id').where('id', '=', input.logoAssetId).where('workspace_id', '=', workspaceId).executeTakeFirst();
+      if (asset === undefined) throw new RefusedError('logo_introuvable', 'Logo introuvable.');
+      logoAssetId = asset.id;
+    }
     if (logo) {
       logoAssetId = randomUUID();
       const storageKey = `${workspaceId}/charte/${logoAssetId}.${EXTENSIONS[logo.mime]}`;

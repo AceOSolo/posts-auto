@@ -4,3 +4,8 @@
 export function editorialProposalKey(workspaceId: string, proposalId: string): string {
   return `${workspaceId}/brouillons/ligne-${proposalId}.json`;
 }
+
+/** ONB-05 : charte proposée à partir du site web, avant correction et enregistrement. */
+export function brandProposalKey(workspaceId: string, proposalId: string): string {
+  return `${workspaceId}/brouillons/charte-${proposalId}.json`;
+}

@@ -1,12 +1,13 @@
-import { NotFoundError, getTemplateLibrary } from '@posts-auto/services';
+import { type BrandProposal, NotFoundError, getTemplateLibrary } from '@posts-auto/services';
 import { FONTS } from '@posts-auto/visuals';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
-import { database } from '../../../../server/context.ts';
+import { database, mediaStore } from '../../../../server/context.ts';
+import { brandProposalKey } from '../../../../server/drafts.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { archiveTemplateAction, duplicateTemplateAction, recolorAction, saveBrandingAction } from '../actions.ts';
+import { archiveTemplateAction, duplicateTemplateAction, proposeBrandAction, recolorAction, saveBrandingAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Visuels' };
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,7 @@ export default async function VisualsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceId } = await params;
-  const { message } = await searchParams;
+  const { message, charte } = await searchParams;
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   let library;
@@ -38,7 +39,17 @@ export default async function VisualsPage({
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const { templates, branding, imageBudget, canManage } = library;
+  const { templates, imageBudget, canManage } = library;
+  // ONB-05 : charte proposée à partir du site, à relire avant d'enregistrer.
+  let proposal: BrandProposal | null = null;
+  if (typeof charte === 'string' && UUID.test(charte)) {
+    try {
+      proposal = JSON.parse(new TextDecoder().decode(await mediaStore().read(brandProposalKey(workspaceId, charte)))) as BrandProposal;
+    } catch {
+      proposal = null;
+    }
+  }
+  const branding = proposal === null ? library.branding : { ...library.branding, primary: proposal.primary, secondary: proposal.secondary, light: proposal.light, dark: proposal.dark, font: proposal.font };
   const active = templates.filter((t) => !t.archived);
   const archived = templates.filter((t) => t.archived);
 
@@ -104,6 +115,27 @@ export default async function VisualsPage({
 
       <section aria-labelledby="charte">
         <h2 id="charte">Charte visuelle</h2>
+        {canManage && (
+          <form action={proposeBrandAction.bind(null, workspaceId)} className="inline-fields" id="proposer-charte">
+            <label>
+              Proposer la charte à partir du site web
+              <input name="site" type="url" inputMode="url" placeholder="https://www.votre-site.fr" required defaultValue={proposal?.sourceUrl ?? ''} />
+            </label>
+            <button type="submit">Proposer la charte</button>
+          </form>
+        )}
+        {proposal !== null && (
+          <div className="ai-note" role="status">
+            <p>
+              <strong>Charte proposée à partir de {proposal.sourceUrl}</strong>, à relire : rien n’est enregistré tant que vous n’avez pas cliqué « Enregistrer la charte ».
+            </p>
+            {proposal.notes.map((n) => (
+              <p key={n} className="hint">
+                {n}
+              </p>
+            ))}
+          </div>
+        )}
         {canManage ? (
           <form action={saveBrandingAction.bind(null, workspaceId)} className="stack">
             <div className="grid4">
@@ -132,6 +164,16 @@ export default async function VisualsPage({
                   <img src={`/media/${branding.logoAssetId}`} alt="Logo actuel" height={60} className="logo-preview" />
                   <label className="check">
                     <input type="checkbox" name="retirer-logo" /> Retirer le logo
+                  </label>
+                </>
+              )}
+              {proposal?.logoAssetId && (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- image privée servie par /media */}
+                  <img src={`/media/${proposal.logoAssetId}`} alt="Logo trouvé sur le site" height={60} className="logo-preview" />
+                  <input type="hidden" name="logo-site" value={proposal.logoAssetId} />
+                  <label className="check">
+                    <input type="checkbox" name="logo-du-site" defaultChecked /> Utiliser le logo trouvé sur le site
                   </label>
                 </>
               )}

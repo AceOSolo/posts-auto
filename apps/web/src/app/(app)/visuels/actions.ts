@@ -1,10 +1,12 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
 import {
   ForbiddenError,
   NotFoundError,
   RefusedError,
   addLibraryPhotos,
+  proposeBrandFromWebsite,
   duplicateTemplate,
   recolorGalleryTemplates,
   removeFromLibrary,
@@ -17,6 +19,7 @@ import type { FontKey } from '@posts-auto/visuals';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { database, mediaStore } from '../../../server/context.ts';
+import { brandProposalKey } from '../../../server/drafts.ts';
 import { requireUserId } from '../../../server/session.ts';
 import { definitionFromForm } from '../../../server/template-form.ts';
 
@@ -96,7 +99,13 @@ export async function saveBrandingAction(workspaceId: string, form: FormData): P
         light: text(form, 'claire'),
         dark: text(form, 'sombre'),
         ...(text(form, 'police') !== '' && { font: text(form, 'police') as FontKey }),
-        ...(logo !== undefined ? { logo: { bytes: new Uint8Array(await logo.arrayBuffer()), mime: logo.type } } : form.get('retirer-logo') === 'on' ? { logo: null } : {}),
+        ...(logo !== undefined
+          ? { logo: { bytes: new Uint8Array(await logo.arrayBuffer()), mime: logo.type } }
+          : form.get('retirer-logo') === 'on'
+            ? { logo: null }
+            : form.get('logo-du-site') === 'on' && text(form, 'logo-site') !== ''
+              ? { logoAssetId: text(form, 'logo-site') }
+              : {}),
         ...(budget !== '' && { imageBudgetMonthly: Number(budget) }),
       },
       now,
@@ -134,5 +143,15 @@ export async function removeLibraryAction(workspaceId: string, assetId: string):
   await run([workspaceId, assetId], () => `/visuels/${workspaceId}/photos`, async (userId, now) => {
     await removeFromLibrary(database(), userId, assetId, now);
     return { message: 'photo-retiree-mediatheque' };
+  });
+}
+
+/** ONB-05 : charte proposée à partir du site web ; le formulaire est pré-rempli, rien n'est enregistré. */
+export async function proposeBrandAction(workspaceId: string, form: FormData): Promise<void> {
+  await run([workspaceId], (id) => (id === null ? `/visuels/${workspaceId}#charte` : `/visuels/${workspaceId}?charte=${id}#charte`), async (userId, now) => {
+    const proposal = await proposeBrandFromWebsite(database(), mediaStore(), userId, workspaceId, text(form, 'site'), now);
+    const id = randomUUID();
+    await mediaStore().write(brandProposalKey(workspaceId, id), new TextEncoder().encode(JSON.stringify(proposal)));
+    return { message: 'charte-proposee', result: id };
   });
 }

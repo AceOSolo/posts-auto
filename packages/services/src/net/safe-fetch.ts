@@ -92,6 +92,12 @@ export interface SafeFetchOptions {
 
 /** Télécharge un texte en respectant les limites ; lève SafeFetchError sinon. */
 export async function safeFetchText(raw: string, options: SafeFetchOptions): Promise<{ readonly text: string; readonly url: string }> {
+  const { bytes, url } = await safeFetchBytes(raw, options);
+  return { text: Buffer.from(bytes).toString('utf8'), url };
+}
+
+/** Télécharge un contenu (texte ou image) en respectant les mêmes limites. */
+export async function safeFetchBytes(raw: string, options: SafeFetchOptions): Promise<{ readonly bytes: Uint8Array; readonly url: string; readonly contentType: string | null }> {
   const maxBytes = options.maxBytes ?? SAFE_FETCH_MAX_BYTES;
   let url = checkPublicUrl(raw);
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
@@ -130,7 +136,7 @@ export async function safeFetchText(raw: string, options: SafeFetchOptions): Pro
       }
       chunks.push(value);
     }
-    return { text: Buffer.concat(chunks).toString('utf8'), url: url.toString() };
+    return { bytes: new Uint8Array(Buffer.concat(chunks)), url: url.toString(), contentType: response.headers.get('content-type') };
   }
   throw new SafeFetchError('redirections', 'Trop de redirections.');
 }

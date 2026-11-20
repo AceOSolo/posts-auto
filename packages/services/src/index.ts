@@ -44,6 +44,7 @@ export * from './billing/subscriptions.ts';
 export * from './billing/trial.ts';
 export * from './billing/usage-alerts.ts';
 export * from './net/safe-fetch.ts';
+export * from './onboarding/brand-extraction.ts';
 export * from './onboarding/editorial-proposal.ts';
 export * from './onboarding/onboarding.ts';
 export * from './onboarding/signup.ts';
