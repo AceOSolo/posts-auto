@@ -71,6 +71,8 @@ export function describeNotification(kind: string, payload: Record<string, unkno
       };
     case 'reprise_manuelle':
       return { title: `Un post de ${account} doit être repris à la main (3 reprises déjà faites)`, href: post };
+    case 'publication_manuelle':
+      return { title: `À publier maintenant sur ${account} (publication manuelle) : texte et images envoyés par e-mail`, href: post };
     case 'impaye':
       return {
         title: payload['step'] === 'j14' ? 'Abonnement impayé : rédaction et publication suspendues' : 'Paiement de l’abonnement en échec : mettez à jour votre moyen de paiement',

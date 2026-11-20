@@ -187,6 +187,23 @@ export function notificationMail(kind: string, payload: Record<string, unknown>,
         postAction,
         footer,
       );
+    case 'publication_manuelle': {
+      // PUB-09 : le texte à copier, les images en pièces jointes (ajoutées à l'envoi).
+      const images = Number(payload['images']) || 0;
+      return compose(
+        ctx,
+        `À publier maintenant sur ${account}`,
+        [
+          `C’est l’heure prévue pour ce post validé. Copiez le texte ci-dessous et publiez-le sur ${account}${images > 0 ? `, avec ${plural(images, 'image')} jointe${images > 1 ? 's' : ''} à cet e-mail` : ''}.`,
+          '———',
+          ...str(payload['body']).split(/\n{2,}/),
+          '———',
+          'Une fois publié, vous pouvez ajouter le lien du post LinkedIn sur sa page, pour le suivi.',
+        ],
+        postAction,
+        footer,
+      );
+    }
     case 'impaye': {
       // FAC-06 : relances à J+3 et J+7, suspension à J+14.
       const billingAction = { label: 'Mettre à jour le paiement', url: `${ctx.appUrl}/abonnement/${encodeURIComponent(workspaceId)}` };

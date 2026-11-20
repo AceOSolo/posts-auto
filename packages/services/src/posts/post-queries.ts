@@ -11,9 +11,9 @@ import {
   findBlockingMarkers,
   type MarkerSpan,
 } from '@posts-auto/core';
-import { type Database, type Tx, asUser } from '@posts-auto/db';
+import { type Database, type Tx, asSystem, asUser } from '@posts-auto/db';
 import { canEditPost, canReschedulePost, loadAccess } from '../access.ts';
-import { NotFoundError } from '../errors.ts';
+import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 import type { VisualTaskState } from '../visuals/visual-requests.ts';
 
 export interface PostMedia {
@@ -224,13 +224,16 @@ export interface PostDetail extends PostCard {
     readonly canRedoVisual: boolean;
   };
   readonly url: string | null;
+  /** PUB-09 : envoyé par e-mail pour publication manuelle ; le lien peut être ajouté ensuite. */
+  readonly publishedManually: boolean;
+  readonly canSetManualUrl: boolean;
   /** VIS-13 : visuel demandé, en préparation ou en échec. */
   readonly visualTask: VisualTaskState | null;
 }
 
 export async function getPostDetail(db: Database, userId: string, postId: string, now: Date): Promise<PostDetail> {
   return asUser(db, userId, async (trx) => {
-    const row = await baseQuery(trx).select('p.external_post_url').where('p.id', '=', postId).executeTakeFirst();
+    const row = await baseQuery(trx).select(['p.external_post_url', 'p.published_manually']).where('p.id', '=', postId).executeTakeFirst();
     if (row === undefined) throw new NotFoundError('Post');
     const access = await loadAccess(trx, userId, row.workspace_id, row.account_id);
     const media = await mediaOf(trx, [row.id]);
@@ -276,6 +279,8 @@ export async function getPostDetail(db: Database, userId: string, postId: string
         canRedoVisual: canEditPost(access) && visualStatuses.includes(card.status),
       },
       url: row.external_post_url,
+      publishedManually: row.published_manually,
+      canSetManualUrl: row.published_manually && (access.relation === 'holder' || access.actor.kind === 'user' && access.actor.isWorkspaceManager),
       visualTask:
         task === undefined
           ? null
@@ -414,5 +419,29 @@ export async function findMediaForUser(db: Database, userId: string, assetId: st
       .where('id', '=', assetId)
       .executeTakeFirst();
     return row === undefined ? null : { storageKey: row.storage_key, mime: row.mime };
+  });
+}
+
+const LINKEDIN_POST_URL = /^https:\/\/(www\.)?linkedin\.com\/(feed\/update|posts)\/[\w:%.\-/]+$/;
+
+/** PUB-09 : lien du post publié à la main, ajouté par le titulaire ou un administrateur. */
+export async function setManualPostUrl(db: Database, userId: string, postId: string, rawUrl: string, now: Date): Promise<void> {
+  const url = rawUrl.trim().split('?')[0] ?? '';
+  if (!LINKEDIN_POST_URL.test(url)) throw new RefusedError('lien_linkedin_invalide', 'Collez le lien du post tel que LinkedIn l’affiche (linkedin.com/posts/… ou linkedin.com/feed/update/…).');
+  const post = await asUser(db, userId, async (trx) => {
+    const row = await trx.selectFrom('posts').select(['workspace_id', 'account_id', 'published_manually']).where('id', '=', postId).executeTakeFirst();
+    if (row === undefined) throw new NotFoundError('Post');
+    const access = await loadAccess(trx, userId, row.workspace_id, row.account_id);
+    if (!row.published_manually) throw new RefusedError('pas_manuel', 'Ce post n’a pas été envoyé pour publication manuelle.');
+    if (access.relation !== 'holder' && !(access.actor.kind === 'user' && access.actor.isWorkspaceManager)) throw new ForbiddenError('setManualUrl');
+    return row;
+  });
+  await asSystem(db, async (trx) => {
+    await trx.updateTable('posts').set({ external_post_url: url }).where('id', '=', postId).execute();
+    const ws = await trx.selectFrom('workspaces').select('org_id').where('id', '=', post.workspace_id).executeTakeFirstOrThrow();
+    await trx
+      .insertInto('audit_log')
+      .values({ org_id: ws.org_id, workspace_id: post.workspace_id, actor_user_id: userId, actor_kind: 'user', action: 'post.lien_manuel', entity: 'post', entity_id: postId, details: JSON.stringify({ url }), at: now })
+      .execute();
   });
 }

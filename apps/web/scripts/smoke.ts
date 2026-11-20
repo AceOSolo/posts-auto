@@ -671,6 +671,16 @@ try {
   const rightCode = await submitForm('/connexion/code', claireAgain, 'Vérifier', { code: totpCode(totpSecret, new Date(Date.now() + 30_000)) });
   check('bon code : accès ouvert', /\/$/.test(rightCode.headers.get('location') ?? '') && (await get('/', claireAgain)).status === 200, `HTTP ${rightCode.status} → ${rightCode.headers.get('location')}`);
 
+  // PUB-09 : publication manuelle, puis retour à l'automatique.
+  const toManual = await submitForm(`/comptes/${workspaceId}`, alexis, 'Passer en publication manuelle (par e-mail)', {});
+  const manualCount = (await asSystem(db, (trx) => trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspaceId).where('publish_mode', '=', 'manual').execute())).length;
+  const backToAuto = await submitForm(`/comptes/${workspaceId}`, alexis, 'Revenir à la publication automatique', {});
+  check(
+    'PUB-09 : compte en publication manuelle (par e-mail), puis retour à l’automatique',
+    (toManual.headers.get('location') ?? '').includes('publication-manuelle') && manualCount === 1 && (backToAuto.headers.get('location') ?? '').includes('publication-automatique'),
+    `HTTP ${toManual.status}`,
+  );
+
   // ADM-01 à ADM-06 : back-office de l'éditeur.
   check('back-office introuvable pour un client', (await get('/admin', alexis)).status === 404);
   const editorUser = await asSystem(db, async (trx) => {

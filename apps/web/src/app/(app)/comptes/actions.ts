@@ -2,7 +2,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { PAGE_SCOPES, PROFILE_SCOPES } from '@posts-auto/linkedin';
-import { ForbiddenError, NotFoundError, RefusedError, confirmPageConnection, disconnectAccount } from '@posts-auto/services';
+import { ForbiddenError, NotFoundError, RefusedError, confirmPageConnection, disconnectAccount, setPublishMode } from '@posts-auto/services';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { database, linkedinOAuth, tokenCipher } from '../../../server/context.ts';
@@ -75,6 +75,22 @@ export async function disconnectAction(workspaceId: string, accountId: string): 
   let message = 'compte-deconnecte';
   try {
     await disconnectAccount(database(), userId, accountId, new Date());
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    if (error instanceof ForbiddenError) message = 'interdit';
+    else throw error;
+  }
+  redirect(`/comptes/${workspaceId}?message=${message}`);
+}
+
+/** PUB-09 : publication manuelle (envoi par e-mail au créneau) ou automatique. */
+export async function publishModeAction(workspaceId: string, accountId: string, formData: FormData): Promise<void> {
+  if (!UUID.test(workspaceId) || !UUID.test(accountId)) notFound();
+  const userId = await requireUserId();
+  const manual = formData.get('mode') === 'manual';
+  let message = manual ? 'publication-manuelle' : 'publication-automatique';
+  try {
+    await setPublishMode(database(), userId, accountId, manual ? 'manual' : 'auto', new Date());
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     if (error instanceof ForbiddenError) message = 'interdit';

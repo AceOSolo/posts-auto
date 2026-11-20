@@ -252,6 +252,8 @@ export interface AccountSummary {
   /** LNK-03 : échéance de la connexion (jeton de renouvellement s'il existe, sinon jeton d'accès). */
   readonly connectionExpiresAt: Date | null;
   readonly canDisconnect: boolean;
+  /** PUB-09 : « manual » : envoi par e-mail au titulaire au créneau, au lieu de l'API. */
+  readonly publishMode: 'auto' | 'manual';
 }
 
 /** LNK-03 : comptes d'un espace avec l'état de leur connexion. */
@@ -260,7 +262,7 @@ export async function listWorkspaceAccounts(db: Database, userId: string, worksp
     const rows = await trx
       .selectFrom('social_accounts as a')
       .leftJoin('users as u', 'u.id', 'a.holder_user_id')
-      .select(['a.id', 'a.kind', 'a.display_name', 'a.avatar_url', 'a.status', 'a.holder_user_id', 'u.full_name'])
+      .select(['a.id', 'a.kind', 'a.display_name', 'a.avatar_url', 'a.status', 'a.holder_user_id', 'a.publish_mode', 'u.full_name'])
       .where('a.workspace_id', '=', workspaceId)
       .where('a.status', '<>', 'revoked')
       .orderBy('a.kind', 'desc')
@@ -306,6 +308,7 @@ export async function listWorkspaceAccounts(db: Database, userId: string, worksp
       isMine,
       connectionExpiresAt: token ? (token.refresh_expires_at ?? token.expires_at) : null,
       canDisconnect: isMine || accounts.manager,
+      publishMode: row.publish_mode === 'manual' ? 'manual' : 'auto',
     };
   });
 }

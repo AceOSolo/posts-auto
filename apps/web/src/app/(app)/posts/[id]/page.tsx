@@ -23,6 +23,7 @@ import {
   rescheduleAction,
   reportContentAction,
   retryAction,
+  setManualUrlAction,
   validateAction,
   withdrawAction,
 } from '../actions.ts';
@@ -132,6 +133,17 @@ export default async function PostPage({
             Voir le post sur LinkedIn
           </a>
         </p>
+      )}
+      {/* PUB-09 : post envoyé par e-mail pour publication manuelle. */}
+      {post.publishedManually && <p className="hint">Envoyé par e-mail au titulaire pour publication manuelle.</p>}
+      {post.canSetManualUrl && post.url === null && (
+        <form action={setManualUrlAction.bind(null, post.id)} className="inline-fields">
+          <label>
+            Lien du post publié sur LinkedIn
+            <input name="lien" type="url" inputMode="url" placeholder="https://www.linkedin.com/posts/…" required />
+          </label>
+          <button type="submit">Enregistrer le lien</button>
+        </form>
       )}
 
       <PostPreview accountName={post.accountName} accountKind={post.accountKind} body={post.body} media={post.media} expanded />

@@ -10,6 +10,8 @@ export interface MailMessage {
   readonly html: string;
   /** Étiquette de suivi chez Brevo (ex. « rappel_validation »). */
   readonly tag?: string;
+  /** Pièces jointes (PUB-09 : images du post à publier à la main). */
+  readonly attachments?: readonly { readonly name: string; readonly content: Uint8Array }[];
 }
 
 export interface Mailer {
@@ -56,6 +58,9 @@ export class BrevoMailer implements Mailer {
           textContent: message.text,
           htmlContent: message.html,
           ...(message.tag ? { tags: [message.tag] } : {}),
+          ...(message.attachments && message.attachments.length > 0
+            ? { attachment: message.attachments.map((a) => ({ name: a.name, content: Buffer.from(a.content).toString('base64') })) }
+            : {}),
         }),
         signal: AbortSignal.timeout(15_000),
       });
@@ -73,7 +78,8 @@ export class ConsoleMailer implements Mailer {
   readonly sent: MailMessage[] = [];
   async send(message: MailMessage): Promise<void> {
     this.sent.push(message);
-    console.info(`[e-mail] À ${message.to.email} — ${message.subject}\n${message.text}\n`);
+    const files = message.attachments?.length ? `\n[pièces jointes : ${message.attachments.map((a) => a.name).join(', ')}]` : '';
+    console.info(`[e-mail] À ${message.to.email} — ${message.subject}\n${message.text}${files}\n`);
   }
 }
 

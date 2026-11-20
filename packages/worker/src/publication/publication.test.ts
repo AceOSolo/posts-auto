@@ -303,3 +303,21 @@ async function orgOwner(orgId: string): Promise<string> {
   );
   return row.user_id;
 }
+
+describe('publication manuelle (PUB-09)', () => {
+  it('au créneau, le post part par e-mail au titulaire, même sans connexion valable, sans appel à LinkedIn', async () => {
+    const s = await scene('expired');
+    await asSystem(db, (trx) => trx.updateTable('social_accounts').set({ publish_mode: 'manual' }).where('id', '=', s.accountId).execute());
+    const postId = await validatedPost(s);
+    await attachPhotos(s, postId, [1, 2]);
+    const report = await runPublicationTick(s.deps(() => minutes(1)));
+    expect(report.manual).toEqual([postId]);
+    expect(s.linkedin.published).toHaveLength(0);
+    expect(await postRow(postId)).toMatchObject({ status: 'publie', published_manually: true, external_post_url: null });
+    const sent = await notificationsOf(postId, 'publication_manuelle');
+    expect(sent.map((n) => n.channel).sort()).toEqual(['email', 'in_app']);
+    expect(sent[0]?.user_id).toBe(s.holderId);
+    // Une seule fois : le post a quitté la file.
+    expect((await runPublicationTick(s.deps(() => minutes(2)))).manual).toEqual([]);
+  });
+});

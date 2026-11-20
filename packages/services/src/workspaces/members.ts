@@ -224,3 +224,22 @@ export async function setAccountPaused(db: Database, userId: string, accountId: 
     return status;
   });
 }
+
+/**
+ * PUB-09 : publication manuelle (envoi par e-mail au titulaire au créneau) ou automatique,
+ * choisie par un administrateur ou par le titulaire du compte.
+ */
+export async function setPublishMode(db: Database, userId: string, accountId: string, mode: 'auto' | 'manual', now: Date): Promise<void> {
+  if (mode !== 'auto' && mode !== 'manual') throw new RefusedError('choix_inconnu', 'Choix inconnu.');
+  const account = await asUser(db, userId, async (trx) => {
+    const row = await trx.selectFrom('social_accounts').select(['workspace_id', 'holder_user_id']).where('id', '=', accountId).executeTakeFirst();
+    if (row === undefined) throw new NotFoundError('Compte');
+    if (row.holder_user_id !== userId && !(await isManager(trx, userId, row.workspace_id))) throw new ForbiddenError('publishMode');
+    return row;
+  });
+  await asSystem(db, async (trx) => {
+    await trx.updateTable('social_accounts').set({ publish_mode: mode }).where('id', '=', accountId).execute();
+    const ws = await trx.selectFrom('workspaces').select('org_id').where('id', '=', account.workspace_id).executeTakeFirstOrThrow();
+    await audit(trx, ws.org_id, account.workspace_id, userId, mode === 'manual' ? 'compte.publication_manuelle' : 'compte.publication_automatique', 'social_account', accountId, {}, now);
+  });
+}

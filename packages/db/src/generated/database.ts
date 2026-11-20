@@ -469,6 +469,7 @@ export interface Posts {
   publish_lease_until: Timestamp | null;
   publish_retries_left: Generated<number>;
   published_at: Timestamp | null;
+  published_manually: Generated<boolean>;
   reminders_sent: Generated<string[]>;
   replaces_post_id: string | null;
   request_id: string | null;
@@ -609,6 +610,7 @@ export interface SocialAccounts {
   kind: string;
   network: Generated<string>;
   profile_url: string | null;
+  publish_mode: Generated<string>;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
   workspace_id: string;

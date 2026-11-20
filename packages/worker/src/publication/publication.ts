@@ -71,10 +71,12 @@ export interface PublicationReport {
   /** Validés trop tard : nouveau créneau (RÈG-06). */
   readonly moved: string[];
   readonly abandoned: string[];
+  /** PUB-09 : envoyés par e-mail pour publication manuelle. */
+  readonly manual: string[];
 }
 
 function emptyReport(): PublicationReport {
-  return { started: [], published: [], retryScheduled: [], failed: [], uncertain: [], withdrawn: [], moved: [], abandoned: [] };
+  return { started: [], published: [], retryScheduled: [], failed: [], uncertain: [], withdrawn: [], moved: [], abandoned: [], manual: [] };
 }
 
 export async function runPublicationTick(deps: PublicationDeps): Promise<PublicationReport> {
@@ -204,6 +206,10 @@ async function startDuePosts(deps: PublicationDeps, now: Date, report: Publicati
         'p.must_publish_by',
         'v.has_blocking_markers',
         'a.status as account_status',
+        'a.publish_mode',
+        'a.display_name',
+        'a.holder_user_id',
+        'v.body',
         'w.status as workspace_status',
         'o.status as org_status',
         'w.timezone',
@@ -227,7 +233,10 @@ async function startDuePosts(deps: PublicationDeps, now: Date, report: Publicati
       // le post reste validé et partira quand la situation sera rétablie.
       if (post.workspace_status !== 'active') continue;
       if (post.org_status !== 'active' && post.org_status !== 'past_due') continue;
-      if (post.account_status !== 'connected' && post.account_status !== 'expiring') continue;
+      // PUB-09 : un compte en publication manuelle n'a pas besoin d'une connexion valable.
+      const manual = post.publish_mode === 'manual';
+      if (!manual && post.account_status !== 'connected' && post.account_status !== 'expiring') continue;
+      if (manual && (post.account_status === 'paused' || post.account_status === 'revoked')) continue;
 
       // RÈG-11 : jamais après l'événement.
       if (post.must_publish_by !== null && post.must_publish_by.getTime() < now.getTime()) {
@@ -280,6 +289,12 @@ async function startDuePosts(deps: PublicationDeps, now: Date, report: Publicati
         }
       }
 
+      if (manual) {
+        await sendForManualPublication(trx, post, now);
+        report.manual.push(post.id);
+        continue;
+      }
+
       await transition(trx, post, { type: 'startPublishing' }, now, {
         publish_retries_left: RETRY_DELAYS_MINUTES.length,
         next_publish_attempt_at: now,
@@ -289,6 +304,30 @@ async function startDuePosts(deps: PublicationDeps, now: Date, report: Publicati
       report.started.push(post.id);
     }
   });
+}
+
+/**
+ * PUB-09 : au créneau, le post validé part par e-mail au titulaire (texte et images) au lieu
+ * de l'API ; il quitte la file comme publié, marqué « publication manuelle ».
+ */
+async function sendForManualPublication(
+  trx: Tx,
+  post: PostRef & { readonly account_id: string; readonly scheduled_at: Date; readonly body: string | null; readonly display_name: string | null; readonly holder_user_id: string | null },
+  now: Date,
+) {
+  await transition(trx, post, { type: 'startPublishing' }, now, { publish_lease_until: null, last_error: null });
+  await transition(trx, { ...post, status: 'en_publication' }, { type: 'markPublished' }, now, { published_at: now, published_manually: true });
+  const images = await trx.selectFrom('post_media').select('asset_id').where('post_id', '=', post.id).execute();
+  const recipients = post.holder_user_id !== null ? [post.holder_user_id] : await alertRecipients(trx, post.workspace_id, post.account_id);
+  await notify(
+    trx,
+    recipients,
+    post.workspace_id,
+    'publication_manuelle',
+    { postId: post.id, accountName: post.display_name ?? 'votre compte LinkedIn', scheduledAt: post.scheduled_at.toISOString(), body: post.body ?? '', images: images.length },
+    ['email', 'in_app'],
+  );
+  await audit(trx, post.workspace_id, 'post.envoye_publication_manuelle', post.id, { recipients: recipients.length }, now);
 }
 
 // ---------------------------------------------------------------------------

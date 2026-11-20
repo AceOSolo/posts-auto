@@ -3,25 +3,26 @@
 import { DEFAULT_WORKSPACE_CALENDAR, REFUSAL_REASONS, type RefusalReason, atLocal } from '@posts-auto/core';
 import { type AssistKind, ModelError } from '@posts-auto/ai';
 import {
-  type Decision,
-  ForbiddenError,
-  NotFoundError,
-  RefusedError,
   addPostPhotos,
+  applyHook,
   assistPost,
   decidePost,
+  type Decision,
   editPostText,
+  escapeHtml,
+  ForbiddenError,
   getPostDetail,
   movePostPhoto,
+  NotFoundError,
+  type PhotoMode,
   proposeHooks,
+  RefusedError,
   removePostPhoto,
+  reportContent,
   requestVisualRedo,
   reschedulePost,
-  type PhotoMode,
-  escapeHtml,
-  reportContent,
   retryPublication,
-  applyHook,
+  setManualPostUrl,
   withdrawPost,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
@@ -216,5 +217,13 @@ export async function applyHookAction(postId: string, index: number, formData: F
   await run(postId, formData, async (userId, now) => {
     await applyHook(database(), userId, postId, index, now);
     return 'accroche-utilisee';
+  });
+}
+
+/** PUB-09 : lien du post publié à la main. */
+export async function setManualUrlAction(postId: string, formData: FormData): Promise<void> {
+  await run(postId, formData, async (userId, now) => {
+    await setManualPostUrl(database(), userId, postId, String(formData.get('lien') ?? ''), now);
+    return 'lien-enregistre';
   });
 }

@@ -14,6 +14,7 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 - [Avancement de l'incrément 2b](./docs/avancement-2b.md) : abonnement Stripe, quotas mensuels, packs, impayés, export des usages, espaces des agences.
 - [Avancement de l'incrément 2c](./docs/avancement-2c.md) : double authentification (TOTP), connexion Google et Microsoft.
 - [Avancement de l'incrément 2d](./docs/avancement-2d.md) : back-office de l'éditeur (organisations, supervision, paramètres, galerie, annonces, support).
+- [Avancement de l'incrément 2e](./docs/avancement-2e.md) : fonctions complémentaires du lot 2 (publication manuelle, statistiques, rapports, connecteurs…).
 - [API d'échange](./docs/api-echange.md) : comment la tâche Claude actuelle dépose ses posts et lit les décisions (incrément 1a), et comment reprendre ses idées et ses demandes (incrément 1b).
 
 ## Structure

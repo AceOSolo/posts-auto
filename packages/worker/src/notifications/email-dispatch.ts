@@ -9,7 +9,8 @@
  * - Une ligne n'est traitée que par un processus à la fois (verrou de ligne).
  */
 import { type Database, asSystem } from '@posts-auto/db';
-import { MailError, type Mailer, createApprovalLink, notificationMail } from '@posts-auto/services';
+import { MailError, type MailMessage, type Mailer, createApprovalLink, notificationMail } from '@posts-auto/services';
+import type { MediaStore } from '../media/media-store.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const MAX_DELIVERY_ATTEMPTS = 5;
@@ -20,6 +21,8 @@ export interface EmailDispatchDeps {
   readonly db: Database;
   readonly mailer: Mailer;
   readonly appUrl: string;
+  /** PUB-09 : images jointes aux posts à publier à la main. */
+  readonly media?: MediaStore;
   readonly clock?: () => Date;
 }
 
@@ -91,8 +94,29 @@ export async function runEmailDispatch(deps: EmailDispatchDeps): Promise<EmailDi
         return true;
       }
 
+      let attachments: MailMessage['attachments'] = [];
+      if (row.kind === 'publication_manuelle' && deps.media !== undefined && typeof payload['postId'] === 'string' && UUID.test(payload['postId'])) {
+        const files = await trx
+          .selectFrom('post_media as pm')
+          .innerJoin('media_assets as m', 'm.id', 'pm.asset_id')
+          .select(['m.storage_key', 'm.mime'])
+          .where('pm.post_id', '=', payload['postId'])
+          .orderBy('pm.position')
+          .execute();
+        const media = deps.media;
+        const read = await Promise.all(
+          files.map(async (f, i) => {
+            const content = await media.read(f.storage_key).catch(() => null);
+            const ext = f.mime === 'image/png' ? 'png' : f.mime === 'image/webp' ? 'webp' : f.mime === 'image/gif' ? 'gif' : 'jpg';
+            return content === null ? null : { name: `image-${i + 1}.${ext}`, content };
+          }),
+        );
+        // Une image illisible n'empêche pas l'envoi du texte ; le lien du post permet de la récupérer.
+        attachments = read.filter((a) => a !== null);
+      }
+
       try {
-        await deps.mailer.send({ to: { email: row.email, name: row.full_name }, ...mail, tag: row.kind });
+        await deps.mailer.send({ to: { email: row.email, name: row.full_name }, ...mail, tag: row.kind, ...(attachments.length > 0 && { attachments }) });
         await trx.updateTable('notifications').set({ delivery_status: 'sent', sent_at: now, delivery_attempts: row.delivery_attempts + 1 }).where('id', '=', row.id).execute();
         report.sent.push(row.id);
       } catch (error) {

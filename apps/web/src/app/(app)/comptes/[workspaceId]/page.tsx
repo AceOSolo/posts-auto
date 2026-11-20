@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { disconnectAction, startPagesConnection } from '../actions.ts';
+import { disconnectAction, publishModeAction, startPagesConnection } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Comptes LinkedIn' };
 export const dynamic = 'force-dynamic';
@@ -68,6 +68,18 @@ export default async function AccountsPage({
               <p>
                 <Link href={`/comptes/${workspaceId}/fiche/${account.id}`}>Fiche du compte : voix, rythme, créneaux, exemples</Link>
               </p>
+              {/* PUB-09 : publication manuelle, au choix du titulaire ou d'un administrateur. */}
+              <p className="muted">
+                {account.publishMode === 'manual'
+                  ? 'Publication manuelle : au créneau, le post validé est envoyé par e-mail au titulaire (texte et images), qui le publie lui-même.'
+                  : 'Publication automatique au créneau.'}
+              </p>
+              {account.canDisconnect && (
+                <form action={publishModeAction.bind(null, workspaceId, account.id)}>
+                  <input type="hidden" name="mode" value={account.publishMode === 'manual' ? 'auto' : 'manual'} />
+                  <button type="submit">{account.publishMode === 'manual' ? 'Revenir à la publication automatique' : 'Passer en publication manuelle (par e-mail)'}</button>
+                </form>
+              )}
               {account.canDisconnect && (
                 <details>
                   <summary>Déconnecter ce compte</summary>
