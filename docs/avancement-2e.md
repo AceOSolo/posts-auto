@@ -74,3 +74,10 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
 - obtenir l'accord écrit de Secutop et saisir le témoignage ;
 - définir `SALES_EMAIL`, et `DEMO_WEBHOOK_URL` si les demandes doivent aller au CRM ;
 - mesurer le score Lighthouse sur le domaine définitif.
+
+## VIS-06 : avatar de marque (fait, 20 novembre 2026)
+
+- **Déclaration** : sur la fiche de son compte (profil personnel), le **titulaire lui-même** déclare un avatar, une image générée qui le représente. Il accepte un texte de consentement versionné, enregistré avec la date et l'adresse IP.
+- **Usage** : quand un visuel de ce compte doit porter une image générée, l'avatar la remplace. Une photo de la médiathèque qui convient reste préférée. L'avatar porte la mention « image générée par IA ».
+- **Cloisonnement** : l'avatar n'entre pas dans la médiathèque de l'espace. Il ne sert donc jamais sur les posts d'un autre compte.
+- **Retrait** : le titulaire ou un administrateur le retire à tout moment ; les nouveaux visuels ne l'utilisent plus. Déclaration et retrait sont inscrits au journal d'audit.

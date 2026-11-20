@@ -288,4 +288,27 @@ describe('refaire le visuel (VIS-13)', () => {
     ]);
     expect((await postMedia(postId))[1]?.id).toBe(upload);
   });
+
+  it('VIS-06 : l’avatar autorisé du titulaire remplace l’image générée, sur son compte seulement', async () => {
+    const other = await createAccount(db, workspaceId, { display_name: 'Autre compte' });
+    const bytes = (await new FakeImageGenerator().generate({ subject: 'avatar', width: 400, height: 400 })).bytes;
+    await asSystem(db, async (trx) => {
+      const holder = await trx.insertInto('users').values({ email: `avatar-${accountId}@exemple.fr` }).returning('id').executeTakeFirstOrThrow();
+      const asset = await trx
+        .insertInto('media_assets')
+        .values({ workspace_id: workspaceId, kind: 'upload', storage_key: `${workspaceId}/avatars/${accountId}/a.png`, mime: 'image/png', ai_generated: true })
+        .returning(['id', 'storage_key'])
+        .executeTakeFirstOrThrow();
+      await media.write(asset.storage_key, bytes);
+      await trx.insertInto('account_avatars').values({ account_id: accountId, workspace_id: workspaceId, asset_id: asset.id, consent_version: 'v', consent_text: 't', consented_by: holder.id }).execute();
+    });
+    const ctx = await context();
+    const own = await prepareVisual(deps(), ctx, await account(), { accountId, postText: POST, summary: 'S', withPhoto: true });
+    expect(own?.content.photo).toBe('avatar');
+    expect(own?.aiGenerated).toBe(true);
+    expect(images.requests).toHaveLength(0);
+    const otherAccount = (await asSystem(db, (trx) => loadAccountVisuals(trx, [other], NOW))).get(other) as AccountVisual;
+    const foreign = await prepareVisual(deps(), ctx, otherAccount, { accountId: other, postText: POST, summary: 'S', withPhoto: true });
+    expect(foreign?.content.photo).toBe('generated');
+  });
 });

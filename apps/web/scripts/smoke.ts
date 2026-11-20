@@ -713,6 +713,12 @@ try {
   await submitForm(`/tableau/${workspaceId}`, alexis, 'Ne plus recevoir le rapport chaque mois', {});
   check('rapport d’un autre client → 404', (await get(`/tableau/${workspaceId}/rapport`, await sessionFor('exterieur@demo.example.test').catch(() => ''))).status !== 200);
 
+  // VIS-06 : avatar de marque, proposé au titulaire sur la fiche de son compte.
+  if (jpAccount) {
+    const ficheHtml = await (await get(`/comptes/${workspaceId}/fiche/${jpAccount.id}`, jp)).text();
+    check('fiche du compte : avatar de marque proposé au titulaire, avec le texte de consentement (VIS-06)', ficheHtml.includes('Avatar de marque') && ficheHtml.includes('Déclarer mon avatar') && ficheHtml.includes('mon propre compte LinkedIn'));
+  }
+
   // PUB-09 : publication manuelle, puis retour à l'automatique.
   const toManual = await submitForm(`/comptes/${workspaceId}`, alexis, 'Passer en publication manuelle (par e-mail)', {});
   const manualCount = (await asSystem(db, (trx) => trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspaceId).where('publish_mode', '=', 'manual').execute())).length;

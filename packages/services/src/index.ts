@@ -51,6 +51,7 @@ export * from './onboarding/onboarding.ts';
 export * from './onboarding/signup.ts';
 export * from './reporting/dashboard.ts';
 export * from './reporting/monthly.ts';
+export * from './visuals/avatars.ts';
 export * from './visuals/branding.ts';
 export * from './visuals/library.ts';
 export * from './visuals/templates.ts';

@@ -29,7 +29,7 @@ export interface PostMedia {
 
 export interface VisualInfo {
   /** D'où vient la photo du visuel ; null pour un visuel texte. */
-  readonly photo: 'generated' | 'library' | 'kept' | null;
+  readonly photo: 'generated' | 'library' | 'kept' | 'avatar' | null;
   /** Problèmes de lisibilité relevés au rendu. */
   readonly issues: readonly string[];
   /** Remarques de préparation (budget atteint, générateur indisponible…). */
@@ -48,7 +48,7 @@ function visualInfo(content: unknown): VisualInfo {
   const strings = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []);
   const issues = Array.isArray(c['issues']) ? (c['issues'] as { code?: unknown; zone?: unknown }[]) : [];
   return {
-    photo: c['photo'] === 'generated' || c['photo'] === 'library' || c['photo'] === 'kept' ? c['photo'] : null,
+    photo: c['photo'] === 'generated' || c['photo'] === 'library' || c['photo'] === 'kept' || c['photo'] === 'avatar' ? c['photo'] : null,
     issues: issues.map((i) => ISSUE_LABELS[String(i.code)]?.(String(i.zone)) ?? String(i.code)),
     notes: strings(c['notes']),
     instruction: typeof c['instruction'] === 'string' ? c['instruction'] : null,

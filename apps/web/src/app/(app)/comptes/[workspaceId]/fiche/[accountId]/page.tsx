@@ -1,11 +1,11 @@
-import { IMAGE_RATIOS, NotFoundError, getAccountProfile, getLearnedPreferences, listReferencePosts } from '@posts-auto/services';
+import { AVATAR_CONSENT_TEXT, IMAGE_RATIOS, NotFoundError, accountAvatar, getAccountProfile, getLearnedPreferences, listReferencePosts } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../../../components/flash.tsx';
 import { database } from '../../../../../../server/context.ts';
 import { requireUserId } from '../../../../../../server/session.ts';
-import { addExampleAction, deleteExampleAction, savePreferencesAction, saveProfileAction } from '../../../fiche-actions.ts';
+import { addExampleAction, declareAvatarAction, deleteExampleAction, revokeAvatarAction, savePreferencesAction, saveProfileAction } from '../../../fiche-actions.ts';
 import { SLOT_ROWS } from '../../../fiche-constants.ts';
 
 export const metadata: Metadata = { title: 'Fiche du compte' };
@@ -34,12 +34,13 @@ export default async function AccountProfilePage({
   const db = database();
   let data;
   try {
-    data = await Promise.all([getAccountProfile(db, userId, accountId), listReferencePosts(db, userId, accountId), getLearnedPreferences(db, userId, accountId)]);
+    data = await Promise.all([getAccountProfile(db, userId, accountId), listReferencePosts(db, userId, accountId), getLearnedPreferences(db, userId, accountId), accountAvatar(db, userId, accountId)]);
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const [{ profile, rights }, examples, preferences] = data;
+  const [{ profile, rights }, examples, preferences, avatar] = data;
+  const isHolder = profile.holderUserId === userId;
   if (profile.workspaceId !== workspaceId) notFound();
   const canEditExamples = rights.canEditAll || rights.canEditOwn;
   const lockAll = !rights.canEditAll;
@@ -188,6 +189,38 @@ export default async function AccountProfilePage({
           {canEditExamples && <button type="submit">Enregistrer les préférences</button>}
         </form>
       </section>
+
+      {/* VIS-06 : personnage de marque, sur les posts de ce compte seulement. */}
+      {profile.kind === 'profile' && (isHolder || rights.canEditAll) && (
+        <section aria-labelledby="avatar-titre" id="avatar">
+          <h2 id="avatar-titre">Avatar de marque</h2>
+          <p className="hint">
+            Une image générée qui représente le titulaire peut illustrer les visuels de ses propres posts, à la place d’une image générée anonyme. Elle n’est jamais utilisée sur un autre
+            compte et porte la mention « image générée par IA ».
+          </p>
+          {avatar !== null ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- image privée servie par /media */}
+              <img src={`/media/${avatar.assetId}`} alt="Avatar du titulaire" height={120} className="logo-preview" />
+              <p className="muted">Autorisé par le titulaire le {new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'Europe/Paris' }).format(avatar.consentedAt)}.</p>
+              <form action={revokeAvatarAction.bind(null, workspaceId, accountId)}>
+                <button type="submit">Retirer l’avatar</button>
+              </form>
+            </>
+          ) : isHolder ? (
+            <form action={declareAvatarAction.bind(null, workspaceId, accountId)} className="stack">
+              <label htmlFor="avatar-image">Image de l’avatar (PNG ou JPEG)</label>
+              <input id="avatar-image" name="avatar" type="file" accept="image/png,image/jpeg" required />
+              <label className="check">
+                <input type="checkbox" name="accord" required /> {AVATAR_CONSENT_TEXT}
+              </label>
+              <button type="submit">Déclarer mon avatar</button>
+            </form>
+          ) : (
+            <p className="muted">Seul le titulaire peut déclarer son avatar.</p>
+          )}
+        </section>
+      )}
     </>
   );
 }

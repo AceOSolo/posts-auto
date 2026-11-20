@@ -27,6 +27,18 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface AccountAvatars {
+  account_id: string;
+  asset_id: string;
+  consent_ip: string | null;
+  consent_text: string;
+  consent_version: string;
+  consented_at: Generated<Timestamp>;
+  consented_by: string;
+  revoked_at: Timestamp | null;
+  workspace_id: string;
+}
+
 export interface AccountConsents {
   account_id: string;
   granted_at: Generated<Timestamp>;
@@ -830,6 +842,7 @@ export interface Workspaces {
 }
 
 export interface DB {
+  account_avatars: AccountAvatars;
   account_consents: AccountConsents;
   account_delegates: AccountDelegates;
   account_followers: AccountFollowers;

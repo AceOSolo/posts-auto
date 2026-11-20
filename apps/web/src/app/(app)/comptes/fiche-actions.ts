@@ -9,14 +9,17 @@ import {
   type Sensitivity,
   type Voice,
   addReferencePost,
+  declareAvatar,
   deleteReferencePost,
+  revokeAvatar,
   getAccountProfile,
   saveAccountProfile,
   saveLearnedPreferences,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database } from '../../../server/context.ts';
+import { headers } from 'next/headers';
+import { database, mediaStore } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 import { SLOT_ROWS } from './fiche-constants.ts';
 
@@ -91,5 +94,30 @@ export async function savePreferencesAction(workspaceId: string, accountId: stri
   await run(workspaceId, accountId, 'preferences', async (userId, now) => {
     await saveLearnedPreferences(database(), userId, accountId, text(form, 'resume'), now);
     return 'preferences-apprises-enregistrees';
+  });
+}
+
+/** VIS-06 : avatar de marque déclaré par le titulaire, avec son consentement écrit. */
+export async function declareAvatarAction(workspaceId: string, accountId: string, form: FormData): Promise<void> {
+  const file = form.get('avatar');
+  const forwarded = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim();
+  await run(workspaceId, accountId, 'avatar', async (userId, now) => {
+    if (!(file instanceof File) || file.size === 0) throw new RefusedError('image_requise', 'Choisissez une image.');
+    await declareAvatar(
+      database(),
+      mediaStore(),
+      userId,
+      accountId,
+      { bytes: new Uint8Array(await file.arrayBuffer()), mime: file.type, consent: form.get('accord') === 'on', ...(forwarded && /^[\d.:a-f]+$/i.test(forwarded) && { ip: forwarded }) },
+      now,
+    );
+    return 'avatar-declare';
+  });
+}
+
+export async function revokeAvatarAction(workspaceId: string, accountId: string): Promise<void> {
+  await run(workspaceId, accountId, 'avatar', async (userId, now) => {
+    await revokeAvatar(database(), userId, accountId, now);
+    return 'avatar-retire';
   });
 }

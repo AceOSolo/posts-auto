@@ -67,6 +67,8 @@ export interface VisualContext {
   readonly logo: Uint8Array | null;
   readonly templates: readonly VisualTemplate[];
   readonly library: readonly StoredPhoto[];
+  /** VIS-06 : avatars autorisés, par compte ; chacun ne sert qu'aux posts de son compte. */
+  readonly avatars: ReadonlyMap<string, { readonly assetId: string; readonly storageKey: string }>;
   /** Images générées encore permises ce mois-ci (VIS-05), décomptées au fil de la génération. */
   imagesLeft: number;
 }
@@ -122,6 +124,14 @@ export async function loadVisualContext(trx: Tx, media: MediaStore, workspaceId:
     .limit(LIBRARY_LIMIT)
     .execute();
 
+  const avatarRows = await trx
+    .selectFrom('account_avatars as v')
+    .innerJoin('media_assets as m', 'm.id', 'v.asset_id')
+    .select(['v.account_id', 'v.asset_id', 'm.storage_key'])
+    .where('v.workspace_id', '=', workspaceId)
+    .where('v.revoked_at', 'is', null)
+    .execute();
+
   let logo: Uint8Array | null = null;
   if (branding.logoAssetId !== null) {
     const asset = await trx.selectFrom('media_assets').select('storage_key').where('id', '=', branding.logoAssetId).where('workspace_id', '=', workspaceId).executeTakeFirst();
@@ -134,6 +144,7 @@ export async function loadVisualContext(trx: Tx, media: MediaStore, workspaceId:
     logo,
     templates,
     library: library.map((p) => ({ id: p.id, label: p.label, folder: p.folder, tags: p.tags, storageKey: p.storage_key, aiGenerated: p.ai_generated })),
+    avatars: new Map(avatarRows.map((a) => [a.account_id, { assetId: a.asset_id, storageKey: a.storage_key }])),
     // Budget de l'espace (VIS-05) et, pour un abonné, quota d'images de sa formule (FAC-04).
     imagesLeft: Math.min(Math.max(0, workspace.image_budget_monthly - used.n), imageQuota ?? Number.POSITIVE_INFINITY),
   };
@@ -208,7 +219,7 @@ export interface VisualRequest {
   readonly fallbackOnModelError?: boolean;
 }
 
-export type PhotoSource = 'generated' | 'library' | 'kept';
+export type PhotoSource = 'generated' | 'library' | 'kept' | 'avatar';
 
 /** Recette d'un visuel rendu (media_assets.render_content). */
 export interface RenderContent {
@@ -325,6 +336,12 @@ export async function prepareVisual(deps: VisualDeps, ctx: VisualContext, accoun
     const bytes = await deps.media.read(chosen.storageKey).catch(() => null);
     if (bytes === null) notes.push('Photo de la médiathèque introuvable : visuel sans photo.');
     else photo = { source: 'library', assetId: chosen.id, bytes, aiGenerated: chosen.aiGenerated };
+  } else if (choosePhoto && fill.imageSubject !== null && ctx.avatars.has(request.accountId)) {
+    // VIS-06 : avatar autorisé du titulaire, à la place d'une image générée (posts de son compte).
+    const avatar = ctx.avatars.get(request.accountId) as { assetId: string; storageKey: string };
+    const bytes = await deps.media.read(avatar.storageKey).catch(() => null);
+    if (bytes === null) notes.push('Avatar du titulaire introuvable : visuel sans photo.');
+    else photo = { source: 'avatar', assetId: avatar.assetId, bytes, aiGenerated: true };
   } else if (choosePhoto && fill.imageSubject !== null) {
     const box = photoBox((rank(true)[0] as VisualTemplate).definition) ?? { width: 1080, height: 1080 };
     if (deps.images === null) notes.push('Aucun générateur d’images n’est configuré : visuel sans photo.');
