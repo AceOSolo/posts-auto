@@ -8,6 +8,7 @@ export * from './generation/reworks.ts';
 export * from './generation/store.ts';
 export * from './generation/weekly.ts';
 export * from './media/media-store.ts';
+export * from './notifications/chat-dispatch.ts';
 export * from './notifications/email-dispatch.ts';
 export * from './notifications/recipients.ts';
 export * from './notifications/reminders.ts';

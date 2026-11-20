@@ -1,11 +1,22 @@
-import { SUPPORT_MAX_HOURS, listDelegates, listMembers, listSupportGrants, listWorkspaceAccounts } from '@posts-auto/services';
+import { CHAT_EVENTS, CHAT_PROVIDERS, SUPPORT_MAX_HOURS, getTeamChat, listDelegates, listMembers, listSupportGrants, listWorkspaceAccounts } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { changeRoleAction, delegatesAction, grantSupportAction, inviteAction, pauseAction, removeMemberAction, revokeSupportAction } from '../actions.ts';
+import {
+  changeRoleAction,
+  delegatesAction,
+  grantSupportAction,
+  inviteAction,
+  pauseAction,
+  removeMemberAction,
+  removeTeamChatAction,
+  revokeSupportAction,
+  saveTeamChatAction,
+  testTeamChatAction,
+} from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Réglages de l’espace' };
 export const dynamic = 'force-dynamic';
@@ -35,6 +46,7 @@ export default async function WorkspaceSettingsPage({
   if (members.length === 0 && !canManage) notFound();
   const accounts = await listWorkspaceAccounts(db, userId, workspaceId);
   const supportGrants = canManage ? await listSupportGrants(db, userId, workspaceId, new Date()) : [];
+  const teamChat = canManage ? await getTeamChat(db, userId, workspaceId).catch(() => null) : null;
   const when = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const delegates = new Map(await Promise.all(accounts.map(async (account) => [account.id, new Set(await listDelegates(db, userId, account.id))] as const)));
 
@@ -140,6 +152,55 @@ export default async function WorkspaceSettingsPage({
           ))}
         </ul>
       </section>
+
+      {canManage && (
+        <section aria-labelledby="messagerie">
+          <h2 id="messagerie">Messagerie d’équipe (Slack ou Teams)</h2>
+          <p className="hint">
+            Annoncez dans un canal de l’équipe les posts prêts à valider, les échecs de publication et les posts publiés : quelques réactions et commentaires de l’équipe dans la
+            première heure aident un post à être vu. Dans Slack, créez un « webhook entrant » ; dans Teams, un flux Workflows « Publier dans un canal quand une requête webhook est
+            reçue ». Collez ici l’adresse obtenue : elle est chiffrée et ne sera plus affichée.
+          </p>
+          {teamChat !== null && (
+            <p>
+              {`Reliée à ${CHAT_PROVIDERS[teamChat.provider]} (${teamChat.urlHint})`}
+              {teamChat.lastSentAt !== null && ` · dernier message le ${when.format(teamChat.lastSentAt)}`}
+              {teamChat.lastError !== null && <strong>{` · dernier envoi en échec : ${teamChat.lastError}`}</strong>}
+            </p>
+          )}
+          <form action={saveTeamChatAction.bind(null, workspaceId)} className="stack">
+            <label htmlFor="messagerie-service">Messagerie</label>
+            <select id="messagerie-service" name="messagerie" defaultValue={teamChat?.provider ?? 'slack'}>
+              {Object.entries(CHAT_PROVIDERS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="messagerie-adresse">{teamChat === null ? 'Adresse du webhook' : 'Nouvelle adresse du webhook (laisser vide pour garder la même)'}</label>
+            <input id="messagerie-adresse" name="adresse" type="url" inputMode="url" autoComplete="off" maxLength={1000} required={teamChat === null} placeholder="https://hooks.slack.com/services/…" />
+            <fieldset>
+              <legend>Annoncer</legend>
+              {Object.entries(CHAT_EVENTS).map(([value, label]) => (
+                <label key={value} className="check">
+                  <input type="checkbox" name="evenements" value={value} defaultChecked={teamChat === null || teamChat.events.includes(value as keyof typeof CHAT_EVENTS)} /> {label}
+                </label>
+              ))}
+            </fieldset>
+            <button type="submit">{teamChat === null ? 'Relier la messagerie' : 'Enregistrer'}</button>
+          </form>
+          {teamChat !== null && (
+            <div className="inline-fields">
+              <form action={testTeamChatAction.bind(null, workspaceId)}>
+                <button type="submit">Envoyer un message d’essai</button>
+              </form>
+              <form action={removeTeamChatAction.bind(null, workspaceId)}>
+                <button type="submit">Retirer la messagerie</button>
+              </form>
+            </div>
+          )}
+        </section>
+      )}
 
       {canManage && (
         <section aria-labelledby="support">

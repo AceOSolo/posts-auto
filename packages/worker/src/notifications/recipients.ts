@@ -3,6 +3,7 @@
  * leur envoi par e-mail est fait par une tâche dédiée, selon les préférences (NOT-01).
  */
 import type { Tx } from '@posts-auto/db';
+import { enqueueTeamChat } from '@posts-auto/services';
 
 /** Titulaire du compte, administrateurs de l'espace, propriétaires de l'organisation. */
 export async function alertRecipients(trx: Tx, workspaceId: string, accountId: string): Promise<string[]> {
@@ -36,4 +37,7 @@ export async function notify(
     channels.map((channel) => ({ user_id: userId, workspace_id: workspaceId, kind, channel, payload: JSON.stringify(payload) })),
   );
   if (rows.length > 0) await trx.insertInto('notifications').values(rows).execute();
+  // Messagerie d'équipe (Slack, Teams) : un message par événement, pas un par personne.
+  if (kind === 'posts_prets') await enqueueTeamChat(trx, workspaceId, 'a_valider', { count: payload['count'] });
+  if (kind === 'publication_erreur') await enqueueTeamChat(trx, workspaceId, 'erreurs', { postId: payload['postId'], message: payload['message'] });
 }

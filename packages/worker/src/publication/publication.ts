@@ -31,6 +31,7 @@ import {
 } from '@posts-auto/linkedin';
 import { createHmac } from 'node:crypto';
 import type { MediaStore } from '../media/media-store.ts';
+import { enqueueTeamChat } from '@posts-auto/services';
 import { alertRecipients, notify } from '../notifications/recipients.ts';
 import type { TokenCipher } from '../secrets/token-cipher.ts';
 
@@ -623,6 +624,8 @@ async function recordSuccess(
     if (holder?.holder_user_id) {
       await notify(trx, [holder.holder_user_id], claimed.post.workspace_id, 'post_publie', { postId: claimed.post.id, url: result.url }, ['in_app']);
     }
+    // Messagerie d'équipe : le post publié, à relayer par l'équipe.
+    await enqueueTeamChat(trx, claimed.post.workspace_id, 'publies', { postId: claimed.post.id, url: result.url });
     await audit(trx, claimed.post.workspace_id, 'post.publie', claimed.post.id, { postUrn: result.postUrn }, at);
   });
   report.published.push(claimed.post.id);

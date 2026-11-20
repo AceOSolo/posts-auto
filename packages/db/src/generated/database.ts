@@ -176,6 +176,18 @@ export interface CanvaConnections {
   workspace_id: string;
 }
 
+export interface ChatMessages {
+  attempts: Generated<number>;
+  created_at: Generated<Timestamp>;
+  event: string;
+  id: Generated<Int8>;
+  last_error: string | null;
+  payload: Generated<Json>;
+  sent_at: Timestamp | null;
+  status: string | null;
+  workspace_id: string;
+}
+
 export interface ContentReports {
   created_at: Generated<Timestamp>;
   handled_at: Timestamp | null;
@@ -831,6 +843,18 @@ export interface VisualTasks {
   workspace_id: string;
 }
 
+export interface WorkspaceChatHooks {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  events: Generated<string[]>;
+  last_error: string | null;
+  last_sent_at: Timestamp | null;
+  provider: string;
+  url_enc: Buffer;
+  url_hint: string;
+  workspace_id: string;
+}
+
 export interface WorkspaceMembers {
   created_at: Generated<Timestamp>;
   role: string;
@@ -879,6 +903,7 @@ export interface DB {
   audit_log: AuditLog;
   billing_events: BillingEvents;
   canva_connections: CanvaConnections;
+  chat_messages: ChatMessages;
   content_reports: ContentReports;
   content_sources: ContentSources;
   demo_requests: DemoRequests;
@@ -930,6 +955,7 @@ export interface DB {
   user_totp: UserTotp;
   users: Users;
   visual_tasks: VisualTasks;
+  workspace_chat_hooks: WorkspaceChatHooks;
   workspace_members: WorkspaceMembers;
   workspaces: Workspaces;
 }

@@ -55,6 +55,7 @@ import { runSourcesTick } from '../sources/sources-job.ts';
 import { runMonthlyTick } from '../stats/monthly-job.ts';
 import { runStatsTick } from '../stats/stats-job.ts';
 import { runGenerationTick } from '../generation/weekly.ts';
+import { runChatDispatch } from '../notifications/chat-dispatch.ts';
 import { runEmailDispatch } from '../notifications/email-dispatch.ts';
 import { runValidationReminders } from '../notifications/reminders.ts';
 import { FileMediaStore } from '../media/media-store.ts';
@@ -114,6 +115,7 @@ const scheduler = startScheduler(
     { name: 'connexions', intervalMs: 24 * 3_600_000, run: () => runTokenCheck({ db, oauth, cipher }) },
     { name: 'rappels', intervalMs: 15 * 60_000, run: () => runValidationReminders({ db }) },
     { name: 'e-mails', intervalMs: 60_000, run: () => runEmailDispatch({ db, mailer, appUrl, media }) },
+    { name: 'messagerie', intervalMs: 60_000, run: () => runChatDispatch({ db, cipher, appUrl }) },
     { name: 'redaction', intervalMs: 5 * 60_000, run: () => runGenerationTick(writing) },
     { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick(writing) },
     { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick(writing) },

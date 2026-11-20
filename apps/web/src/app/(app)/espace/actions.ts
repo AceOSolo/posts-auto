@@ -11,15 +11,18 @@ import {
   NotFoundError,
   RefusedError,
   removeMember,
+  removeTeamChat,
   requestLoginLink,
   revokeSupportAccess,
   setAccountPaused,
   setDelegates,
+  setTeamChat,
+  testTeamChat,
 } from '@posts-auto/services';
 import { asUser } from '@posts-auto/db';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { appUrl, database, mailer } from '../../../server/context.ts';
+import { appUrl, database, mailer, tokenCipher } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -118,5 +121,36 @@ export async function revokeSupportAction(workspaceId: string, grantId: string):
     if (!UUID.test(grantId)) throw new NotFoundError('Accès');
     await revokeSupportAccess(database(), userId, workspaceId, grantId, now);
     return 'support-retire';
+  });
+}
+
+/** Messagerie d'équipe : relie un canal Slack ou Teams, ou change les événements annoncés. */
+export async function saveTeamChatAction(workspaceId: string, formData: FormData): Promise<void> {
+  await run(workspaceId, async (userId, now) => {
+    const cipher = tokenCipher();
+    if (cipher === null) return 'chiffrement-non-configure';
+    await setTeamChat(
+      database(),
+      cipher,
+      userId,
+      workspaceId,
+      { provider: String(formData.get('messagerie') ?? ''), url: String(formData.get('adresse') ?? ''), events: formData.getAll('evenements').map(String) },
+      now,
+    );
+    return 'messagerie-reliee';
+  });
+}
+
+export async function testTeamChatAction(workspaceId: string): Promise<void> {
+  await run(workspaceId, async (userId, now) => {
+    await testTeamChat(database(), userId, workspaceId, now);
+    return 'messagerie-essai';
+  });
+}
+
+export async function removeTeamChatAction(workspaceId: string): Promise<void> {
+  await run(workspaceId, async (userId, now) => {
+    await removeTeamChat(database(), userId, workspaceId, now);
+    return 'messagerie-retiree';
   });
 }

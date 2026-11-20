@@ -304,6 +304,22 @@ try {
   check('invitation par le formulaire : membre ajouté avec son rôle (ONB-07)', (invited.headers.get('location') ?? '').includes('message=invite') && newMember?.role === 'contributor', `HTTP ${invited.status}`);
   check('réglages refusés à un simple contributeur', !(await (await get(`/espace/${workspaceId}`, claire)).text()).includes('Envoyer l’invitation'));
 
+  // Messagerie d'équipe (Slack, Teams) : adresses officielles seulement, adresse jamais réaffichée.
+  const settingsHtml = (await (await get(`/espace/${workspaceId}`, alexis)).text()).replace(/<!-- -->/g, '');
+  check('réglages : messagerie d’équipe proposée (Slack ou Teams)', settingsHtml.includes('Messagerie d’équipe (Slack ou Teams)') && settingsHtml.includes('Relier la messagerie'));
+  const badHook = await submitForm(`/espace/${workspaceId}`, alexis, 'Relier la messagerie', { messagerie: 'slack', adresse: 'https://exemple.fr/hook', evenements: 'a_valider' });
+  check('messagerie : adresse qui n’est pas un webhook Slack refusée', (badHook.headers.get('location') ?? '').includes('messagerie_adresse'), `HTTP ${badHook.status}`);
+  const hookSecret = `smoke${Date.now()}`;
+  const goodHook = await submitForm(`/espace/${workspaceId}`, alexis, 'Relier la messagerie', { messagerie: 'slack', adresse: `https://hooks.slack.com/services/T0/B0/${hookSecret}`, evenements: 'publies' });
+  const linkedHtml = (await (await get(`/espace/${workspaceId}`, alexis)).text()).replace(/<!-- -->/g, '');
+  check(
+    'messagerie reliée : adresse chiffrée, jamais réaffichée',
+    (goodHook.headers.get('location') ?? '').includes('messagerie-reliee') && linkedHtml.includes('Reliée à Slack') && !linkedHtml.includes(hookSecret),
+    `HTTP ${goodHook.status} → ${goodHook.headers.get('location') ?? ''}`,
+  );
+  const removedHook = await submitForm(`/espace/${workspaceId}`, alexis, 'Retirer la messagerie', {});
+  check('messagerie retirée', (removedHook.headers.get('location') ?? '').includes('messagerie-retiree'), `HTTP ${removedHook.status}`);
+
   // EDI-01 à EDI-05 : ligne éditoriale et fiche du compte.
   const linePath = `/ligne/${workspaceId}`;
   const versionOf = async () =>
