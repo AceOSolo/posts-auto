@@ -10,6 +10,7 @@ import { type Actor, applyPostCommand } from '@posts-auto/core';
 import { type Database, asSystem, asUser } from '@posts-auto/db';
 import { type LinkedInOAuth } from '@posts-auto/linkedin';
 import { loadAccess } from '../access.ts';
+import { TRIAL_MAX_ACCOUNTS, canConnectAccount, trialStateForWorkspace } from '../billing/trial.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 
 /** Version du texte de consentement affiché (conservée avec chaque consentement). */
@@ -74,6 +75,19 @@ export async function connectProfile(
       .where('external_urn', '=', profile.urn)
       .orderBy('updated_at', 'desc')
       .executeTakeFirst();
+    // ONB-06 : pendant l'essai, 3 comptes au plus ; après l'essai, aucun nouveau compte.
+    // Une reconnexion (compte déjà dans l'espace) reste toujours possible.
+    if (existing === undefined) {
+      const allowed = canConnectAccount(await trialStateForWorkspace(trx, input.workspaceId, now));
+      if (!allowed.ok) {
+        throw new RefusedError(
+          allowed.code,
+          allowed.code === 'essai_termine'
+            ? 'L’essai gratuit est terminé : un nouveau compte se connecte avec l’abonnement.'
+            : `L’essai gratuit est limité à ${TRIAL_MAX_ACCOUNTS} comptes LinkedIn.`,
+        );
+      }
+    }
 
     const values = {
       display_name: profile.name,

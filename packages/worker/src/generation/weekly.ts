@@ -13,6 +13,7 @@
 import { ModelError, PROMPT_VERSION, type PostBrief, type TextModel, renderBrief, writePost } from '@posts-auto/ai';
 import { type Assignment, type Subject, allocateSubjects, isoWeekNumber, lastCronOccurrence, parseCron } from '@posts-auto/core';
 import { type Database, type Tx, asSystem, weekStartOf } from '@posts-auto/db';
+import { remainingTrialPosts, trialLimitReason, trialStateForWorkspace } from '@posts-auto/services';
 import type { ImageGenerator } from '@posts-auto/visuals';
 import type { MediaStore } from '../media/media-store.ts';
 import { notify } from '../notifications/recipients.ts';
@@ -266,6 +267,14 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
     slots: { calendar: settings.calendar, rules: settings.slotRules, occupied: [...data.occupied] },
   });
 
+  // ONB-06 : pendant l'essai gratuit, la rédaction s'arrête à 10 posts et à la fin de l'essai.
+  // Les premiers créneaux sont servis ; les autres sujets sont signalés au rapport.
+  const trial = await asSystem(db, (trx) => trialStateForWorkspace(trx, workspaceId, now));
+  const allowed = remainingTrialPosts(trial);
+  const kept = new Set(allowed === null ? allocation.assignments : [...allocation.assignments].sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, allowed));
+  const assignments = allocation.assignments.filter((a) => kept.has(a));
+  const cutByTrial = allocation.assignments.filter((a) => !kept.has(a));
+
   const contexts = new Map<string, string>();
   const written: { postId: string; text: string }[] = [];
   const posts: PostReport[] = [];
@@ -274,13 +283,13 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
   let consecutiveProviderErrors = 0;
   let aborted: string | null = null;
   // 1c : visuels préparés avec chaque post ; alternance photo / texte décidée d'avance, compte par compte.
-  const visuals = await openVisualSession(deps, workspaceId, [...new Set(allocation.assignments.map((a) => a.accountId))], now);
-  const withPhoto = visuals === null ? new Map<Assignment, boolean>() : photoPlan(visuals, allocation.assignments);
+  const visuals = await openVisualSession(deps, workspaceId, [...new Set(assignments.map((a) => a.accountId))], now);
+  const withPhoto = visuals === null ? new Map<Assignment, boolean>() : photoPlan(visuals, assignments);
   // GEN-09 : chaque créneau laissé au choix de l'IA reçoit un article de veille différent, qu'elle peut reprendre.
-  const freeSlots = allocation.assignments.filter((a) => a.subject === null);
+  const freeSlots = assignments.filter((a) => a.subject === null);
   const articleFor = new Map(freeSlots.flatMap((a, i) => (data.articles[i] ? [[a, data.articles[i]] as const] : [])));
 
-  await pool(allocation.assignments, deps.concurrency ?? 3, async (assignment) => {
+  await pool(assignments, deps.concurrency ?? 3, async (assignment) => {
     if (aborted !== null) return;
     const account = accounts.get(assignment.accountId);
     if (account === undefined) return;
@@ -290,7 +299,7 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
     const sameSubject =
       assignment.subject === null
         ? []
-        : allocation.assignments
+        : assignments
             .filter((other) => other !== assignment && other.subject !== null && subjectKey(other.subject) === subjectKey(assignment.subject as Subject))
             .map((other) => nameOf(other.accountId) ?? 'Compte');
     const brief: PostBrief = {
@@ -400,13 +409,22 @@ export async function runWeeklyGeneration(deps: GenerationDeps, workspaceId: str
   const report: RunReport = {
     weeks: data.weeks,
     posts,
-    unplaced: allocation.unplaced.map((u) => ({
-      kind: u.subject?.kind ?? 'rythme',
-      label: u.subject === null ? 'Créneau du rythme du compte' : (data.subjectInfo.get(subjectKey(u.subject))?.title ?? ''),
-      accountName: nameOf(u.accountId),
-      weekStart: u.weekStart,
-      reason: u.reason,
-    })),
+    unplaced: [
+      ...allocation.unplaced.map((u) => ({
+        kind: u.subject?.kind ?? 'rythme',
+        label: u.subject === null ? 'Créneau du rythme du compte' : (data.subjectInfo.get(subjectKey(u.subject))?.title ?? ''),
+        accountName: nameOf(u.accountId),
+        weekStart: u.weekStart,
+        reason: u.reason,
+      })),
+      ...cutByTrial.map((a) => ({
+        kind: a.subject?.kind ?? 'rythme',
+        label: a.subject === null ? 'Créneau du rythme du compte' : (data.subjectInfo.get(subjectKey(a.subject))?.title ?? ''),
+        accountName: nameOf(a.accountId),
+        weekStart: weekStartOf(a.at, settings.calendar),
+        reason: trialLimitReason(trial),
+      })),
+    ],
     errors,
     costUsd: Math.round(costUsd * 1e6) / 1e6,
     model: model.model,

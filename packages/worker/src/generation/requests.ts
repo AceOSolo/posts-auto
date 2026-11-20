@@ -11,7 +11,7 @@
 import { ModelError, PROMPT_VERSION, renderBrief, writePost } from '@posts-auto/ai';
 import { addMinutes, firstFreeSlot, isSlotFree } from '@posts-auto/core';
 import { asSystem, weekStartOf } from '@posts-auto/db';
-import { currentEditorialLine, offerItems } from '@posts-auto/services';
+import { currentEditorialLine, offerItems, remainingTrialPosts, trialLimitReason, trialStateForWorkspace } from '@posts-auto/services';
 import { notify } from '../notifications/recipients.ts';
 import { storeVisual } from '../visuals/prepare.ts';
 import { openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
@@ -122,12 +122,20 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
       .executeTakeFirstOrThrow(),
   );
   const reportPosts: Record<string, unknown>[] = [];
+  let trialBlocked = false;
   // Les photos de la demande font le visuel ; sans photo, un visuel est préparé (1c).
   const visuals = request.photos.length > 0 ? null : await openVisualSession(deps, workspaceId, accounts.map((a) => a.profile.accountId), now);
   try {
     for (const account of accounts) {
       const accountId = account.profile.accountId;
       if (request.existing.some((p) => p.account_id === accountId)) continue;
+      // ONB-06 : pendant l'essai gratuit, 10 posts au plus, et rien après la fin de l'essai.
+      const trial = await asSystem(db, (trx) => trialStateForWorkspace(trx, workspaceId, now));
+      if (remainingTrialPosts(trial) === 0) {
+        trialBlocked = true;
+        followups.push(`${account.profile.displayName ?? 'Compte'} : ${trialLimitReason(trial)}`);
+        continue;
+      }
       // Créneau : celui souhaité s'il est libre, sinon le prochain créneau libre (IDE-06).
       const occupied = await asSystem(db, (trx) => loadOccupied(trx, workspaceId, now, addMinutes(now, SEARCH_DAYS * 24 * 60)));
       const context = { calendar: settings.calendar, rules: settings.slotRules, occupied };
@@ -216,6 +224,11 @@ async function processRequest(deps: GenerationDeps, requestId: string, clock: ()
     await asSystem(db, (trx) =>
       trx.updateTable('generation_runs').set({ status: 'done', finished_at: clock(), lease_until: null, report: JSON.stringify({ requestId, posts: reportPosts }) }).where('id', '=', run.id).execute(),
     );
+    // Rien n'a pu être rédigé à cause de l'essai : la demande ne peut pas aboutir pour l'instant.
+    if (trialBlocked && reportPosts.length === 0) {
+      await finish('impossible', followups.join(' '), null);
+      return 'impossible';
+    }
     await finish('done', followups.join(' '), null);
     return 'done';
   } catch (error) {

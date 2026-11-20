@@ -28,6 +28,7 @@ export * from './requests/interpret.ts';
 export * from './editorial/sources.ts';
 export * from './posts/assist.ts';
 export * from './planning/week-document.ts';
+export * from './billing/trial.ts';
 export * from './onboarding/onboarding.ts';
 export * from './onboarding/signup.ts';
 export * from './visuals/branding.ts';

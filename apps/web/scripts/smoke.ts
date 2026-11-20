@@ -535,6 +535,8 @@ try {
     const newHome = (await (await get('/', newSession)).text()).replace(/<!-- -->/g, '');
     check('indicateur « prêt à publier » sur « Mes posts » (ONB-08)', newHome.includes('prêt à publier à 1 sur 6') && newHome.includes('Continuer le démarrage'));
     check('pas d’indicateur pour l’espace déjà en place', !(await (await get('/', alexis)).text()).includes('Continuer le démarrage'));
+    check('bandeau d’essai gratuit : 14 jours, 0 post sur 10, 0 compte sur 3 (ONB-06)', /Essai gratuit<\/strong> · 14 jours restants · 0 post rédigé sur 10 · 0 compte LinkedIn sur 3/.test(newHome));
+    check('pas de bandeau d’essai pour Secutop', !(await (await get('/', alexis)).text()).includes('Essai gratuit'));
     check('le nouveau client ne voit pas l’espace de démonstration', (await get(`/planning/${workspaceId}`, newSession)).status === 404);
   } else {
     check('inscription : jeton de confirmation obtenu', false, signup.kind);

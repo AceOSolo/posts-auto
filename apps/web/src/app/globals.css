@@ -123,6 +123,10 @@ fieldset.zone { background: var(--surface); }
 .badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: var(--border); vertical-align: middle; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0; }
 .filters a[aria-current='page'] { font-weight: 700; text-decoration: none; }
+/* Essai gratuit (ONB-06). */
+.trial-banner { margin: 0; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.trial-banner.expired { background: #fff4e5; color: #6b3d00; }
+
 /* Démarrage (ONB-03, ONB-08). */
 .onboarding-indicator { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .onboarding-indicator progress, progress { width: 160px; height: 10px; vertical-align: middle; accent-color: var(--primary); }
