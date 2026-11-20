@@ -22,7 +22,8 @@ try {
     sessions[key] = outcome.session.sessionToken;
   }
   const workspace = await asSystem(db, (trx) => trx.selectFrom('workspaces').select('id').where('name', 'like', '%Secutop%').orderBy('created_at').executeTakeFirstOrThrow());
-  writeFileSync(new URL('./.sessions.json', import.meta.url), JSON.stringify({ ...sessions, workspaceId: workspace.id }, null, 2));
+  const page = await asSystem(db, (trx) => trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspace.id).where('display_name', '=', 'Secutop').executeTakeFirstOrThrow());
+  writeFileSync(new URL('./.sessions.json', import.meta.url), JSON.stringify({ ...sessions, workspaceId: workspace.id, pageAccountId: page.id }, null, 2));
   console.log('Sessions prêtes pour les tests dans le navigateur.');
 } finally {
   await db.destroy();

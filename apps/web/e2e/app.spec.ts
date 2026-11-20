@@ -66,6 +66,19 @@ test.describe('pages de gestion (administratrice)', () => {
     });
   }
 
+  test('fiche d’un compte : meilleurs moments pour publier, ajout du créneau proposé', async ({ page }) => {
+    await page.goto(`/comptes/${sessions().workspaceId}/fiche/${sessions().pageAccountId}`);
+    await expect(page.getByRole('heading', { name: 'Meilleurs moments pour publier' })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await expectAccessible(page);
+    const add = page.getByRole('button', { name: /^Ajouter le créneau du mardi/ });
+    if ((await add.count()) > 0) {
+      await add.click();
+      await expect(page.getByText(/Créneau ajouté aux créneaux habituels/)).toBeVisible();
+    }
+    await expect(page.getByText('Un créneau habituel est déjà placé à ce moment.')).toBeVisible();
+  });
+
   test('navigation : liens principaux présents', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible();

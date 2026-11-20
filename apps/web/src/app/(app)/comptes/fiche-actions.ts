@@ -72,6 +72,19 @@ export async function saveProfileAction(workspaceId: string, accountId: string, 
   });
 }
 
+/** Ajoute aux créneaux habituels le meilleur moment proposé à partir des statistiques. */
+export async function addSuggestedSlotAction(workspaceId: string, accountId: string, form: FormData): Promise<void> {
+  await run(workspaceId, accountId, 'moments', async (userId, now) => {
+    const weekday = Number(text(form, 'jour'));
+    const time = text(form, 'heure');
+    if (!(weekday >= 1 && weekday <= 7) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return 'interdit';
+    const { profile, rights } = await getAccountProfile(database(), userId, accountId);
+    if (!rights.canEditAll) return 'interdit';
+    await saveAccountProfile(database(), userId, accountId, { usualSlots: [...profile.usualSlots, { weekday: weekday as IsoWeekday, time }] }, now);
+    return 'creneau-ajoute';
+  });
+}
+
 /** EDI-05 : exemple « à imiter » ou « à éviter ». */
 export async function addExampleAction(workspaceId: string, accountId: string, form: FormData): Promise<void> {
   await run(workspaceId, accountId, 'exemples', async (userId, now) => {

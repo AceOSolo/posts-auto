@@ -262,6 +262,22 @@ await asSystem(db, async (trx) => {
   });
   await post(jpProfile, slot(4, '12:00'), 'Prévention : ce que la nouvelle réglementation change pour les PME (version validée).', { status: 'valide' });
   await post(pageSecutop, slot(-1, '12:00'), 'Bienvenue à nos deux nouveaux formateurs ! (post déjà publié)', { status: 'publie' });
+  // Meilleurs moments pour publier : posts publiés des semaines passées, avec leurs statistiques
+  // à J+7. Ceux du mardi midi marchent nettement mieux que ceux du mercredi matin.
+  const isoToday = ((now.getUTCDay() + 6) % 7) + 1;
+  const pastDay = (weeksAgo: number, weekday: number) => -7 * weeksAgo + (weekday - isoToday);
+  const pastPosts: [number, number, string, string, { impressions: number; reactions: number; comments: number; shares: number }][] = [
+    [2, 2, '12:00', 'Trois idées reçues sur le défibrillateur, et ce qu’il faut vraiment savoir.', { impressions: 1450, reactions: 52, comments: 9, shares: 4 }],
+    [3, 2, '12:00', 'Formation SST : pourquoi le recyclage tous les deux ans compte vraiment.', { impressions: 1320, reactions: 47, comments: 7, shares: 3 }],
+    [4, 2, '12:00', 'Le registre de sécurité, mode d’emploi en cinq points.', { impressions: 1210, reactions: 41, comments: 6, shares: 2 }],
+    [2, 3, '09:30', 'Nos sessions incendie du mois prochain sont ouvertes.', { impressions: 980, reactions: 11, comments: 1, shares: 0 }],
+    [3, 3, '09:30', 'Rappel : la vérification annuelle des extincteurs approche.', { impressions: 1010, reactions: 13, comments: 0, shares: 1 }],
+    [4, 3, '09:30', 'Bienvenue à notre nouvelle cliente, une crèche lyonnaise.', { impressions: 920, reactions: 9, comments: 1, shares: 0 }],
+  ];
+  for (const [weeksAgo, weekday, time, body, stats] of pastPosts) {
+    const id = await post(pageSecutop, slot(pastDay(weeksAgo, weekday), time), body, { status: 'publie' });
+    await trx.insertInto('post_stats').values({ post_id: id, workspace_id: ws.id, day_offset: 7, ...stats }).execute();
+  }
   await post(claireProfile, slot(0, '08:30'), 'Trois réflexes pour bien démarrer la semaine en sécurité.', {
     status: 'erreur',
     error: 'LinkedIn est momentanément indisponible : nouvel essai plus tard.',

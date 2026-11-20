@@ -7,6 +7,7 @@ export interface Sessions {
   readonly alexis: string;
   readonly claire: string;
   readonly workspaceId: string;
+  readonly pageAccountId: string;
 }
 
 export const sessions = (): Sessions => JSON.parse(readFileSync(new URL('./.sessions.json', import.meta.url), 'utf8')) as Sessions;

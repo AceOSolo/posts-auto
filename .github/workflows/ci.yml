@@ -60,7 +60,8 @@ jobs:
   # Tests dans le navigateur (Playwright + axe), ordinateur et téléphone, sur l'application
   # compilée, les données de démonstration et les fournisseurs simulés.
   navigateur:
-    runs-on: ubuntu-latest
+    # Playwright 1.58 ne fournit pas Chromium pour Ubuntu 26.04 (ubuntu-latest).
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
       postgres:

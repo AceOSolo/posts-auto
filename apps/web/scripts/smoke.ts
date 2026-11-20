@@ -343,6 +343,25 @@ try {
   const example = await submitForm(fichePath, claire, '>Ajouter<', { texte: 'Un post de référence collé par la titulaire.', etiquette: 'imiter' });
   check('fiche : exemple « à imiter » ajouté par le titulaire (EDI-05)', (example.headers.get('location') ?? '').includes('exemple-ajoute'), `HTTP ${example.status}`);
 
+  // Meilleurs moments pour publier, tirés des statistiques à J+7 des posts publiés.
+  const pageAccount = await asSystem(db, (trx) =>
+    trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspaceId).where('display_name', '=', 'Secutop').executeTakeFirstOrThrow(),
+  );
+  const pagePath = `/comptes/${workspaceId}/fiche/${pageAccount.id}`;
+  const momentsHtml = (await (await get(pagePath, alexis)).text()).replace(/<!-- -->/g, '');
+  check(
+    'fiche : meilleur moment pour publier proposé à partir des statistiques (mardi midi)',
+    momentsHtml.includes('Meilleurs moments pour publier') && momentsHtml.includes('mardi le midi') && momentsHtml.includes('Ajouter le créneau du mardi à 12 h 00'),
+  );
+  const addedSlot = await submitForm(pagePath, alexis, 'Ajouter le créneau du mardi', {});
+  const pageSlots = await asSystem(db, (trx) => trx.selectFrom('account_profiles').select('usual_slots').where('account_id', '=', pageAccount.id).executeTakeFirst());
+  check(
+    'fiche : le créneau proposé rejoint les créneaux habituels',
+    (addedSlot.headers.get('location') ?? '').includes('creneau-ajoute') &&
+      ((pageSlots?.usual_slots ?? []) as { weekday: number; time: string }[]).some((slot) => slot.weekday === 2 && slot.time === '12:00'),
+    `HTTP ${addedSlot.status} → ${addedSlot.headers.get('location') ?? ''}`,
+  );
+
   // GEN-09 : source de veille ajoutée depuis la ligne éditoriale (la relève, réseau compris, est testée à part).
   const feedUrl = `https://veille.exemple.fr/flux-${Date.now()}.xml`;
   const addedSource = await submitForm(linePath, alexis, 'Suivre cette source', { adresse: feedUrl, libelle: 'Veille de test' });

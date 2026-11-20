@@ -1,11 +1,22 @@
-import { AVATAR_CONSENT_TEXT, IMAGE_RATIOS, NotFoundError, accountAvatar, getAccountProfile, getLearnedPreferences, listReferencePosts } from '@posts-auto/services';
+import {
+  AVATAR_CONSENT_TEXT,
+  IMAGE_RATIOS,
+  NotFoundError,
+  TIME_BANDS,
+  WEEKDAY_NAMES,
+  accountAvatar,
+  getAccountProfile,
+  getLearnedPreferences,
+  listReferencePosts,
+  postingTimesAdvice,
+} from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../../../components/flash.tsx';
 import { database } from '../../../../../../server/context.ts';
 import { requireUserId } from '../../../../../../server/session.ts';
-import { addExampleAction, declareAvatarAction, deleteExampleAction, revokeAvatarAction, savePreferencesAction, saveProfileAction } from '../../../fiche-actions.ts';
+import { addExampleAction, addSuggestedSlotAction, declareAvatarAction, deleteExampleAction, revokeAvatarAction, savePreferencesAction, saveProfileAction } from '../../../fiche-actions.ts';
 import { SLOT_ROWS } from '../../../fiche-constants.ts';
 
 export const metadata: Metadata = { title: 'Fiche du compte' };
@@ -44,6 +55,8 @@ export default async function AccountProfilePage({
   if (profile.workspaceId !== workspaceId) notFound();
   const canEditExamples = rights.canEditAll || rights.canEditOwn;
   const lockAll = !rights.canEditAll;
+  const moments = await postingTimesAdvice(db, userId, accountId, new Date(), profile.usualSlots);
+  const unit = moments.metric === 'taux' ? 'interactions pour 1 000 impressions' : 'interactions par post';
 
   return (
     <>
@@ -133,6 +146,58 @@ export default async function AccountProfilePage({
           )}
           {!rights.canEditAll && rights.canEditOwn && <p className="hint">En tant que titulaire, vous réglez le ton et les sujets à éviter.</p>}
         </form>
+      </section>
+
+      <section aria-labelledby="moments-titre" id="moments">
+        <h2 id="moments-titre">Meilleurs moments pour publier</h2>
+        {moments.groups.length === 0 ? (
+          <p className="muted">
+            Pas encore assez de posts mesurés pour conseiller un moment : {moments.measured} sur {moments.needed} (statistiques LinkedIn relevées une semaine après la publication, sur les six
+            derniers mois).
+          </p>
+        ) : (
+          <>
+            {moments.best === null ? (
+              <p>Aucun moment ne se détache nettement pour l’instant : les créneaux actuels conviennent.</p>
+            ) : (
+              <p>
+                {`Les posts publiés le ${WEEKDAY_NAMES[moments.best.weekday]} ${TIME_BANDS[moments.best.band].label} marchent le mieux : ${moments.gainPercent} % d’engagement de plus que la moyenne du compte.`}
+                {moments.alreadyUsed && ' Un créneau habituel est déjà placé à ce moment.'}
+              </p>
+            )}
+            {moments.best !== null && !moments.alreadyUsed && rights.canEditAll && (
+              <form action={addSuggestedSlotAction.bind(null, workspaceId, accountId)} className="inline-fields">
+                <input type="hidden" name="jour" value={moments.best.weekday} />
+                <input type="hidden" name="heure" value={moments.best.suggestedTime} />
+                <button type="submit">{`Ajouter le créneau du ${WEEKDAY_NAMES[moments.best.weekday]} à ${moments.best.suggestedTime.replace(':', ' h ')}`}</button>
+              </form>
+            )}
+            <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
+              <table>
+                <caption className="visually-hidden">Engagement par moment de publication</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Moment</th>
+                    <th scope="col">Posts mesurés</th>
+                    <th scope="col">Engagement ({unit})</th>
+                    <th scope="col">Impressions moyennes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {moments.groups.map((g) => (
+                    <tr key={`${g.weekday}-${g.band}`}>
+                      <th scope="row">{`${WEEKDAY_NAMES[g.weekday]} ${TIME_BANDS[g.band].label}`}</th>
+                      <td>{g.posts}</td>
+                      <td>{g.score.toLocaleString('fr-FR')}</td>
+                      <td>{g.averageImpressions === null ? '—' : g.averageImpressions.toLocaleString('fr-FR')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="hint">Interactions : réactions, commentaires comptés double, partages comptés triple. Seuls les moments d’au moins deux posts sont classés.</p>
+          </>
+        )}
       </section>
 
       <section aria-labelledby="exemples-titre" id="exemples">

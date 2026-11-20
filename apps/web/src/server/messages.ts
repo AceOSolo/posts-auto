@@ -75,6 +75,7 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   nom_requis: { tone: 'error', text: 'Donnez un nom à l’offre.' },
   statut_invalide: { tone: 'error', text: 'Disponibilité inconnue.' },
   'fiche-enregistree': { tone: 'success', text: 'Fiche du compte enregistrée.' },
+  'creneau-ajoute': { tone: 'success', text: 'Créneau ajouté aux créneaux habituels du compte : il servira dès le prochain planning.' },
   rythme_invalide: { tone: 'error', text: 'Indiquez un nombre de posts entre 0 et 14 par semaine.' },
   options_invalide: { tone: 'error', text: 'Indiquez un nombre de posts en option entre 0 et 14 par semaine.' },
   voix_invalide: { tone: 'error', text: 'Voix inconnue.' },
