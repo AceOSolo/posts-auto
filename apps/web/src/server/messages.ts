@@ -173,6 +173,8 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   entreprise_site: { tone: 'error', text: 'Adresse du site invalide.' },
   'demarrage-ferme': { tone: 'success', text: 'Assistant de démarrage fermé. Il reste accessible depuis les réglages de l’espace.' },
   'demarrage-rouvert': { tone: 'success', text: 'Assistant de démarrage rouvert.' },
+  proposition_vide: { tone: 'error', text: 'Indiquez le site de l’entreprise ou collez quelques posts : l’IA a besoin d’une matière à lire.' },
+  trop_de_propositions: { tone: 'error', text: 'Trop de propositions demandées : réessayez dans une heure.' },
   essai_comptes: { tone: 'error', text: 'L’essai gratuit est limité à 3 comptes LinkedIn.' },
   essai_termine: { tone: 'error', text: 'L’essai gratuit est terminé : un nouveau compte se connecte avec l’abonnement.' },
 };

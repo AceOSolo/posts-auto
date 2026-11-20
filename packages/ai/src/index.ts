@@ -3,6 +3,7 @@ import { FakeModel } from './fake-model.ts';
 import type { TextModel } from './model.ts';
 
 export * from './anthropic-model.ts';
+export * from './editorial-proposal.ts';
 export * from './fake-model.ts';
 export * from './image-inspection.ts';
 export * from './injection.ts';

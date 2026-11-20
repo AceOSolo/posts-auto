@@ -32,6 +32,7 @@ export class FakeModel implements TextModel {
 
   #demo(request: ModelCall<unknown>): unknown {
     if (request.purpose === 'verify') return { issues: [] };
+    if (request.purpose === 'interpret' && request.task.startsWith('Propose la ligne éditoriale')) return demoEditorialProposal(request.task);
     if (request.purpose === 'interpret') return demoInterpretation(request.task);
     if (request.purpose === 'visual' && (request.images?.length ?? 0) > 0) {
       // Contrôle d'une image (VIS-11) : le générateur simulé ne produit que des dégradés.
@@ -85,6 +86,23 @@ function demoVisual(task: string): unknown {
     libraryPhotoId: match?.id ?? '',
     imageSubject: wantPhoto && match === undefined ? 'Bureau lumineux, dossiers et casque de chantier posés sur une table, lumière du matin' : '',
     altText: `Visuel : ${title || 'démonstration'}`,
+    ignoredInstructions: [],
+  };
+}
+
+/** Ligne éditoriale de démonstration : reprend le nom et le début du site, marquée comme telle. */
+function demoEditorialProposal(task: string): unknown {
+  const company = /^Propose la ligne éditoriale LinkedIn de (.+?)(?: \(secteur|\.$)/m.exec(task)?.[1] ?? 'l’entreprise';
+  const page = /<document type="page_du_site"[^>]*>\n([\s\S]*?)\n<\/document>/.exec(task)?.[1] ?? '';
+  const firstLines = page.split('\n').filter((l) => l.trim().length > 3).slice(0, 3);
+  return {
+    positioning: `(Démonstration, sans IA) ${company} : ${firstLines[0] ?? 'positionnement à préciser'}.`,
+    offers: firstLines.slice(1).join('\n'),
+    audiences: 'Dirigeants de PME\nResponsables de la prévention',
+    allowedProofs: '',
+    tone: 'Vouvoiement, « nous », ton professionnel et concret.',
+    bannedPhrases: [],
+    toVerify: ['Quels chiffres ou références clients peuvent être cités ?'],
     ignoredInstructions: [],
   };
 }

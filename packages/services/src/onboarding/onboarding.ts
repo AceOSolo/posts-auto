@@ -86,8 +86,8 @@ async function computeSteps(trx: Tx, workspaceId: string): Promise<{ steps: Onbo
       key: 'ligne',
       title: 'Ligne éditoriale',
       done: editorial !== undefined,
-      detail: editorial !== undefined ? 'Enregistrée.' : 'Positionnement, offres, cibles, ton. L’IA peut la proposer à partir de votre site.',
-      href: `/ligne/${ws}`,
+      detail: editorial !== undefined ? 'Enregistrée.' : 'Positionnement, offres, cibles, ton. L’IA la propose à partir de votre site et de vos posts ; vous corrigez puis validez.',
+      href: editorial !== undefined ? `/ligne/${ws}` : `/ligne/${ws}#proposer`,
     },
     {
       key: 'charte',

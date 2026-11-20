@@ -1,5 +1,7 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
+import { ModelError } from '@posts-auto/ai';
 import { type EmojiPolicy, parseEditorialRules } from '@posts-auto/core';
 import {
   ForbiddenError,
@@ -10,13 +12,15 @@ import {
   addSource,
   deleteOfferItem,
   deleteSource,
+  proposeEditorialLineFor,
   saveEditorialLine,
   saveOfferItem,
   setSourceEnabled,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database } from '../../../server/context.ts';
+import { database, mediaStore, model, usdToEur } from '../../../server/context.ts';
+import { editorialProposalKey } from '../../../server/drafts.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -42,6 +46,28 @@ const number = (form: FormData, name: string) => {
   const value = Number.parseInt(text(form, name), 10);
   return Number.isNaN(value) ? undefined : value;
 };
+
+/**
+ * ONB-04 : l'IA propose la ligne éditoriale à partir du site et de posts collés. Rien n'est
+ * enregistré : la proposition pré-remplit le formulaire, que la personne corrige et valide.
+ */
+export async function proposeLineAction(workspaceId: string, form: FormData): Promise<void> {
+  if (!UUID.test(workspaceId)) notFound();
+  const userId = await requireUserId();
+  let destination: string;
+  try {
+    const proposal = await proposeEditorialLineFor(database(), model(), userId, workspaceId, { website: text(form, 'site'), posts: text(form, 'posts') }, new Date(), { usdToEur: usdToEur() });
+    const id = randomUUID();
+    await mediaStore().write(editorialProposalKey(workspaceId, id), new TextEncoder().encode(JSON.stringify(proposal)));
+    destination = `/ligne/${workspaceId}?proposition=${id}#ligne`;
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    const code = error instanceof ForbiddenError ? 'interdit' : error instanceof RefusedError ? error.code : error instanceof ModelError ? 'ia-indisponible' : null;
+    if (code === null) throw error;
+    destination = `/ligne/${workspaceId}?message=${encodeURIComponent(code)}#proposer`;
+  }
+  redirect(destination);
+}
 
 /** EDI-01, EDI-02 : enregistre une nouvelle version de la ligne éditoriale. */
 export async function saveLineAction(workspaceId: string, form: FormData): Promise<void> {

@@ -538,6 +538,19 @@ try {
     check('bandeau d’essai gratuit : 14 jours, 0 post sur 10, 0 compte sur 3 (ONB-06)', /Essai gratuit<\/strong> · 14 jours restants · 0 post rédigé sur 10 · 0 compte LinkedIn sur 3/.test(newHome));
     check('pas de bandeau d’essai pour Secutop', !(await (await get('/', alexis)).text()).includes('Essai gratuit'));
     check('le nouveau client ne voit pas l’espace de démonstration', (await get(`/planning/${workspaceId}`, newSession)).status === 404);
+    // ONB-04 : ligne éditoriale proposée par l'IA, à relire avant d'enregistrer.
+    const proposed = await submitForm(`/ligne/${newWorkspace}`, newSession, 'Proposer la ligne éditoriale', {
+      site: 'http://127.0.0.1/admin',
+      posts: 'Nous formons nos équipes au travail en hauteur chaque trimestre.\n---\nRetour sur notre chantier de rénovation à Lyon.',
+    });
+    const proposedAt = proposed.headers.get('location') ?? '';
+    const reviewPage = proposedAt.includes('proposition=') ? (await (await get(proposedAt.replace(/#.*$/, ''), newSession)).text()).replace(/<!-- -->/g, '') : '';
+    check(
+      'ligne éditoriale proposée par l’IA : formulaire pré-rempli, site interne refusé, rien d’enregistré (ONB-04)',
+      reviewPage.includes('Proposition de l’IA, à relire') && reviewPage.includes('(Démonstration, sans IA) Atelier Démo') && reviewPage.includes('Adresse interdite'),
+      `HTTP ${proposed.status} → ${proposedAt}`,
+    );
+    check('la proposition n’enregistre aucune version de la ligne', (await asSystem(db, (trx) => trx.selectFrom('editorial_lines').select('id').where('workspace_id', '=', newWorkspace).execute())).length === 0);
   } else {
     check('inscription : jeton de confirmation obtenu', false, signup.kind);
   }

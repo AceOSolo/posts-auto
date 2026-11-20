@@ -1,10 +1,11 @@
-import { NotFoundError, type OfferItem, editorialHistory, getEditorialLine, listOffer, listSources } from '@posts-auto/services';
+import { type EditorialProposal, NotFoundError, type OfferItem, editorialHistory, getEditorialLine, getOnboarding, listOffer, listSources } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
-import { database } from '../../../../server/context.ts';
+import { database, mediaStore } from '../../../../server/context.ts';
+import { editorialProposalKey } from '../../../../server/drafts.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { addSourceAction, deleteOfferAction, deleteSourceAction, saveLineAction, saveOfferAction, toggleSourceAction } from '../actions.ts';
+import { addSourceAction, deleteOfferAction, deleteSourceAction, proposeLineAction, saveLineAction, saveOfferAction, toggleSourceAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Ligne éditoriale' };
 export const dynamic = 'force-dynamic';
@@ -54,7 +55,7 @@ export default async function EditorialLinePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceId } = await params;
-  const { message } = await searchParams;
+  const { message, proposition } = await searchParams;
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   const db = database();
@@ -68,6 +69,24 @@ export default async function EditorialLinePage({
   const [{ line, canEdit }, offer, history, sources] = data;
   const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Paris' });
   const readOnly = !canEdit;
+  // ONB-04 : proposition de l'IA en cours de relecture (rien n'est enregistré avant validation).
+  let proposal: EditorialProposal | null = null;
+  if (canEdit && typeof proposition === 'string' && UUID.test(proposition)) {
+    try {
+      proposal = JSON.parse(new TextDecoder().decode(await mediaStore().read(editorialProposalKey(workspaceId, proposition)))) as EditorialProposal;
+    } catch {
+      proposal = null;
+    }
+  }
+  const website = canEdit ? (await getOnboarding(db, userId, workspaceId)).company.website : null;
+  const field = {
+    positioning: proposal?.positioning ?? line.positioning ?? '',
+    offers: proposal?.offers ?? line.offers ?? '',
+    audiences: proposal?.audiences ?? line.audiences ?? '',
+    allowedProofs: proposal?.allowedProofs ?? line.allowedProofs ?? '',
+    tone: proposal?.tone ?? line.tone ?? '',
+    bannedPhrases: (proposal?.bannedPhrases ?? line.bannedPhrases).join('\n'),
+  };
 
   return (
     <>
@@ -78,29 +97,65 @@ export default async function EditorialLinePage({
         signalé par un marqueur [À COMPLÉTER] qui bloque la publication.
       </p>
 
+      {canEdit && (
+        <details className="assist" id="proposer" open={line.version === 0 && proposal === null}>
+          <summary>Proposer avec l’IA, à partir du site et de posts publiés</summary>
+          <form action={proposeLineAction.bind(null, workspaceId)} className="stack">
+            <p className="hint">L’IA lit la page d’accueil du site et les posts collés, puis pré-remplit le formulaire ci-dessous. Vous relisez, corrigez, puis enregistrez : rien n’est enregistré avant.</p>
+            <label htmlFor="site">Site de l’entreprise</label>
+            <input id="site" name="site" type="text" inputMode="url" defaultValue={website ?? ''} placeholder="www.exemple.fr" maxLength={300} />
+            <label htmlFor="posts">Quelques posts déjà publiés (facultatif), séparés par une ligne « --- »</label>
+            <textarea id="posts" name="posts" rows={6} maxLength={16000} />
+            <button type="submit">Proposer la ligne éditoriale</button>
+          </form>
+        </details>
+      )}
+
       <section aria-labelledby="ligne-titre" id="ligne">
         <h2 id="ligne-titre">
           Ligne en vigueur {line.version > 0 && <small>· version {line.version}</small>}
         </h2>
-        <form action={saveLineAction.bind(null, workspaceId)} className="stack">
+        {proposal !== null && (
+          <div className="flash success" role="status">
+            <p>
+              <strong>Proposition de l’IA, à relire.</strong> Le formulaire est pré-rempli{proposal.sourceUrl ? ` à partir de ${proposal.sourceUrl}` : ' à partir des posts collés'} : corrigez-le, puis
+              enregistrez. Rien n’est enregistré avant.
+            </p>
+            {proposal.websiteError && <p>{proposal.websiteError}</p>}
+            {proposal.toVerify.length > 0 && (
+              <>
+                <p>À préciser :</p>
+                <ul>
+                  {proposal.toVerify.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {proposal.suspiciousInstructions.length > 0 && (
+              <p>Consignes trouvées dans les contenus lus, et ignorées : {proposal.suspiciousInstructions.map((s) => `« ${s} »`).join(', ')}.</p>
+            )}
+          </div>
+        )}
+        <form key={proposal === null ? 'ligne' : `proposition-${String(proposition)}`} action={saveLineAction.bind(null, workspaceId)} className="stack">
           <fieldset disabled={readOnly}>
             <legend>Ce que l’entreprise dit d’elle</legend>
             <div className="stack">
               <label htmlFor="positionnement">Positionnement</label>
-              <textarea id="positionnement" name="positionnement" rows={3} defaultValue={line.positioning ?? ''} />
+              <textarea id="positionnement" name="positionnement" rows={3} defaultValue={field.positioning} />
               <label htmlFor="offres">Offres (présentation générale)</label>
-              <textarea id="offres" name="offres" rows={3} defaultValue={line.offers ?? ''} />
+              <textarea id="offres" name="offres" rows={3} defaultValue={field.offers} />
               <label htmlFor="cibles">Cibles</label>
-              <textarea id="cibles" name="cibles" rows={2} defaultValue={line.audiences ?? ''} />
+              <textarea id="cibles" name="cibles" rows={2} defaultValue={field.audiences} />
               <label htmlFor="preuves">Preuves autorisées</label>
-              <textarea id="preuves" name="preuves" rows={3} defaultValue={line.allowedProofs ?? ''} aria-describedby="preuves-aide" />
+              <textarea id="preuves" name="preuves" rows={3} defaultValue={field.allowedProofs} aria-describedby="preuves-aide" />
               <p id="preuves-aide" className="hint">
                 Chiffres, références clients (avec leur accord), labels : seules ces preuves peuvent être citées.
               </p>
               <label htmlFor="ton">Ton</label>
-              <textarea id="ton" name="ton" rows={2} defaultValue={line.tone ?? ''} />
+              <textarea id="ton" name="ton" rows={2} defaultValue={field.tone} />
               <label htmlFor="interdits">Mots et formules interdits (un par ligne)</label>
-              <textarea id="interdits" name="interdits" rows={3} defaultValue={line.bannedPhrases.join('\n')} />
+              <textarea id="interdits" name="interdits" rows={3} defaultValue={field.bannedPhrases} />
             </div>
           </fieldset>
           <fieldset disabled={readOnly}>
