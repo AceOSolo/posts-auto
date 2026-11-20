@@ -17,17 +17,15 @@ SimplX a demandé un nom plus singulier, inventé comme Pharow ou Lemlist, qui �
    - Le nom ne contient ni « Linked » ni « In » : il convient aussi pour l'application LinkedIn.
    - Aucun logiciel de ce nom n'a été trouvé. Les noms proches (Rostr, Rosterna) sont dans le planning d'équipe.
 2. **La signature : « Prenez la parole. »** Elle garde toujours son point final.
-3. **Le logo.** Un R formé de trois pièces, dessiné sur une grille de 120 unités :
-   - une colonne en encre : la tribune ;
-   - une bulle en rouge pompéien, à contreforme ronde : la parole ;
-   - un éperon en rouge pompéien : la proue des *rostra*.
-   Le logotype est en Fraunces, vectorisé.
-4. **Les couleurs.** Travertin `#F5EFE4` (fond), Encre `#221C1A` (texte), Pompéien `#A8372A` (la parole, les actions), Ocre `#C8912E` (ce qui attend une décision). Les contrastes du texte atteignent tous le niveau AA. Le bleu de LinkedIn est exclu, pour ne pas se confondre avec lui.
-5. **Les polices.** Fraunces pour les titres, Hanken Grotesk pour le texte, sous licence OFL. Le site les héberge lui-même en woff2 (57 Ko et 19 Ko, caractères latins) : aucun appel à Google Fonts.
-6. **Une seule source pour la géométrie.** Le logo, les fichiers fournis, les éléments du site et la charte PDF sont produits par les scripts de `docs/marque/outils`. Le composant `Logo` du site est généré : ses couleurs sont des variables CSS, et il suit donc le mode sombre.
+3. **Une première identité a été refusée** (même jour) : fond crème, encre, une couleur forte et un accent réservé, mêmes proportions et même plan de charte que pour Les Employeurs. Trop proche de la charte précédente. Trois directions nouvelles ont été proposées (sombre et électrique, pop et illustrée, éditoriale et brutaliste), jugées « trop IA » ; la direction pop a été retravaillée et retenue.
+4. **La matière : la mosaïque romaine.** « Chaque collaborateur est une tesselle ; ensemble, ils forment la parole de l'entreprise. » Les illustrations sont des mosaïques produites par `docs/marque/outils/mosaique.py` : tesselles décalées, tournées et nuancées comme posées à la main, joints sombres qui suivent la silhouette. Personnage : un buste d'orateur romain couronné de laurier, sa bulle de parole au-dessus de la tête.
+5. **Le logo.** Une bulle de parole faite de 4 × 3 tesselles (pas 20, tesselle 17) et d'une queue inclinée. Une seule tesselle est jaune soleil : la voix de chacun, qui attend sa validation. En monochrome, elle devient une tesselle évidée. Le logotype est en Bagel Fat One, vectorisé.
+6. **Les couleurs.** Rose `#DF1C60` (on agit), Soleil `#FFC93C` (ça attend), Vert-de-gris `#2BB59A` (c'est parti), Nuit `#1E1A45` (on lit), Marbre `#FFF4E2` (on respire). Le rose de la maquette (`#E5306F`) a été foncé pour que le texte blanc dessus atteigne 4,5:1 (4,7:1). Le bleu de LinkedIn est exclu.
+7. **Les polices.** Bagel Fat One pour les titres, Schibsted Grotesk pour le texte, Caveat pour les notes manuscrites, sous licence OFL. Le site les héberge lui-même en woff2 (23 Ko, 38 Ko et 49 Ko, caractères latins ; Caveat n'est pas préchargée).
+8. **Une seule source pour la géométrie.** Le logo, les fichiers fournis, les mosaïques, les éléments du site et la charte PDF sont produits par les scripts de `docs/marque/outils`. Le composant `Logo` du site est généré : ses couleurs sont des variables CSS, et il suit donc le mode sombre.
 
 ## Conséquences
 
-- La charte (PDF de 23 pages) et les logos (72 fichiers) sont destinés au Drive de Secutop, dossier « Rostra », à côté de « Les Employeurs ». Le dossier est créé ; l'envoi des fichiers a échoué le 20/11/2026, faute d'espace de stockage sur le compte Google. Ils ne sont pas dans le dépôt : `docs/marque/sortie/` est ignoré par Git et se régénère.
+- La charte (PDF de 32 pages), les logos (72 fichiers) et les illustrations sont destinés au Drive de Secutop, dossier « Rostra », à côté de « Les Employeurs ». Le dossier est créé ; l'envoi des fichiers a échoué le 20/11/2026, faute d'espace de stockage sur le compte Google. Ils ne sont pas dans le dépôt : `docs/marque/sortie/` est ignoré par Git et se régénère.
 - L'application, les e-mails, le second facteur d'authentification (nom affiché dans l'application d'authentification), les métadonnées et le fichier llms.txt s'appellent désormais « Rostra ». Les codes de double authentification déjà enregistrés restent valides ; seul leur libellé change pour les nouvelles inscriptions.
 - **Reste à faire par SimplX** : vérifier la disponibilité de la marque (INPI, EUIPO, classes 9, 35 et 42) et du nom de domaine, puis déposer la marque. Ces deux vérifications n'ont pas été faites ; elles conditionnent l'usage public du nom.

@@ -96,42 +96,49 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <div className="hero">
         <div>
-        <p className="eyebrow">Posts LinkedIn · PME, ETI et agences</p>
-        <h1>
-          Vos posts LinkedIn rédigés par l’IA, <em>validés par vous</em>, publiés à l’heure.
-        </h1>
-        <p className="lead">
-          Chaque semaine, l’IA rédige les posts de vos dirigeants, de vos experts et de vos pages d’entreprise, dans le ton de chacun. Chaque titulaire valide en quelques secondes sur son
-          téléphone ; la publication est automatique.
-        </p>
-        <div className="actions">
-          <Link href="/inscription" className="button primary">
-            Essai gratuit 14 jours
-          </Link>
-          <a href="#demo" className="button">
-            Demander une démo
-          </a>
-        </div>
-        <p className="hint">Sans carte bancaire. 3 comptes LinkedIn et 10 posts pendant l’essai.</p>
-        </div>
-        {/* Illustration : un post proposé à son titulaire. Décorative, ignorée des lecteurs d'écran. */}
-        <div className="hero-card" aria-hidden="true">
-          <header>
-            <span className="li-avatar">CM</span>
-            <span className="who">
-              Claire M.
-              <small>Directrice générale · mardi 8 h 30</small>
+          <h1>
+            Toute l’équipe prend la{' '}
+            <span className="said">
+              parole.
+              <svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M4 16C60 6 120 20 170 11S260 6 296 14" strokeWidth="9" fill="none" strokeLinecap="round" />
+              </svg>
             </span>
-            <span className="badge status-a_valider">À valider</span>
-          </header>
-          <div className="lines">
-            <span />
-            <span />
-            <span />
+          </h1>
+          <p className="lead">
+            Chaque semaine, l’IA rédige les posts LinkedIn de vos dirigeants, de vos experts et de vos pages d’entreprise, dans le ton de chacun. Chaque titulaire valide en quelques secondes
+            sur son téléphone ; la publication est automatique.
+          </p>
+          <div className="actions">
+            <Link href="/inscription" className="button primary">
+              Essai gratuit 14 jours
+            </Link>
+            <a href="#demo" className="button">
+              Demander une démo
+            </a>
           </div>
-          <div className="card-actions">
-            <span className="ok">Valider</span>
-            <span>Corriger</span>
+          <p className="hint">Sans carte bancaire. 3 comptes LinkedIn et 10 posts pendant l’essai.</p>
+          <p className="hand" aria-hidden="true">
+            ↳ rien ne part sans leur accord
+          </p>
+        </div>
+        {/* Illustration : un buste romain en mosaïque prend la parole ; un post attend sa validation. Décorative. */}
+        <div className="hero-art" aria-hidden="true">
+          <img src="/marque/buste-mosaique.svg" alt="" width={520} height={520} />
+          <div className="post-card">
+            <header>
+              <span className="li-avatar">CM</span>
+              <span className="who">
+                Claire M.
+                <small>Directrice générale · mar. 8 h 30</small>
+              </span>
+              <span className="badge status-a_valider">À valider</span>
+            </header>
+            <p>Ce que trois ans de formations sur le terrain m’ont appris : la prévention se joue avant le premier geste…</p>
+            <div className="card-actions">
+              <span className="ok">Valider</span>
+              <span>Corriger</span>
+            </div>
           </div>
         </div>
       </div>
@@ -140,18 +147,22 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
         <h2 id="fonctionnement-titre">Comment ça marche</h2>
         <ol className="steps-list">
           <li>
+            <img src="/marque/etape-planning.svg" alt="" width={76} height={76} />
             <h3>Planning</h3>
             <p>Vous posez vos temps forts, vos événements et vos sujets ; l’IA complète avec des idées et votre veille.</p>
           </li>
           <li>
+            <img src="/marque/etape-redaction.svg" alt="" width={76} height={76} />
             <h3>Rédaction par l’IA</h3>
             <p>Les posts des deux semaines à venir sont rédigés dans le ton de chaque compte, avec leur visuel.</p>
           </li>
           <li>
+            <img src="/marque/etape-validation.svg" alt="" width={76} height={76} />
             <h3>Validation</h3>
             <p>Chaque titulaire valide, corrige ou refuse ; rien ne part sans son accord.</p>
           </li>
           <li>
+            <img src="/marque/etape-publication.svg" alt="" width={76} height={76} />
             <h3>Publication</h3>
             <p>Au créneau prévu, sur LinkedIn ; vous suivez les statistiques et les enseignements du mois.</p>
           </li>

@@ -31,6 +31,9 @@ const FAQ: readonly { q: string; a: string }[] = [
   { q: 'Is the service available in English?', a: 'The application and the AI writing are in French for now; English is planned according to client demand.' },
 ];
 
+/** Pictogrammes en mosaïque des quatre étapes, dans l'ordre de STEPS. */
+const STEP_ICONS = ['planning', 'redaction', 'validation', 'publication'] as const;
+
 const STEPS: readonly [string, string][] = [
   ['Planning', 'You set your highlights, events and topics; the AI fills in with ideas and your news watch.'],
   ['AI writing', 'Posts for the next two weeks are written in each account’s voice, with their visual.'],
@@ -68,42 +71,49 @@ export default async function EnglishLandingPage({ searchParams }: { searchParam
       </p>
       <div className="hero">
         <div>
-        <p className="eyebrow">LinkedIn posts · SMEs and agencies</p>
-        <h1>
-          Your LinkedIn posts written by AI, <em>approved by you</em>, published on time.
-        </h1>
-        <p className="lead">
-          Every week, the AI writes the posts of your executives, experts and company pages, in each person’s voice. Every holder approves in seconds on their phone; publishing is
-          automatic.
-        </p>
-        <div className="actions">
-          <Link href="/inscription" className="button primary">
-            14-day free trial
-          </Link>
-          <a href="#demo" className="button">
-            Book a demo
-          </a>
-        </div>
-        <p className="hint">No credit card. 3 LinkedIn accounts and 10 posts during the trial. The application is in French.</p>
-        </div>
-        {/* Illustration: a post offered to its holder. Decorative, hidden from screen readers. */}
-        <div className="hero-card" aria-hidden="true">
-          <header>
-            <span className="li-avatar">CM</span>
-            <span className="who">
-              Claire M.
-              <small>Managing director · Tuesday 8:30</small>
+          <h1>
+            Your whole team takes the{' '}
+            <span className="said">
+              floor.
+              <svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M4 16C60 6 120 20 170 11S260 6 296 14" strokeWidth="9" fill="none" strokeLinecap="round" />
+              </svg>
             </span>
-            <span className="badge status-a_valider">To approve</span>
-          </header>
-          <div className="lines">
-            <span />
-            <span />
-            <span />
+          </h1>
+          <p className="lead">
+            Every week, the AI writes the LinkedIn posts of your executives, experts and company pages, in each person’s voice. Every holder approves in seconds on their phone; publishing is
+            automatic.
+          </p>
+          <div className="actions">
+            <Link href="/inscription" className="button primary">
+              14-day free trial
+            </Link>
+            <a href="#demo" className="button">
+              Book a demo
+            </a>
           </div>
-          <div className="card-actions">
-            <span className="ok">Approve</span>
-            <span>Edit</span>
+          <p className="hint">No credit card. 3 LinkedIn accounts and 10 posts during the trial. The application is in French.</p>
+          <p className="hand" aria-hidden="true">
+            ↳ nothing goes out without their approval
+          </p>
+        </div>
+        {/* Illustration: a Roman bust in mosaic takes the floor; a post awaits approval. Decorative. */}
+        <div className="hero-art" aria-hidden="true">
+          <img src="/marque/buste-mosaique.svg" alt="" width={520} height={520} />
+          <div className="post-card">
+            <header>
+              <span className="li-avatar">CM</span>
+              <span className="who">
+                Claire M.
+                <small>Managing director · Tue 8:30</small>
+              </span>
+              <span className="badge status-a_valider">To approve</span>
+            </header>
+            <p>What three years of field training taught me: prevention starts before the very first move…</p>
+            <div className="card-actions">
+              <span className="ok">Approve</span>
+              <span>Edit</span>
+            </div>
           </div>
         </div>
       </div>
@@ -111,8 +121,9 @@ export default async function EnglishLandingPage({ searchParams }: { searchParam
       <section aria-labelledby="how">
         <h2 id="how">How it works</h2>
         <ol className="steps-list">
-          {STEPS.map(([title, text]) => (
+          {STEPS.map(([title, text], index) => (
             <li key={title}>
+              <img src={`/marque/etape-${STEP_ICONS[index]}.svg`} alt="" width={76} height={76} />
               <h3>{title}</h3>
               <p>{text}</p>
             </li>

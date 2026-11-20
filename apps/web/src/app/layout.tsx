@@ -13,17 +13,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // Couleur de la barre du navigateur : travertin, ou fond sombre en mode sombre (charte Rostra).
+  // Couleur de la barre du navigateur : celle de l'en-tête (charte Rostra).
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f5efe4' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1614' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#221e45' },
   ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   // Polices de la charte, hébergées sur le site : chargées en priorité pour limiter le décalage d'affichage.
-  preload('/fonts/fraunces-latin.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' });
-  preload('/fonts/hanken-grotesk-latin.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' });
+  preload('/fonts/bagel-fat-one-latin.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' });
+  preload('/fonts/schibsted-grotesk-latin.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' });
   return (
     <html lang="fr">
       <body>{children}</body>

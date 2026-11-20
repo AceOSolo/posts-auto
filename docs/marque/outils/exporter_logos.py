@@ -14,12 +14,12 @@ from compose import COLORS, SH, SW, horizontal, logotype, symbol, symbol_group, 
 HERE = pathlib.Path(__file__).parent
 OUT = HERE.parent / 'sortie' / 'Rostra' / 'Logos'
 
-TRAVERTIN, ENCRE, POMPEIEN, BLANC = '#F5EFE4', '#221C1A', '#A8372A', '#FFFFFF'
-JPEG_BG = {'couleur': BLANC, 'noir': BLANC, 'negatif': ENCRE, 'blanc': POMPEIEN}
+MARBRE, NUIT, ROSE, BLANC = '#FFF4E2', '#1E1A45', '#DF1C60', '#FFFFFF'
+JPEG_BG = {'couleur': BLANC, 'noir': BLANC, 'negatif': NUIT, 'blanc': ROSE}
 
 # Zone de protection x, exprimée en fraction de la hauteur du fichier SVG produit.
-# Symbole et versions avec symbole : x = largeur de la colonne du R (29/96 de la hauteur du symbole).
-X_SYMBOL = 29 / SH
+# Symbole et versions avec symbole : x = le pas d'une tesselle (20 unités sur 79 de hauteur de symbole).
+X_SYMBOL = 20 / SH
 
 DOSSIERS = {
     'horizontal': ('1. Horizontal', (3000, 800), 3000),
@@ -44,8 +44,8 @@ def protection(version, svg_text):
         return X_SYMBOL * (200 * SH / SW)
     if version == 'symbole':
         return X_SYMBOL * h
-    # logotype : x = hauteur d'x du nom (0,63 de la capitale), capitale dessinée à 200
-    return 0.63 * 200
+    # logotype : x = hauteur d'x du nom (0,72 de la capitale en Bagel Fat One), capitale dessinée à 200
+    return 0.72 * 200
 
 
 def main():
@@ -76,12 +76,12 @@ def main():
                     f'<style>html,body{{margin:0}}div{{width:{jw}px;height:{jh}px;background:{JPEG_BG[color]};display:grid;place-items:center}}'
                     f'svg{{display:block;width:{w * scale:.2f}px;height:{h * scale:.2f}px}}</style><div>{text}</div>')
                 page.locator('div').screenshot(path=str(base / 'JPEG' / f'rostra_{version}_{color}_{jw}px.jpg'), type='jpeg', quality=92)
-        # Réseaux sociaux : symbole centré, inscrit dans le cercle de recadrage (diamètre utile 62 %).
+        # Réseaux sociaux : symbole centré, inscrit dans le cercle de recadrage.
         social = OUT / '5. Réseaux sociaux'
         social.mkdir(parents=True, exist_ok=True)
-        for name, bg, color in [('fond-travertin', TRAVERTIN, 'couleur'), ('fond-blanc', BLANC, 'couleur'), ('fond-encre', ENCRE, 'negatif'), ('fond-pompeien', POMPEIEN, 'blanc')]:
-            size = 1080; h = size * 0.46; w = h * SW / SH
-            body = f'<rect width="{size}" height="{size}" fill="{bg}"/>' + symbol_group(COLORS[color], (size - w) / 2 + h * 0.02, (size - h) / 2, h)
+        for name, bg, color in [('fond-marbre', MARBRE, 'couleur'), ('fond-blanc', BLANC, 'couleur'), ('fond-nuit', NUIT, 'negatif'), ('fond-rose', ROSE, 'blanc')]:
+            size = 1080; h = size * 0.5; w = h * SW / SH
+            body = f'<rect width="{size}" height="{size}" fill="{bg}"/>' + symbol_group(COLORS[color], (size - w) / 2 + h * 0.02, (size - h) / 2 + h * 0.03, h)
             text = svg(size, size, body)
             page.set_viewport_size({'width': size, 'height': size})
             page.set_content(f'<style>html,body{{margin:0}}svg{{display:block}}</style>{text}')
