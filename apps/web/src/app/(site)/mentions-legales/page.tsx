@@ -9,7 +9,7 @@ export default function LegalNoticePage() {
     <LegalPage title="Mentions légales" updated="20 novembre 2026">
       <h2>Éditeur</h2>
       <p>
-        Le service Posts LinkedIn est édité par SimplX, <Todo>forme juridique, capital social</Todo>, immatriculée au RCS de <Todo>ville</Todo> sous le numéro <Todo>SIREN</Todo>, dont
+        Le service Rostra est édité par SimplX, <Todo>forme juridique, capital social</Todo>, immatriculée au RCS de <Todo>ville</Todo> sous le numéro <Todo>SIREN</Todo>, dont
         le siège est situé <Todo>adresse</Todo>. Numéro de TVA intracommunautaire : <Todo>numéro</Todo>.
       </p>
       <p>

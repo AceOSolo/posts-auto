@@ -10,7 +10,7 @@ export default function TermsOfUsePage() {
     <LegalPage title="Conditions générales d’utilisation" updated="20 novembre 2026">
       <h2>1. Objet</h2>
       <p>
-        Les présentes conditions régissent l’utilisation du service Posts LinkedIn : planification, rédaction assistée par intelligence artificielle, validation et publication de posts
+        Les présentes conditions régissent l’utilisation du service Rostra : planification, rédaction assistée par intelligence artificielle, validation et publication de posts
         sur LinkedIn pour le compte d’une organisation cliente et des personnes qu’elle invite.
       </p>
       <h2>2. Comptes et accès</h2>

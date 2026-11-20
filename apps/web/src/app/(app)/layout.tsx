@@ -1,6 +1,7 @@
 import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, activeAnnouncements, isPlatformAdmin, listMyWorkspaces, listNotifications, mfaStatus, ownedOrganizations, trialBanners } from '@posts-auto/services';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Logo } from '../../components/logo.tsx';
 import { database } from '../../server/context.ts';
 import { currentSession, requireUserId } from '../../server/session.ts';
 import { logout } from '../connexion/actions.ts';
@@ -20,8 +21,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <>
       <header className="topbar">
         <nav aria-label="Navigation principale">
-          <Link href="/" className="brand">
-            Posts LinkedIn
+          <Link href="/" className="brand" aria-label="Rostra, mes posts">
+            <Logo title="Rostra" />
           </Link>
           <Link href="/">Mes posts</Link>
           <Link href="/notifications" aria-label={`Notifications${unread > 0 ? ` : ${unread} non lue${unread > 1 ? 's' : ''}` : ''}`}>

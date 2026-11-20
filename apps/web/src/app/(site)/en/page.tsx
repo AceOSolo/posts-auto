@@ -67,7 +67,11 @@ export default async function EnglishLandingPage({ searchParams }: { searchParam
         </Link>
       </p>
       <div className="hero">
-        <h1>Your LinkedIn posts written by AI, approved by you, published on time.</h1>
+        <div>
+        <p className="eyebrow">LinkedIn posts · SMEs and agencies</p>
+        <h1>
+          Your LinkedIn posts written by AI, <em>approved by you</em>, published on time.
+        </h1>
         <p className="lead">
           Every week, the AI writes the posts of your executives, experts and company pages, in each person’s voice. Every holder approves in seconds on their phone; publishing is
           automatic.
@@ -81,6 +85,27 @@ export default async function EnglishLandingPage({ searchParams }: { searchParam
           </a>
         </div>
         <p className="hint">No credit card. 3 LinkedIn accounts and 10 posts during the trial. The application is in French.</p>
+        </div>
+        {/* Illustration: a post offered to its holder. Decorative, hidden from screen readers. */}
+        <div className="hero-card" aria-hidden="true">
+          <header>
+            <span className="li-avatar">CM</span>
+            <span className="who">
+              Claire M.
+              <small>Managing director · Tuesday 8:30</small>
+            </span>
+            <span className="badge status-a_valider">To approve</span>
+          </header>
+          <div className="lines">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="card-actions">
+            <span className="ok">Approve</span>
+            <span>Edit</span>
+          </div>
+        </div>
       </div>
 
       <section aria-labelledby="how">

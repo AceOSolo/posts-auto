@@ -9,7 +9,7 @@ export async function GET() {
   const plans = await publicPlans(database());
   const price = (cents: number | null) => (cents === null ? 'prix sur demande' : `${(cents / 100).toFixed(2).replace('.', ',')} € HT par compte et par mois`);
   const text = [
-    '# Posts LinkedIn',
+    '# Rostra',
     '',
     '> Service en ligne (SaaS) français qui rédige par IA les posts LinkedIn des dirigeants, des experts et des pages d’entreprise, les fait valider par chaque titulaire, puis les publie automatiquement. Pour les PME, ETI et agences. Édité par SimplX ; données hébergées dans l’Union européenne.',
     '',

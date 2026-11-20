@@ -90,7 +90,7 @@ describe('double authentification (SEC-04)', () => {
     expect(session?.mfaPending).toBe(false);
 
     const { secret, uri } = await startTotpSetup(db, cipher, userId, NOW);
-    expect(uri).toMatch(/^otpauth:\/\/totp\/Posts%20LinkedIn%3Amfa-user%40exemple\.fr\?secret=/);
+    expect(uri).toMatch(/^otpauth:\/\/totp\/Rostra%3Amfa-user%40exemple\.fr\?secret=/);
     expect((await pendingTotpSetup(db, cipher, userId))?.secret).toBe(secret);
     await expect(confirmTotpSetup(db, cipher, userId, session?.sessionId as string, '000000', NOW)).rejects.toMatchObject({ code: 'code_faux' });
     const recovery = await confirmTotpSetup(db, cipher, userId, session?.sessionId as string, totpCode(secret, NOW), NOW);

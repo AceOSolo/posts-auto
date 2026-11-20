@@ -61,7 +61,7 @@ describe('envoi par Brevo', () => {
     const calls: { url: string; init: RequestInit }[] = [];
     const mailer = new BrevoMailer({
       apiKey: 'xkeysib-test',
-      sender: { email: 'notifications@simplx.example', name: 'Posts LinkedIn' },
+      sender: { email: 'notifications@simplx.example', name: 'Rostra' },
       fetch: (async (url: string, init: RequestInit) => {
         calls.push({ url, init });
         return Response.json({ messageId: '<1@brevo>' }, { status: 201 });
@@ -71,7 +71,7 @@ describe('envoi par Brevo', () => {
     expect(calls[0]?.url).toBe('https://api.brevo.com/v3/smtp/email');
     expect((calls[0]?.init.headers as Record<string, string>)['api-key']).toBe('xkeysib-test');
     expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
-      sender: { email: 'notifications@simplx.example', name: 'Posts LinkedIn' },
+      sender: { email: 'notifications@simplx.example', name: 'Rostra' },
       to: [{ email: 'jp@exemple.test', name: 'JP' }],
       subject: 'Objet',
       textContent: 'Texte',

@@ -88,5 +88,5 @@ export function mailerFromEnv(env: Record<string, string | undefined> = process.
   const apiKey = env['BREVO_API_KEY'];
   const from = env['MAIL_FROM'];
   if (!apiKey || !from) return new ConsoleMailer();
-  return new BrevoMailer({ apiKey, sender: { email: from, name: env['MAIL_FROM_NAME'] ?? 'Posts LinkedIn' } });
+  return new BrevoMailer({ apiKey, sender: { email: from, name: env['MAIL_FROM_NAME'] ?? 'Rostra' } });
 }

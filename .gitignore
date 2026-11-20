@@ -9,6 +9,9 @@ next-env.d.ts
 # Médias stockés en local pendant le développement
 .media/
 
+# Fichiers produits par les outils de la marque (régénérables, déposés sur le Drive)
+docs/marque/sortie/
+
 # Secrets et environnements locaux
 .env
 .env.*
@@ -23,3 +26,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Caches Python des outils de la marque
+__pycache__/

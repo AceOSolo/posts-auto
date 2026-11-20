@@ -302,7 +302,7 @@ export async function renderMonthlyReportPdf(data: MonthlyReportData): Promise<U
   const doc = await PDFDocument.create();
   const month = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', month: 'long', year: 'numeric' }).format(data.monthStart);
   doc.setTitle(`Rapport LinkedIn ${month} - ${data.workspaceName}`);
-  doc.setProducer('Posts LinkedIn');
+  doc.setProducer('Rostra');
   doc.setCreationDate(new Date(data.monthEnd.getTime() - 1));
   const w = new Writer(doc, await doc.embedFont(StandardFonts.Helvetica), await doc.embedFont(StandardFonts.HelveticaBold));
   const primary: [number, number, number] = [0.06, 0.24, 0.37];

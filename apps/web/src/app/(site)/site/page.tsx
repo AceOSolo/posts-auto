@@ -12,11 +12,11 @@ const DESCRIPTION =
   'Planning éditorial, rédaction des posts LinkedIn par l’IA dans votre ton, validation en un clic par chaque titulaire, publication automatique. Pour les PME, ETI et agences.';
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} · Posts LinkedIn` },
+  title: { absolute: `Rostra · ${TITLE}` },
   description: DESCRIPTION,
   robots: { index: true, follow: true },
   alternates: { canonical: '/' },
-  openGraph: { title: TITLE, description: DESCRIPTION, type: 'website', locale: 'fr_FR', siteName: 'Posts LinkedIn' },
+  openGraph: { title: TITLE, description: DESCRIPTION, type: 'website', locale: 'fr_FR', siteName: 'Rostra' },
 };
 
 const FAQ: readonly { q: string; a: string }[] = [
@@ -76,7 +76,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
     {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
-      name: 'Posts LinkedIn',
+      name: 'Rostra',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       description: DESCRIPTION,
@@ -95,7 +95,11 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: données structurées produites ici, sans contenu saisi. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <div className="hero">
-        <h1>Vos posts LinkedIn rédigés par l’IA, validés par vous, publiés à l’heure.</h1>
+        <div>
+        <p className="eyebrow">Posts LinkedIn · PME, ETI et agences</p>
+        <h1>
+          Vos posts LinkedIn rédigés par l’IA, <em>validés par vous</em>, publiés à l’heure.
+        </h1>
         <p className="lead">
           Chaque semaine, l’IA rédige les posts de vos dirigeants, de vos experts et de vos pages d’entreprise, dans le ton de chacun. Chaque titulaire valide en quelques secondes sur son
           téléphone ; la publication est automatique.
@@ -109,6 +113,27 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           </a>
         </div>
         <p className="hint">Sans carte bancaire. 3 comptes LinkedIn et 10 posts pendant l’essai.</p>
+        </div>
+        {/* Illustration : un post proposé à son titulaire. Décorative, ignorée des lecteurs d'écran. */}
+        <div className="hero-card" aria-hidden="true">
+          <header>
+            <span className="li-avatar">CM</span>
+            <span className="who">
+              Claire M.
+              <small>Directrice générale · mardi 8 h 30</small>
+            </span>
+            <span className="badge status-a_valider">À valider</span>
+          </header>
+          <div className="lines">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="card-actions">
+            <span className="ok">Valider</span>
+            <span>Corriger</span>
+          </div>
+        </div>
       </div>
 
       <section id="fonctionnement" aria-labelledby="fonctionnement-titre">

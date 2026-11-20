@@ -85,7 +85,7 @@ try {
   check('simulateur de prix : 6 comptes (SIT-03)', simulated.includes('Pour 6 comptes'));
   const sitemapXml = await (await get('/sitemap.xml')).text();
   const llms = await get('/llms.txt');
-  check('sitemap, robots et llms.txt (SIT-06)', sitemapXml.includes('/mentions-legales') && (await (await get('/robots.txt')).text()).includes('Disallow: /api/') && (await llms.text()).startsWith('# Posts LinkedIn'));
+  check('sitemap, robots et llms.txt (SIT-06)', sitemapXml.includes('/mentions-legales') && (await (await get('/robots.txt')).text()).includes('Disallow: /api/') && (await llms.text()).startsWith('# Rostra'));
   const legal = await Promise.all(['/mentions-legales', '/cgu', '/cgv', '/confidentialite', '/cookies', '/sous-traitants'].map(async (path) => (await get(path)).status));
   check('pages légales (SIT-04)', legal.every((s) => s === 200), legal.join(','));
   const demoEmail = `prospect-${Date.now()}@demo.example.test`;

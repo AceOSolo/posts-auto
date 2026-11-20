@@ -45,13 +45,13 @@ function compose(
   const greeting = ctx.recipientName ? `Bonjour ${ctx.recipientName},` : 'Bonjour,';
   const text = [greeting, '', ...paragraphs.flatMap((p) => [p, '']), ...actions.flatMap((a) => [`${a.label} : ${a.url}`, '']), ...(footer ? ['—', footer] : [])].join('\n');
   const button = (a: MailAction, primary: boolean) =>
-    `<a href="${escapeHtml(a.url)}" style="display:inline-block;margin:0 8px 8px 0;background:${primary ? '#0f5b8c' : '#ffffff'};color:${primary ? '#ffffff' : '#0f5b8c'};border:2px solid #0f5b8c;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${escapeHtml(a.label)}</a>`;
+    `<a href="${escapeHtml(a.url)}" style="display:inline-block;margin:0 8px 8px 0;background:${primary ? '#a8372a' : '#ffffff'};color:${primary ? '#ffffff' : '#a8372a'};border:2px solid #a8372a;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${escapeHtml(a.label)}</a>`;
   const html = [
-    '<!doctype html><html lang="fr"><body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#17212b;line-height:1.5;max-width:560px;margin:0 auto;padding:16px">',
+    '<!doctype html><html lang="fr"><body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#221c1a;line-height:1.5;max-width:560px;margin:0 auto;padding:16px">',
     `<p>${escapeHtml(greeting)}</p>`,
     ...paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`),
     actions.length > 0 ? `<p>${actions.map((a, index) => button(a, index === 0)).join('')}</p>` : '',
-    footer ? `<hr style="border:none;border-top:1px solid #d5dde4"><p style="font-size:13px;color:#566573">${escapeHtml(footer)}</p>` : '',
+    footer ? `<hr style="border:none;border-top:1px solid #dcd0be"><p style="font-size:13px;color:#5c524c">${escapeHtml(footer)}</p>` : '',
     '</body></html>',
   ].join('');
   return { subject, text, html };

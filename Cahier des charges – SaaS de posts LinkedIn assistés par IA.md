@@ -761,7 +761,7 @@ Code source (dépôt Git de SimplX), schéma de base et migrations, documentatio
 
 ### 12.1 Noms proposés
 
-Disponibilité des noms de domaine et des marques (INPI, EUIPO) à vérifier avant tout choix.
+**Décision (20/11/2026) : le produit s'appelle Rostra**, signature « Prenez la parole. » (voir docs/decisions/0009-marque-rostra.md et la charte graphique). Les trois noms ci-dessous ont été écartés : Postop est déjà une application médicale, Cadence se heurte à Cadence Design Systems, Valido a été jugé trop peu singulier. Disponibilité de la marque (INPI, EUIPO) et du nom de domaine de Rostra à vérifier avant tout usage public.
 
 | Nom | Idée | Points d'attention |
 | --- | --- | --- |
@@ -792,7 +792,7 @@ Disponibilité des noms de domaine et des marques (INPI, EUIPO) à vérifier ava
 
 1. Prix des formules Essentiel / Pro / Agence et quotas d'images : à fixer après la mesure du coût IA réel pendant le pilote (GEN-11).
 2. Faut-il conserver un mode « Make » pour les clients qui en ont déjà un, ou tout passer par l'API directe ?
-3. Choix définitif du nom et dépôt de marque (le nom de l'application LinkedIn ne peut contenir ni « Linked » ni « In »).
+3. Dépôt de la marque Rostra, après vérification de sa disponibilité (INPI, EUIPO) et de celle du nom de domaine. Le nom est choisi (20/11/2026) ; il ne contient ni « Linked » ni « In ».
 4. PAM et planning intégré : le PAM reste la source de vérité de Secutop pendant les incréments 1a et 1b. Le planning intégré le remplace-t-il à la fin de 1b (avec import), ou faut-il la synchronisation bidirectionnelle (PLA-06) dès le pilote ?
 5. Hébergeur (France ou UE) : à proposer par SimplX au lot 0.
 6. Taille de SimplX au sens de la réforme de la facture électronique (PME ou ETI), qui fixe l'échéance d'émission (FAC-01).

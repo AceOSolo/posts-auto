@@ -25,7 +25,7 @@ export const MFA_GRACE_DAYS = 7;
 export const MFA_ENFORCEMENT_START = new Date('2026-11-20T00:00:00Z');
 export const MFA_MAX_FAILURES = 5;
 export const RECOVERY_CODE_COUNT = 10;
-const ISSUER = 'Posts LinkedIn';
+const ISSUER = 'Rostra';
 
 const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
