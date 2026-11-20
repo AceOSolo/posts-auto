@@ -2,6 +2,7 @@ export * from './access.ts';
 export * from './accounts/accounts.ts';
 export * from './accounts/pages.ts';
 export * from './auth/auth.ts';
+export * from './auth/sso.ts';
 export * from './auth/totp.ts';
 export * from './admin/announcements.ts';
 export * from './admin/gallery.ts';

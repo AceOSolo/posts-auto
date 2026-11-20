@@ -2,10 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Flash } from '../../components/flash.tsx';
+import { ssoProviders } from '../../server/context.ts';
 import { currentUserId } from '../../server/session.ts';
 import { requestLink } from './actions.ts';
 
 export const metadata: Metadata = { title: 'Connexion' };
+// Les fournisseurs de connexion proposés dépendent de la configuration du serveur.
+export const dynamic = 'force-dynamic';
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if ((await currentUserId()) !== null) redirect('/');
@@ -22,6 +25,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           Recevoir mon lien
         </button>
       </form>
+      {/* ONB-01 : connexion avec Google ou Microsoft, pour un compte existant. */}
+      {ssoProviders().length > 0 && (
+        <div className="stack">
+          <p className="muted">ou</p>
+          {ssoProviders().map((p) => (
+            <a key={p.key} href={`/connexion/sso/${p.key}`} className="button">
+              {`Se connecter avec ${p.label}`}
+            </a>
+          ))}
+          <p className="hint">Avec l’adresse professionnelle de votre compte. Une première connexion se fait par le lien envoyé par e-mail ou par l’invitation reçue.</p>
+        </div>
+      )}
       <p className="hint">
         Pas encore de compte ? <Link href="/inscription">Créer un compte</Link> (essai gratuit, sans carte bancaire).
       </p>

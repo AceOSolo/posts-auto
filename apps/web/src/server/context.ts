@@ -7,7 +7,7 @@ import { type TextModel, modelFromEnv } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, type Database, createDatabase } from '@posts-auto/db';
 import { FakeLinkedInOAuth, FakeLinkedInPages, type LinkedInOAuth, LinkedInOAuthClient, type LinkedInPages, LinkedInPagesClient } from '@posts-auto/linkedin';
 import { FileMediaStore, type MediaStore, TokenCipher } from '@posts-auto/worker';
-import { type BillingProvider, FakeBilling, type Mailer, StripeBilling, mailerFromEnv } from '@posts-auto/services';
+import { type BillingProvider, FakeBilling, FakeSsoProvider, type Mailer, type SsoProvider, StripeBilling, googleProvider, mailerFromEnv, microsoftProvider } from '@posts-auto/services';
 
 interface ServerResources {
   db?: Database;
@@ -66,6 +66,19 @@ export function billing(): BillingProvider | null {
 
 export function billingSimulated(): boolean {
   return process.env['BILLING_MODE'] === 'fake';
+}
+
+/**
+ * ONB-01 : connexion avec Google (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) ou Microsoft
+ * (MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET), ou simulée (SSO_MODE=fake).
+ */
+export function ssoProviders(): SsoProvider[] {
+  if (process.env['SSO_MODE'] === 'fake') return [new FakeSsoProvider('google', appUrl()), new FakeSsoProvider('microsoft', appUrl())];
+  const providers: SsoProvider[] = [];
+  const env = process.env;
+  if (env['GOOGLE_CLIENT_ID'] && env['GOOGLE_CLIENT_SECRET']) providers.push(googleProvider(env['GOOGLE_CLIENT_ID'], env['GOOGLE_CLIENT_SECRET']));
+  if (env['MICROSOFT_CLIENT_ID'] && env['MICROSOFT_CLIENT_SECRET']) providers.push(microsoftProvider(env['MICROSOFT_CLIENT_ID'], env['MICROSOFT_CLIENT_SECRET']));
+  return providers;
 }
 
 /** Chiffrement des jetons (SEC-02) ; null si les clés ne sont pas configurées. */

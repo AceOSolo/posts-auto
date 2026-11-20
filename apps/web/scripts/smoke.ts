@@ -702,6 +702,24 @@ try {
     `HTTP ${toManual.status}`,
   );
 
+  // ONB-01 : connexion avec Google ou Microsoft (serveur lancé avec SSO_MODE=fake).
+  check('page de connexion : Google et Microsoft proposés', (await (await get('/connexion')).text()).includes('Se connecter avec Google'));
+  const ssoStart = await get('/connexion/sso/google');
+  const ssoCookie = /sso=([^;]+)/.exec(ssoStart.headers.get('set-cookie') ?? '')?.[1] ?? '';
+  const ssoState = new URL(ssoStart.headers.get('location') ?? `${BASE}/`).searchParams.get('state') ?? '';
+  const ssoBack = (code: string, state: string) => fetch(`${BASE}/connexion/sso/google/retour?code=${encodeURIComponent(code)}&state=${state}`, { redirect: 'manual', headers: { cookie: `sso=${ssoCookie}` } });
+  const forgedSso = await ssoBack('fake-jp@demo.example.test', 'faux');
+  check('SSO : état falsifié refusé', (forgedSso.headers.get('location') ?? '').includes('sso-expire'), `HTTP ${forgedSso.status}`);
+  const ssoDone = await ssoBack('fake-jp@demo.example.test', ssoState);
+  const ssoSession = /(?:__Host-)?session=([^;]+)/.exec(ssoDone.headers.get('set-cookie') ?? '')?.[1] ?? '';
+  check('SSO : compte existant connecté (PKCE et état vérifiés)', ssoSession !== '' && (await get('/', ssoSession)).status === 200, `HTTP ${ssoDone.status} → ${ssoDone.headers.get('location')}`);
+  const ssoStart2 = await get('/connexion/sso/microsoft');
+  const unknown = await fetch(
+    `${BASE}/connexion/sso/microsoft/retour?code=fake-personne@inconnue.example.test&state=${new URL(ssoStart2.headers.get('location') ?? `${BASE}/`).searchParams.get('state') ?? ''}`,
+    { redirect: 'manual', headers: { cookie: `sso=${/sso=([^;]+)/.exec(ssoStart2.headers.get('set-cookie') ?? '')?.[1] ?? ''}` } },
+  );
+  check('SSO : adresse sans compte refusée (pas d’inscription par ce biais)', (unknown.headers.get('location') ?? '').includes('sso-compte-inconnu'), `HTTP ${unknown.status}`);
+
   // ADM-01 à ADM-06 : back-office de l'éditeur.
   check('back-office introuvable pour un client', (await get('/admin', alexis)).status === 404);
   const editorUser = await asSystem(db, async (trx) => {

@@ -20,6 +20,17 @@ Périmètre : lot 2, exigences SEC-04 (double authentification) et ONB-01b (conn
 - **Activation** : les autres sessions ouvertes de la personne demandent le code à la visite suivante. La session où l'activation a été faite reste ouverte.
 - **Vérification** : 765 tests automatiques, dont les vecteurs de la RFC 6238, et 123 vérifications du test de fumée. Celui-ci parcourt l'activation, une nouvelle connexion, un code faux, puis le bon code.
 
-## Reste
+## ONB-01 : connexion avec Google ou Microsoft (fait, 20 novembre 2026)
 
-- **ONB-01b** : connexion avec Google ou Microsoft. Elle demande des applications OAuth chez Google et chez Microsoft, à créer par SimplX.
+- **Où** : boutons « Se connecter avec Google » et « Se connecter avec Microsoft » sur la page de connexion, à côté du lien par e-mail.
+- **Protocole** : OpenID Connect, code d'autorisation avec PKCE et « state » dans un cookie de 10 minutes. Le jeton d'identité est vérifié : application destinataire, émetteur et expiration.
+- **Connexion seulement, pas d'inscription par ce biais** : l'adresse doit être celle d'un compte existant, et **vérifiée** par le fournisseur.
+  - Google : `email_verified`.
+  - Microsoft : `xms_edov`, qui confirme que le domaine est vérifié par le client. Une adresse Microsoft non garantie renvoie au lien par e-mail.
+- **Double authentification** : demandée ensuite comme après un lien.
+- **Mode simulé** : `SSO_MODE=fake` remplace les fournisseurs par une page de l'application (développement, test de fumée).
+
+**À faire par SimplX** :
+
+- **Google** : créer le client OAuth « Application Web » dans Google Cloud, avec l'adresse de retour `https://<domaine>/connexion/sso/google/retour`, puis définir `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`.
+- **Microsoft** : inscrire l'application dans Entra ID (comptes de toute organisation), avec l'adresse de retour `https://<domaine>/connexion/sso/microsoft/retour`. Ajouter les revendications facultatives `email` et `xms_edov` au jeton d'identité, puis définir `MICROSOFT_CLIENT_ID` et `MICROSOFT_CLIENT_SECRET`.
