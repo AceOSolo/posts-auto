@@ -50,14 +50,15 @@ export interface MonthlyReportData {
   readonly insights: readonly Insight[];
 }
 
+/** Origine des sujets, avec sa préposition (« tirés du planning », « des événements »…). */
 const ORIGINS: Record<string, string> = {
-  planning: 'le planning',
-  event: 'les événements',
-  team_idea: 'les idées de l’équipe',
-  ai_idea: 'les idées de l’IA',
-  ai_reserve: 'la réserve de sujets',
-  request: 'les demandes de post',
-  external_source: 'la veille',
+  planning: 'du planning',
+  event: 'des événements',
+  team_idea: 'des idées de l’équipe',
+  ai_idea: 'des idées de l’IA',
+  ai_reserve: 'de la réserve de sujets',
+  request: 'des demandes de post',
+  external_source: 'de la veille',
 };
 
 /** Premier jour du mois (heure de Paris) contenant `at`, et premier jour du mois suivant. */
@@ -125,9 +126,9 @@ export function computeInsights(data: Pick<MonthlyReportData, 'posts' | 'refusal
     const [best, worst] = [origins[0], origins[origins.length - 1]] as [[string, MonthlyPostRow[]], [string, MonthlyPostRow[]]];
     if (average(best[1]) >= 1.3 * Math.max(0.5, average(worst[1]))) {
       insights.push({
-        title: `Sujets : ceux tirés de ${ORIGINS[best[0]] ?? best[0]} marchent le mieux`,
-        detail: `Engagement moyen ${Math.round(average(best[1]))} contre ${Math.round(average(worst[1]))} pour ${ORIGINS[worst[0]] ?? worst[0]}.`,
-        guidance: `Les sujets tirés de ${ORIGINS[best[0]] ?? best[0]} ont le mieux marché le mois dernier : leur donner la priorité quand le choix est possible.`,
+        title: `Sujets : ceux tirés ${ORIGINS[best[0]] ?? best[0]} marchent le mieux`,
+        detail: `Engagement moyen ${Math.round(average(best[1]))} contre ${Math.round(average(worst[1]))} pour ceux tirés ${ORIGINS[worst[0]] ?? worst[0]}.`,
+        guidance: `Les sujets tirés ${ORIGINS[best[0]] ?? best[0]} ont le mieux marché le mois dernier : leur donner la priorité quand le choix est possible.`,
         weight: average(best[1]) / Math.max(0.5, average(worst[1])),
       });
     }
