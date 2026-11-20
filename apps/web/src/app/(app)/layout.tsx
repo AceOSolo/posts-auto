@@ -1,4 +1,4 @@
-import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, listMyWorkspaces, listNotifications, ownedOrganizations, trialBanners } from '@posts-auto/services';
+import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, listMyWorkspaces, listNotifications, mfaStatus, ownedOrganizations, trialBanners } from '@posts-auto/services';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { database } from '../../server/context.ts';
@@ -12,6 +12,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const { unread } = await listNotifications(database(), userId, 1);
   const trials = await trialBanners(database(), userId, new Date());
   const owned = await ownedOrganizations(database(), userId);
+  const mfa = await mfaStatus(database(), userId, new Date());
   return (
     <>
       <header className="topbar">
@@ -68,6 +69,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           )}
         </p>
       ))}
+      {/* SEC-04 : délai de mise en place de la double authentification. */}
+      {mfa.deadline !== null && !mfa.overdue && (
+        <p className="trial-banner" role="status">
+          <strong>Double authentification</strong> : obligatoire pour votre rôle, à activer avant le{' '}
+          {new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'long' }).format(mfa.deadline)} · <Link href="/securite">L’activer</Link>
+        </p>
+      )}
       <main>{children}</main>
     </>
   );

@@ -297,3 +297,7 @@ table.tracking { border-collapse: collapse; width: 100%; font-size: 0.85rem; mar
 table.tracking caption { text-align: left; font-weight: 600; padding: 4px 0; }
 table.tracking th, table.tracking td { border-bottom: 1px solid var(--border); padding: 4px 6px; text-align: right; }
 table.tracking th[scope='row'], table.tracking thead th:first-child { text-align: left; }
+
+/* Double authentification (SEC-04). */
+.qr { width: 200px; max-width: 100%; margin: 8px 0; background: #fff; padding: 4px; border-radius: var(--radius); }
+.qr svg { display: block; width: 100%; height: auto; }

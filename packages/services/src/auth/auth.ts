@@ -14,6 +14,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { addMinutes } from '@posts-auto/core';
 import { type Database, type Tx, asSystem } from '@posts-auto/db';
+import { sql } from 'kysely';
 
 export const LOGIN_LINK_TTL_MINUTES = 15;
 export const LOGIN_LINKS_PER_WINDOW = 5;
@@ -129,6 +130,8 @@ export interface ActiveSession {
   readonly userId: string;
   readonly sessionId: string;
   readonly expiresAt: Date;
+  /** SEC-04 : la personne a activé la double authentification et n'a pas encore saisi son code. */
+  readonly mfaPending: boolean;
 }
 
 /** Identifie la personne derrière un cookie de session, et prolonge la session (30 jours glissants). */
@@ -138,7 +141,14 @@ export async function resolveSession(db: Database, sessionToken: string, now: Da
   return asSystem(db, async (trx) => {
     const session = await trx
       .selectFrom('sessions')
-      .select(['id', 'user_id', 'token_hash', 'expires_at', 'last_seen_at'])
+      .select([
+        'id',
+        'user_id',
+        'token_hash',
+        'expires_at',
+        'last_seen_at',
+        sql<boolean>`mfa_verified_at is null and exists (select 1 from user_totp t where t.user_id = sessions.user_id and t.confirmed_at is not null)`.as('mfa_pending'),
+      ])
       .where('token_hash', '=', hash)
       .where('revoked_at', 'is', null)
       .where('expires_at', '>', now)
@@ -151,7 +161,7 @@ export async function resolveSession(db: Database, sessionToken: string, now: Da
       expiresAt = addMinutes(now, SESSION_TTL_DAYS * 24 * 60);
       await trx.updateTable('sessions').set({ last_seen_at: now, expires_at: expiresAt }).where('id', '=', session.id).execute();
     }
-    return { userId: session.user_id, sessionId: session.id, expiresAt };
+    return { userId: session.user_id, sessionId: session.id, expiresAt, mfaPending: session.mfa_pending };
   });
 }
 

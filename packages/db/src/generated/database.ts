@@ -544,6 +544,8 @@ export interface Sessions {
   id: Generated<string>;
   ip: string | null;
   last_seen_at: Generated<Timestamp>;
+  mfa_failures: Generated<number>;
+  mfa_verified_at: Timestamp | null;
   revoked_at: Timestamp | null;
   token_hash: string;
   user_agent: string | null;
@@ -656,6 +658,12 @@ export interface Templates {
   workspace_id: string;
 }
 
+export interface TotpRecoveryCodes {
+  code_hash: string;
+  used_at: Timestamp | null;
+  user_id: string;
+}
+
 export interface UsageAlerts {
   kind: string;
   period_start: Timestamp;
@@ -671,6 +679,14 @@ export interface Users {
   last_login_at: Timestamp | null;
   locale: Generated<string>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface UserTotp {
+  confirmed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  last_step: Generated<Int8>;
+  secret_encrypted: Buffer;
+  user_id: string;
 }
 
 export interface VisualTasks {
@@ -766,7 +782,9 @@ export interface DB {
   subject_bank: SubjectBank;
   subscriptions: Subscriptions;
   templates: Templates;
+  totp_recovery_codes: TotpRecoveryCodes;
   usage_alerts: UsageAlerts;
+  user_totp: UserTotp;
   users: Users;
   visual_tasks: VisualTasks;
   workspace_members: WorkspaceMembers;

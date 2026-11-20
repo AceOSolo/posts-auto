@@ -60,6 +60,8 @@ await asSystem(db, async (trx) => {
   await trx.deleteFrom('users').where('email', '=', 'nouvelle.recrue@demo.example.test').execute();
   // Remet à zéro la limite de 5 liens de connexion par quart d'heure (SEC-06) des comptes de démonstration.
   await trx.deleteFrom('login_tokens').where('email', 'like', '%@demo.example.test').execute();
+  // Double authentification activée par le test de fumée (SEC-04) : retirée.
+  await trx.deleteFrom('user_totp').where('user_id', 'in', (eb) => eb.selectFrom('users').select('id').where('email', 'like', '%@demo.example.test')).execute();
 
   const users: Record<string, string> = {};
   for (const [key, fullName] of [
@@ -71,7 +73,9 @@ await asSystem(db, async (trx) => {
     const row = await trx
       .insertInto('users')
       .values({ email: `${key}@demo.example.test`, full_name: fullName })
-      .onConflict((oc) => oc.column('email').doUpdateSet({ full_name: fullName }))
+      // Démonstration : comptes « récents », donc dans le délai de mise en place de la double
+      // authentification (SEC-04) ; elle reste à essayer depuis « Mon compte ».
+      .onConflict((oc) => oc.column('email').doUpdateSet({ full_name: fullName, created_at: new Date() }))
       .returning('id')
       .executeTakeFirstOrThrow();
     users[key] = row.id;

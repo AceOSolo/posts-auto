@@ -39,6 +39,9 @@ export default async function MePage({ searchParams }: { searchParams: Promise<R
       </section>
       <section className="card">
         <h2>Sécurité</h2>
+        <p>
+          <Link href="/securite">Double authentification</Link> : un code demandé par votre téléphone à chaque connexion, en plus du lien reçu par e-mail.
+        </p>
         <p>Vous avez perdu un téléphone, ou vous vous êtes connecté sur un ordinateur partagé ?</p>
         <form action={signOutEverywhere}>
           <button type="submit">Déconnecter tous mes appareils</button>

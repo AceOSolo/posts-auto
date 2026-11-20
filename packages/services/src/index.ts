@@ -2,6 +2,7 @@ export * from './access.ts';
 export * from './accounts/accounts.ts';
 export * from './accounts/pages.ts';
 export * from './auth/auth.ts';
+export * from './auth/totp.ts';
 export * from './errors.ts';
 export * from './exchange/api-keys.ts';
 export * from './exchange/exchange.ts';

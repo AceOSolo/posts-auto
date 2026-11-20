@@ -12,7 +12,7 @@ import { FileMediaStore, runGenerationTick, runVisualTick } from '@posts-auto/wo
 import { createHmac } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { confirmSignup, consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink, requestSignup } from '@posts-auto/services';
+import { confirmSignup, consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink, requestSignup, totpCode } from '@posts-auto/services';
 
 const BASE = process.env['APP_URL'] ?? 'http://localhost:3000';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
@@ -648,6 +648,28 @@ try {
   } else {
     check('inscription : jeton de confirmation obtenu', false, signup.kind);
   }
+
+  // SEC-04 : double authentification.
+  check('administrateur : bandeau « double authentification à activer avant le… »', (await (await get('/', alexis)).text()).includes('obligatoire pour votre rôle'));
+  const started = await submitForm('/securite', claire, 'Activer la double authentification', {});
+  const setupHtml = (await (await get('/securite', claire)).text()).replace(/<!-- -->/g, '');
+  const totpSecret = /data-secret="([A-Z2-7]+)"/.exec(setupHtml)?.[1] ?? '';
+  check('mise en place : code QR et clé affichés', (started.headers.get('location') ?? '').includes('/securite') && setupHtml.includes('<svg') && totpSecret.length === 32, `HTTP ${started.status}`);
+  const confirmedMfa = await submitForm('/securite', claire, '>Confirmer<', { code: totpCode(totpSecret, new Date()) });
+  check(
+    'premier code : double authentification activée, codes de secours remis',
+    (confirmedMfa.headers.get('location') ?? '').includes('mfa-activee') && (confirmedMfa.headers.get('set-cookie') ?? '').includes('codes-secours='),
+    `HTTP ${confirmedMfa.status}`,
+  );
+  const claireAgain = await sessionFor('claire@demo.example.test');
+  const askedCode = await get('/', claireAgain);
+  check('nouvelle connexion : le code est demandé avant tout accès', askedCode.status === 307 && (askedCode.headers.get('location') ?? '').includes('/connexion/code'), `HTTP ${askedCode.status}`);
+  check('nouvelle connexion : rien d’accessible sans le code', (await get(`/posts/${withPhotos.id}`, claireAgain)).status === 307 && (await get('/moi/export', claireAgain)).status !== 200);
+  const wrongCode = await submitForm('/connexion/code', claireAgain, 'Vérifier', { code: '000000' });
+  check('code faux refusé', (wrongCode.headers.get('location') ?? '').includes('code_faux'), `HTTP ${wrongCode.status}`);
+  // Code du pas suivant (tolérance d'un pas) : celui du pas courant a déjà servi.
+  const rightCode = await submitForm('/connexion/code', claireAgain, 'Vérifier', { code: totpCode(totpSecret, new Date(Date.now() + 30_000)) });
+  check('bon code : accès ouvert', /\/$/.test(rightCode.headers.get('location') ?? '') && (await get('/', claireAgain)).status === 200, `HTTP ${rightCode.status} → ${rightCode.headers.get('location')}`);
 
   // REC-01 : une personne d'un autre client ne voit ni le post ni l'image.
   await asSystem(db, (trx) =>
