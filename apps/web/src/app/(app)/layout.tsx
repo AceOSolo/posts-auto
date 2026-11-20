@@ -1,4 +1,4 @@
-import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, listMyWorkspaces, listNotifications, trialBanners } from '@posts-auto/services';
+import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, listMyWorkspaces, listNotifications, ownedOrganizations, trialBanners } from '@posts-auto/services';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { database } from '../../server/context.ts';
@@ -11,6 +11,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const workspaces = await listMyWorkspaces(database(), userId);
   const { unread } = await listNotifications(database(), userId, 1);
   const trials = await trialBanners(database(), userId, new Date());
+  const owned = await ownedOrganizations(database(), userId);
   return (
     <>
       <header className="topbar">
@@ -37,6 +38,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <span className="nav-group">
+          {owned.map((org) => (
+            <Link key={org.orgId} href={`/espaces/${org.workspaceId}`}>
+              {org.kind === 'agence' ? 'Clients' : 'Espaces'}
+            </Link>
+          ))}
           <Link href="/moi">Mon compte</Link>
           <form action={logout}>
             <button type="submit" className="link">

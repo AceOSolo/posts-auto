@@ -198,6 +198,10 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   pack_indisponible: { tone: 'error', text: 'Ce pack n’est pas encore proposé.' },
   choix_inconnu: { tone: 'error', text: 'Choix inconnu.' },
   simulation_invalide: { tone: 'error', text: 'Paiement simulé incomplet.' },
+  'espace-cree': { tone: 'success', text: 'Espace créé. Suivez les étapes ci-dessous pour le préparer.' },
+  nom_espace_invalide: { tone: 'error', text: 'Donnez un nom à l’espace (80 caractères au plus).' },
+  espace_existe: { tone: 'error', text: 'Un espace porte déjà ce nom.' },
+  limite_espaces: { tone: 'error', text: 'Votre formule ne permet pas d’espace supplémentaire.' },
 };
 
 export function messageFor(code: string | string[] | undefined): { tone: 'success' | 'error'; text: string } | null {

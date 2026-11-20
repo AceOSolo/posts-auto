@@ -12,7 +12,7 @@ import { FileMediaStore, runGenerationTick, runVisualTick } from '@posts-auto/wo
 import { createHmac } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink, requestSignup } from '@posts-auto/services';
+import { confirmSignup, consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink, requestSignup } from '@posts-auto/services';
 
 const BASE = process.env['APP_URL'] ?? 'http://localhost:3000';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
@@ -611,6 +611,25 @@ try {
     const usageCsv = await get(`${billingPath}/export`, newSession);
     check('export de l’usage par espace et par mois (FAC-07)', usageCsv.headers.get('content-type')?.startsWith('text/csv') === true && (await usageCsv.text()).includes('"Espace";"Mois"'), `HTTP ${usageCsv.status}`);
     check('abonnement d’un autre client → 404', (await get(`/abonnement/${newWorkspace}`, alexis)).status === 404 && (await get(`${billingPath}/export`, alexis)).status === 404);
+
+    const spacesHtml = (await (await get(`/espaces/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('entreprise en formule Essentiel : un seul espace', spacesHtml.includes('Votre formule permet 1 espace') && !spacesHtml.includes('Créer l’espace'));
+
+    // Agence : un espace par client.
+    const agencyEmail = `agence-${Date.now()}@demo.example.test`;
+    const agencySignup = await requestSignup(db, { email: agencyEmail, fullName: 'Agence Démo', orgName: 'Agence Démo', orgKind: 'agence' }, new Date());
+    const agencyOutcome = agencySignup.kind === 'confirm' ? await confirmSignup(db, agencySignup.token, new Date()) : null;
+    if (agencyOutcome?.ok) {
+      const agencySession = agencyOutcome.session.sessionToken;
+      const clientsPath = `/espaces/${agencyOutcome.workspaceId}`;
+      check('agence : lien « Clients » et liste des espaces', (await (await get('/', agencySession)).text()).includes(`href="${clientsPath}"`) && (await (await get(clientsPath, agencySession)).text()).includes('Premier client'));
+      const newClient = await submitForm(clientsPath, agencySession, 'Créer l’espace du client', { nom: 'Boulangerie Démo' });
+      const clientAt = newClient.headers.get('location') ?? '';
+      check('agence : espace d’un nouveau client créé, assistant de démarrage ouvert', /\/demarrage\/[0-9a-f-]{36}\?message=espace-cree/.test(clientAt), `HTTP ${newClient.status} → ${clientAt}`);
+      check('espaces d’une agence invisibles pour un autre client', (await get(clientsPath, newSession)).status === 404);
+    } else {
+      check('agence : inscription', false, agencySignup.kind);
+    }
 
     // Événements Stripe : signature exigée, chaque événement appliqué une seule fois.
     const unsigned = await fetch(`${BASE}/api/stripe/webhook`, { method: 'POST', body: '{"id":"evt_x"}', headers: { 'content-type': 'application/json' } });

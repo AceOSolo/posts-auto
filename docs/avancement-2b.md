@@ -19,6 +19,11 @@ Les 759 tests automatiques passent, ainsi que les 112 vérifications du test de 
 | FAC-07 | Export CSV de l'usage par espace et par mois sur 12 mois (posts, images, coût estimé de l'IA), pour le propriétaire. |
 | RÈG-19 et RÈG-20 | Seules les premières rédactions comptent. Quota mensuel remis à zéro à la date anniversaire, y compris en annuel. |
 
+**Espaces des agences** : page « Clients » (ou « Espaces » pour une entreprise), réservée au propriétaire. Une agence crée un espace par client, cloisonné, et passe directement à son assistant de démarrage. Le nombre d'espaces suit la formule (`max_workspaces`). Sans abonnement :
+
+- une entreprise a un seul espace ;
+- une agence en essai et un client pilote ne sont pas limités.
+
 Le bandeau d'essai mène maintenant à la page « Abonnement » : « Souscrire », ou « Choisir une formule » une fois l'essai terminé.
 
 ## Ce qui attend une action ou une décision
