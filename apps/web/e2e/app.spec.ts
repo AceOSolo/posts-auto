@@ -56,6 +56,7 @@ test.describe('pages de gestion (administratrice)', () => {
     ['visuels', 'visuels'],
     ['réglages', 'espace'],
     ['abonnement', 'abonnement'],
+    ['démarrage', 'demarrage'],
   ] as const) {
     test(`${name} : s’affiche, accessible, tient sur l’écran`, async ({ page }) => {
       const response = await page.goto(`/${path}/${sessions().workspaceId}`);

@@ -1,9 +1,10 @@
 'use server';
 
-import { ForbiddenError, NotFoundError, RefusedError, saveCompanyInfo, setOnboardingClosed } from '@posts-auto/services';
+import { ModelError } from '@posts-auto/ai';
+import { ForbiddenError, NotFoundError, RefusedError, saveCompanyInfo, setOnboardingClosed, writeSamplePostFor } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database } from '../../../server/context.ts';
+import { database, model, usdToEur } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,4 +40,21 @@ export async function closeOnboardingAction(workspaceId: string, closed: boolean
     await setOnboardingClosed(database(), userId, workspaceId, closed, now);
     return closed ? 'demarrage-ferme' : 'demarrage-rouvert';
   });
+}
+
+/** Post d'exemple rédigé par l'IA à partir du site de l'entreprise (jamais publié). */
+export async function samplePostAction(workspaceId: string): Promise<void> {
+  if (!UUID.test(workspaceId)) notFound();
+  const userId = await requireUserId();
+  let message = 'exemple-redige';
+  try {
+    await writeSamplePostFor(database(), model(), userId, workspaceId, new Date(), { usdToEur: usdToEur() });
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    const code = error instanceof ForbiddenError ? 'interdit' : error instanceof RefusedError ? error.code : error instanceof ModelError ? 'ia-indisponible' : null;
+    if (code === null) throw error;
+    message = code;
+  }
+  revalidatePath(`/demarrage/${workspaceId}`);
+  redirect(`/demarrage/${workspaceId}?message=${encodeURIComponent(message)}#exemple`);
 }

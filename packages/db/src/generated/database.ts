@@ -856,6 +856,7 @@ export interface Workspaces {
   name: string;
   onboarding_done_at: Timestamp | null;
   org_id: string;
+  sample_post: Json | null;
   sector: string | null;
   slot_step_minutes: Generated<number>;
   status: Generated<string>;

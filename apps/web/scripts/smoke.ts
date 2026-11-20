@@ -595,6 +595,16 @@ try {
     const company = await submitForm(`/demarrage/${newWorkspace}`, newSession, '>Enregistrer<', { nom: 'Atelier Démo', site: 'atelier-demo.fr', secteur: 'Menuiserie', taille: '1-9' });
     const afterCompany = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
     check('étape 1 « Votre entreprise » enregistrée', (company.headers.get('location') ?? '').includes('entreprise-enregistree') && afterCompany.includes('Prêt à publier à 1 sur 6'), `HTTP ${company.status}`);
+    // Post d'exemple tiré du site, avant la connexion de LinkedIn ; ici le site est une adresse
+    // interne, refusée sans appel au réseau ni à l'IA.
+    check('démarrage : post d’exemple proposé à partir du site', afterCompany.includes('Un exemple tout de suite') && afterCompany.includes('Rédiger un post d’exemple à partir de mon site'));
+    await asSystem(db, (trx) => trx.updateTable('workspaces').set({ website: 'http://127.0.0.1/' }).where('id', '=', newWorkspace).execute());
+    const sample = await submitForm(`/demarrage/${newWorkspace}`, newSession, 'Rédiger un post d’exemple', {});
+    check(
+      'post d’exemple : site interne refusé, aucun post créé',
+      (sample.headers.get('location') ?? '').includes('site_illisible') && (await asSystem(db, (trx) => trx.selectFrom('posts').select('id').where('workspace_id', '=', newWorkspace).execute())).length === 0,
+      `HTTP ${sample.status} → ${sample.headers.get('location') ?? ''}`,
+    );
     const newHome = (await (await get('/', newSession)).text()).replace(/<!-- -->/g, '');
     check('indicateur « prêt à publier » sur « Mes posts » (ONB-08)', newHome.includes('prêt à publier à 1 sur 6') && newHome.includes('Continuer le démarrage'));
     check('pas d’indicateur pour l’espace déjà en place', !(await (await get('/', alexis)).text()).includes('Continuer le démarrage'));

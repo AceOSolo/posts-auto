@@ -11,6 +11,7 @@ export * from './interpreter.ts';
 export * from './model.ts';
 export * from './pricing.ts';
 export * from './prompts.ts';
+export * from './sample-post.ts';
 export * from './visual-fill.ts';
 export * from './writer.ts';
 

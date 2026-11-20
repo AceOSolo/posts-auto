@@ -3,9 +3,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PostPreview } from '../../../../components/post-preview.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { closeOnboardingAction, saveCompanyAction } from '../actions.ts';
+import { closeOnboardingAction, samplePostAction, saveCompanyAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Démarrage' };
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export default async function OnboardingPage({
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const { steps, company, canManage } = onboarding;
+  const { steps, company, canManage, samplePost } = onboarding;
   const next = steps.find((s) => !s.done);
 
   return (
@@ -51,6 +52,34 @@ export default async function OnboardingPage({
         )}
       </p>
       <p className="hint">Vous pouvez faire les étapes dans l’ordre que vous voulez et revenir ici à tout moment : ce qui est fait ailleurs dans l’application compte aussi.</p>
+
+      {/* Le résultat tout de suite : un post d'exemple tiré du site, avant même de connecter LinkedIn. */}
+      <section aria-labelledby="exemple-titre" id="exemple" className="card">
+        <h2 id="exemple-titre">Un exemple tout de suite</h2>
+        {samplePost === null ? (
+          <p className="hint">
+            {company.website === null
+              ? 'Indiquez le site de l’entreprise à l’étape 1 : l’IA en tire un premier post, pour voir le résultat avant même de connecter LinkedIn.'
+              : 'L’IA lit la page d’accueil de votre site et en tire un premier post, pour voir le résultat avant même de connecter LinkedIn.'}
+          </p>
+        ) : (
+          <>
+            <p className="hint">
+              {`Rédigé à partir de ${samplePost.sourceUrl}. Il n’est ni enregistré comme post ni publié ; les passages surlignés sont à compléter : l’IA n’invente ni chiffre ni référence.`}
+            </p>
+            <PostPreview accountName={company.name} accountKind="page" body={samplePost.body} media={[]} expanded />
+            {samplePost.suspicious.length > 0 && <p className="hint">{`Consignes trouvées sur le site et ignorées : ${samplePost.suspicious.join(' · ')}`}</p>}
+            <p className="hint">Avec votre ligne éditoriale, vos créneaux et vos comptes, les posts sont rédigés chaque semaine de la même façon, puis validés en un geste.</p>
+          </>
+        )}
+        {canManage && company.website !== null && (
+          <form action={samplePostAction.bind(null, workspaceId)}>
+            <button type="submit" className={samplePost === null ? 'primary' : undefined}>
+              {samplePost === null ? 'Rédiger un post d’exemple à partir de mon site' : 'Rédiger un autre exemple'}
+            </button>
+          </form>
+        )}
+      </section>
 
       <ol className="onboarding-steps">
         {steps.map((step, index) => (

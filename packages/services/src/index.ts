@@ -49,6 +49,7 @@ export * from './net/safe-fetch.ts';
 export * from './onboarding/brand-extraction.ts';
 export * from './onboarding/editorial-proposal.ts';
 export * from './onboarding/onboarding.ts';
+export * from './onboarding/sample-post.ts';
 export * from './onboarding/signup.ts';
 export * from './reporting/dashboard.ts';
 export * from './reporting/monthly.ts';

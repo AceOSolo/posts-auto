@@ -12,6 +12,7 @@ import { sql } from 'kysely';
 import { canManageContent, workspaceRole } from '../access.ts';
 import { audit, cleanText } from '../audit.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
+import { type SamplePost, parseSamplePost } from './sample-post.ts';
 
 export const COMPANY_SIZES = ['1-9', '10-49', '50-249', '250+'] as const;
 export type CompanySize = (typeof COMPANY_SIZES)[number];
@@ -37,6 +38,8 @@ export interface Onboarding {
   /** L'assistant a été terminé ou fermé. */
   readonly closed: boolean;
   readonly canManage: boolean;
+  /** Dernier post d'exemple rédigé à partir du site (jamais publié). */
+  readonly samplePost: SamplePost | null;
 }
 
 async function requireRole(trx: Tx, userId: string, workspaceId: string) {
@@ -45,11 +48,11 @@ async function requireRole(trx: Tx, userId: string, workspaceId: string) {
   return role;
 }
 
-async function computeSteps(trx: Tx, workspaceId: string): Promise<{ steps: OnboardingStep[]; workspace: { name: string; website: string | null; sector: string | null; company_size: string | null; onboarding_done_at: Date | null } }> {
+async function computeSteps(trx: Tx, workspaceId: string): Promise<{ steps: OnboardingStep[]; workspace: { name: string; website: string | null; sector: string | null; company_size: string | null; onboarding_done_at: Date | null; sample_post: unknown } }> {
   const ws = encodeURIComponent(workspaceId);
   const workspace = await trx
     .selectFrom('workspaces')
-    .select(['name', 'website', 'sector', 'company_size', 'branding', 'onboarding_done_at'])
+    .select(['name', 'website', 'sector', 'company_size', 'branding', 'onboarding_done_at', 'sample_post'])
     .where('id', '=', workspaceId)
     .executeTakeFirstOrThrow();
   const accounts = await trx
@@ -131,6 +134,7 @@ export async function getOnboarding(db: Database, userId: string, workspaceId: s
       doneCount: steps.filter((s) => s.done).length,
       closed: workspace.onboarding_done_at !== null,
       canManage: canManageContent(role),
+      samplePost: parseSamplePost(workspace.sample_post),
     };
   });
 }

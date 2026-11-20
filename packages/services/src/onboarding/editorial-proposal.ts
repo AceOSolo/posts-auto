@@ -21,7 +21,7 @@ const MAX_PAGE_CHARS = 8000;
 
 export type PageFetcher = (url: string) => Promise<{ readonly text: string; readonly url: string }>;
 
-const fetchPage: PageFetcher = (url) => safeFetchText(url, { accept: 'text/html,application/xhtml+xml', userAgent: 'PostsLinkedIn-Demarrage/1.0', maxBytes: 1024 * 1024 });
+export const fetchPage: PageFetcher = (url) => safeFetchText(url, { accept: 'text/html,application/xhtml+xml', userAgent: 'PostsLinkedIn-Demarrage/1.0', maxBytes: 1024 * 1024 });
 
 export interface ProposalRequest {
   /** Site à lire ; à défaut, celui de l'espace. */
