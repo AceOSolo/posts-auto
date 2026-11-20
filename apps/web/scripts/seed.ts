@@ -62,6 +62,8 @@ await asSystem(db, async (trx) => {
   await trx.deleteFrom('login_tokens').where('email', 'like', '%@demo.example.test').execute();
   // Limite de 10 inscriptions par heure et par adresse IP : remise à zéro pour les adresses de démonstration.
   await trx.deleteFrom('signup_requests').where('email', 'like', '%@demo.example.test').execute();
+  // Même chose pour les demandes de démonstration (5 par heure et par adresse IP).
+  await trx.deleteFrom('demo_requests').where('email', 'like', '%@demo.example.test').execute();
   // Double authentification activée par le test de fumée (SEC-04) : retirée.
   await trx.deleteFrom('user_totp').where('user_id', 'in', (eb) => eb.selectFrom('users').select('id').where('email', 'like', '%@demo.example.test')).execute();
 

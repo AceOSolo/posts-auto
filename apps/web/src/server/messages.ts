@@ -260,6 +260,8 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   canva_non_connecte: { tone: 'error', text: 'Connectez d’abord Canva.' },
   modele_canva_inconnu: { tone: 'error', text: 'Modèle Canva introuvable.' },
   modele_canva_sans_titre: { tone: 'error', text: 'Ce modèle Canva n’a pas de champ de texte à remplir.' },
+  'webhook-enregistre': { tone: 'success', text: 'Webhook enregistré : les posts validés de ce compte seront envoyés à votre scénario au créneau.' },
+  webhook_invalide: { tone: 'error', text: 'Adresse de webhook invalide ou interdite : elle doit être publique et commencer par https://.' },
   'espace-cree': { tone: 'success', text: 'Espace créé. Suivez les étapes ci-dessous pour le préparer.' },
   nom_espace_invalide: { tone: 'error', text: 'Donnez un nom à l’espace (80 caractères au plus).' },
   espace_existe: { tone: 'error', text: 'Un espace porte déjà ce nom.' },

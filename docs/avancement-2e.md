@@ -90,3 +90,10 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
 - **Mode simulé** : `CANVA_MODE=fake`.
 
 **À faire par SimplX** : créer l'intégration dans le portail développeurs Canva, avec l'adresse de retour `https://<domaine>/visuels/canva/retour` et les autorisations `design:content:read/write`, `design:meta:read`, `asset:write`, `brandtemplate:meta:read` et `brandtemplate:content:read`. La faire valider par Canva, puis définir `CANVA_CLIENT_ID` et `CANVA_CLIENT_SECRET`, pour le serveur web et pour les tâches de fond. Les modèles de marque et le remplissage automatique demandent un abonnement Canva qui les propose.
+
+## LNK-08 : publication par un scénario du client, Make ou autre (fait, 20 novembre 2026)
+
+- **Mise en place** : sur la page « Comptes », le titulaire ou un administrateur enregistre l'adresse HTTPS d'un webhook (Make, Zapier, n8n…). L'adresse doit être publique. Un secret de signature est montré une seule fois.
+- **Au créneau** : le post validé est envoyé en JSON (texte, images en base64, compte, clé d'idempotence), signé par l'en-tête `X-Signature: t=<secondes>,v1=<HMAC-SHA256 de "t.corps">`. Une connexion LinkedIn valable n'est pas nécessaire.
+- **Réponse** : une réponse 2xx marque le post publié. Le scénario peut renvoyer en JSON l'`urn` et l'`url` du post LinkedIn, pour les statistiques et le lien.
+- **Erreurs** : une 4xx est un échec, avec de nouvelles tentatives selon la règle habituelle. Une absence de réponse ou une 5xx est une **issue incertaine**, comme pour LinkedIn : pas de nouvelle tentative automatique, pour éviter un doublon.

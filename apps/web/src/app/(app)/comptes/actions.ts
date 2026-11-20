@@ -2,7 +2,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { PAGE_SCOPES, PROFILE_SCOPES } from '@posts-auto/linkedin';
-import { ForbiddenError, NotFoundError, RefusedError, confirmPageConnection, disconnectAccount, setPublishMode } from '@posts-auto/services';
+import { ForbiddenError, NotFoundError, RefusedError, confirmPageConnection, disconnectAccount, setAccountWebhook, setPublishMode } from '@posts-auto/services';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { database, linkedinOAuth, tokenCipher } from '../../../server/context.ts';
@@ -94,6 +94,31 @@ export async function publishModeAction(workspaceId: string, accountId: string, 
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     if (error instanceof ForbiddenError) message = 'interdit';
+    else throw error;
+  }
+  redirect(`/comptes/${workspaceId}?message=${message}`);
+}
+
+/** LNK-08 : publication par un scénario du client ; le secret de signature est montré une fois. */
+export async function webhookAction(workspaceId: string, accountId: string, formData: FormData): Promise<void> {
+  if (!UUID.test(workspaceId) || !UUID.test(accountId)) notFound();
+  const userId = await requireUserId();
+  const cipher = tokenCipher();
+  if (cipher === null) redirect(`/comptes/${workspaceId}?message=chiffrement-non-configure`);
+  let message = 'webhook-enregistre';
+  try {
+    const secret = await setAccountWebhook(database(), cipher, userId, accountId, String(formData.get('webhook') ?? ''), new Date());
+    (await cookies()).set('secret-webhook', Buffer.from(cipher.encrypt(secret, `webhook-affichage:${userId}`)).toString('base64url'), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/comptes',
+      maxAge: 600,
+    });
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    if (error instanceof ForbiddenError) message = 'interdit';
+    else if (error instanceof RefusedError) message = error.code;
     else throw error;
   }
   redirect(`/comptes/${workspaceId}?message=${message}`);

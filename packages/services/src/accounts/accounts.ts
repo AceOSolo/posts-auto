@@ -252,8 +252,10 @@ export interface AccountSummary {
   /** LNK-03 : échéance de la connexion (jeton de renouvellement s'il existe, sinon jeton d'accès). */
   readonly connectionExpiresAt: Date | null;
   readonly canDisconnect: boolean;
-  /** PUB-09 : « manual » : envoi par e-mail au titulaire au créneau, au lieu de l'API. */
-  readonly publishMode: 'auto' | 'manual';
+  /** PUB-09 : « manual » : envoi par e-mail au titulaire ; LNK-08 : « webhook » : scénario du client. */
+  readonly publishMode: 'auto' | 'manual' | 'webhook';
+  /** LNK-08 : adresse du webhook (hôte seulement), quand le compte publie par un scénario. */
+  readonly webhookHost: string | null;
 }
 
 /** LNK-03 : comptes d'un espace avec l'état de leur connexion. */
@@ -286,6 +288,13 @@ export async function listWorkspaceAccounts(db: Database, userId: string, worksp
   });
   if (accounts.rows.length === 0) return [];
 
+  const webhooks = await asSystem(db, (trx) =>
+    trx
+      .selectFrom('account_webhooks')
+      .select(['account_id', 'url'])
+      .where('account_id', 'in', accounts.rows.map((row) => row.id))
+      .execute(),
+  );
   // Échéances des jetons : table réservée au système, lue seulement pour les comptes visibles.
   const tokens = await asSystem(db, (trx) =>
     trx
@@ -308,7 +317,11 @@ export async function listWorkspaceAccounts(db: Database, userId: string, worksp
       isMine,
       connectionExpiresAt: token ? (token.refresh_expires_at ?? token.expires_at) : null,
       canDisconnect: isMine || accounts.manager,
-      publishMode: row.publish_mode === 'manual' ? 'manual' : 'auto',
+      publishMode: row.publish_mode === 'manual' ? 'manual' : row.publish_mode === 'webhook' ? 'webhook' : 'auto',
+      webhookHost: (() => {
+        const hook = webhooks.find((w) => w.account_id === row.id);
+        return hook === undefined ? null : new URL(hook.url).host;
+      })(),
     };
   });
 }

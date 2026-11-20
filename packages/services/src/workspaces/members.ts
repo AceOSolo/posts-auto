@@ -6,9 +6,12 @@
  * Droits vérifiés sous l'identité de la personne ; la création d'un utilisateur, réservée
  * au système, se fait ensuite en contexte système.
  */
+import { randomBytes } from 'node:crypto';
 import { type Database, type Tx, asSystem, asUser } from '@posts-auto/db';
+import type { TokenEncryptor } from '../accounts/accounts.ts';
 import { normalizeEmail } from '../auth/auth.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
+import { checkPublicUrl } from '../net/safe-fetch.ts';
 
 export type MemberRole = 'admin' | 'editor' | 'contributor' | 'viewer';
 export const MEMBER_ROLES: readonly MemberRole[] = ['admin', 'editor', 'contributor', 'viewer'];
@@ -242,4 +245,33 @@ export async function setPublishMode(db: Database, userId: string, accountId: st
     const ws = await trx.selectFrom('workspaces').select('org_id').where('id', '=', account.workspace_id).executeTakeFirstOrThrow();
     await audit(trx, ws.org_id, account.workspace_id, userId, mode === 'manual' ? 'compte.publication_manuelle' : 'compte.publication_automatique', 'social_account', accountId, {}, now);
   });
+}
+
+/**
+ * LNK-08 : publication par un scénario du client (Make, Zapier, n8n…). L'adresse doit être
+ * publique et en HTTPS ; le secret de signature (HMAC-SHA256) est renvoyé une seule fois.
+ */
+export async function setAccountWebhook(db: Database, cipher: TokenEncryptor, userId: string, accountId: string, rawUrl: string, now: Date): Promise<string> {
+  let url: URL;
+  try {
+    url = checkPublicUrl(rawUrl.trim());
+  } catch {
+    throw new RefusedError('webhook_invalide', 'Adresse de webhook invalide ou interdite.');
+  }
+  if (url.protocol !== 'https:' || url.toString().length > 500) throw new RefusedError('webhook_invalide', 'L’adresse du webhook doit commencer par https://.');
+  const account = await asUser(db, userId, async (trx) => {
+    const row = await trx.selectFrom('social_accounts').select(['workspace_id', 'holder_user_id']).where('id', '=', accountId).executeTakeFirst();
+    if (row === undefined) throw new NotFoundError('Compte');
+    if (row.holder_user_id !== userId && !(await isManager(trx, userId, row.workspace_id))) throw new ForbiddenError('webhook');
+    return row;
+  });
+  const secret = `whsec_${randomBytes(24).toString('hex')}`;
+  await asSystem(db, async (trx) => {
+    const values = { url: url.toString(), secret_enc: Buffer.from(cipher.encrypt(secret, `webhook:${accountId}`)), created_by: userId, created_at: now };
+    await trx.insertInto('account_webhooks').values({ account_id: accountId, workspace_id: account.workspace_id, ...values }).onConflict((oc) => oc.column('account_id').doUpdateSet(values)).execute();
+    await trx.updateTable('social_accounts').set({ publish_mode: 'webhook' }).where('id', '=', accountId).execute();
+    const ws = await trx.selectFrom('workspaces').select('org_id').where('id', '=', account.workspace_id).executeTakeFirstOrThrow();
+    await audit(trx, ws.org_id, account.workspace_id, userId, 'compte.publication_webhook', 'social_account', accountId, { host: url.host }, now);
+  });
+  return secret;
 }

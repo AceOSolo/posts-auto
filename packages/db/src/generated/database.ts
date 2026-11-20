@@ -83,6 +83,15 @@ export interface AccountProfiles {
   workspace_id: string;
 }
 
+export interface AccountWebhooks {
+  account_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  secret_enc: Buffer;
+  url: string;
+  workspace_id: string;
+}
+
 export interface AiUsage {
   account_id: string | null;
   at: Generated<Timestamp>;
@@ -858,6 +867,7 @@ export interface DB {
   account_delegates: AccountDelegates;
   account_followers: AccountFollowers;
   account_profiles: AccountProfiles;
+  account_webhooks: AccountWebhooks;
   ai_usage: AiUsage;
   announcements: Announcements;
   api_keys: ApiKeys;

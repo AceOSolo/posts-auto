@@ -321,3 +321,40 @@ describe('publication manuelle (PUB-09)', () => {
     expect((await runPublicationTick(s.deps(() => minutes(2)))).manual).toEqual([]);
   });
 });
+
+describe('publication par un scénario du client (LNK-08)', () => {
+  it('envoi signé au webhook ; publié avec l’URN renvoyée ; 5xx : issue incertaine', async () => {
+    const s = await scene('expired');
+    const secret = 'whsec_test';
+    await asSystem(db, async (trx) => {
+      await trx.updateTable('social_accounts').set({ publish_mode: 'webhook' }).where('id', '=', s.accountId).execute();
+      await trx
+        .insertInto('account_webhooks')
+        .values({ account_id: s.accountId, workspace_id: s.workspaceId, url: 'https://hook.example.test/abc', secret_enc: cipher.encrypt(secret, `webhook:${s.accountId}`) })
+        .execute();
+    });
+    const calls: { url: string; signature: string; body: string }[] = [];
+    const ok = (async (url: string, init: RequestInit) => {
+      calls.push({ url, signature: String((init.headers as Record<string, string>)['x-signature']), body: String(init.body) });
+      return new Response(JSON.stringify({ urn: 'urn:li:share:777', url: 'https://www.linkedin.com/feed/update/urn:li:share:777' }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const postId = await validatedPost(s);
+    await attachPhotos(s, postId, [1]);
+    const deps = (now: () => Date) => ({ ...s.deps(now), fetch: ok });
+    await runPublicationTick(deps(() => minutes(1)));
+    await runPublicationTick(deps(() => minutes(2)));
+    expect(s.linkedin.published).toHaveLength(0);
+    expect(await postRow(postId)).toMatchObject({ status: 'publie', external_post_urn: 'urn:li:share:777', published_manually: false });
+    const [call] = calls;
+    const { createHmac } = await import('node:crypto');
+    const [t, v1] = (call?.signature ?? '').split(',').map((p) => p.split('=')[1]);
+    expect(createHmac('sha256', secret).update(`${t}.${call?.body}`).digest('hex')).toBe(v1);
+    expect(JSON.parse(call?.body ?? '{}')).toMatchObject({ event: 'post.a_publier', postId, images: [expect.objectContaining({ position: 1, mime: 'image/png' })] });
+
+    const failing = (async () => new Response('erreur', { status: 502 })) as unknown as typeof fetch;
+    const other = await validatedPost(s, { scheduled_at: minutes(60) });
+    await runPublicationTick({ ...s.deps(() => minutes(61)), fetch: failing });
+    await runPublicationTick({ ...s.deps(() => minutes(62)), fetch: failing });
+    expect(await postRow(other)).toMatchObject({ status: 'erreur' });
+  });
+});

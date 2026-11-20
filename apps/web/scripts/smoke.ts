@@ -758,6 +758,20 @@ try {
   );
   check('SSO : adresse sans compte refusée (pas d’inscription par ce biais)', (unknown.headers.get('location') ?? '').includes('sso-compte-inconnu'), `HTTP ${unknown.status}`);
 
+  // LNK-08 : publication par un scénario du client (webhook).
+  const toWebhook = await submitForm(`/comptes/${workspaceId}`, alexis, 'Enregistrer le webhook', { webhook: 'https://hook.example.test/scenario' });
+  const webhookCookie = /secret-webhook=([^;]+)/.exec(toWebhook.headers.get('set-cookie') ?? '')?.[1] ?? '';
+  const accountsWithSecret = await fetch(`${BASE}/comptes/${workspaceId}`, { headers: { cookie: `session=${alexis}; __Host-session=${alexis}; secret-webhook=${webhookCookie}` } });
+  const webhookHtml = await accountsWithSecret.text();
+  check(
+    'LNK-08 : webhook enregistré, secret de signature montré une fois, mode affiché',
+    (toWebhook.headers.get('location') ?? '').includes('webhook-enregistre') && /whsec_[0-9a-f]{48}/.test(webhookHtml) && webhookHtml.includes('hook.example.test'),
+    `HTTP ${toWebhook.status}`,
+  );
+  const internalHook = await submitForm(`/comptes/${workspaceId}`, alexis, 'Enregistrer le webhook', { webhook: 'https://127.0.0.1/x' });
+  check('LNK-08 : webhook vers une adresse interne refusé', (internalHook.headers.get('location') ?? '').includes('webhook_invalide'));
+  await submitForm(`/comptes/${workspaceId}`, alexis, 'Revenir à la publication automatique', {});
+
   // ADM-01 à ADM-06 : back-office de l'éditeur.
   check('back-office introuvable pour un client', (await get('/admin', alexis)).status === 404);
   const editorUser = await asSystem(db, async (trx) => {

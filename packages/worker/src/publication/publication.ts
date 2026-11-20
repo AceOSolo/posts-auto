@@ -29,6 +29,7 @@ import {
   LinkedInError,
   describeForUser,
 } from '@posts-auto/linkedin';
+import { createHmac } from 'node:crypto';
 import type { MediaStore } from '../media/media-store.ts';
 import { alertRecipients, notify } from '../notifications/recipients.ts';
 import type { TokenCipher } from '../secrets/token-cipher.ts';
@@ -54,6 +55,8 @@ export interface PublicationDeps {
   readonly cipher: TokenCipher;
   readonly clock?: () => Date;
   readonly leaseMinutes?: number;
+  /** LNK-08 : appels aux webhooks des clients (remplaçable dans les tests). */
+  readonly fetch?: typeof fetch;
 }
 
 export interface PublicationReport {
@@ -233,10 +236,11 @@ async function startDuePosts(deps: PublicationDeps, now: Date, report: Publicati
       // le post reste validé et partira quand la situation sera rétablie.
       if (post.workspace_status !== 'active') continue;
       if (post.org_status !== 'active' && post.org_status !== 'past_due') continue;
-      // PUB-09 : un compte en publication manuelle n'a pas besoin d'une connexion valable.
+      // PUB-09, LNK-08 : publication manuelle ou par webhook : pas besoin d'une connexion valable.
       const manual = post.publish_mode === 'manual';
-      if (!manual && post.account_status !== 'connected' && post.account_status !== 'expiring') continue;
-      if (manual && (post.account_status === 'paused' || post.account_status === 'revoked')) continue;
+      const viaApi = post.publish_mode === 'auto';
+      if (viaApi && post.account_status !== 'connected' && post.account_status !== 'expiring') continue;
+      if (!viaApi && (post.account_status === 'paused' || post.account_status === 'revoked')) continue;
 
       // RÈG-11 : jamais après l'événement.
       if (post.must_publish_by !== null && post.must_publish_by.getTime() < now.getTime()) {
@@ -338,7 +342,10 @@ interface ClaimedAttempt {
   readonly attemptId: string;
   readonly post: PostRef & { readonly account_id: string };
   readonly authorUrn: string;
+  readonly accountName: string | null;
   readonly encryptedToken: Uint8Array | null;
+  /** LNK-08 : le compte publie par un scénario du client. */
+  readonly webhook: { readonly url: string; readonly secret: Uint8Array } | null;
   readonly body: string | null;
   readonly media: readonly { storage_key: string; mime: string; alt_text: string | null }[];
 }
@@ -380,7 +387,8 @@ async function claimNextAttempt(deps: PublicationDeps, now: Date): Promise<Claim
     const account = await trx
       .selectFrom('social_accounts as a')
       .leftJoin('social_tokens as t', 't.account_id', 'a.id')
-      .select(['a.external_urn', 't.access_token_enc'])
+      .leftJoin('account_webhooks as h', 'h.account_id', 'a.id')
+      .select(['a.external_urn', 'a.display_name', 'a.publish_mode', 't.access_token_enc', 'h.url as webhook_url', 'h.secret_enc as webhook_secret'])
       .where('a.id', '=', post.account_id)
       .executeTakeFirstOrThrow();
     const version =
@@ -399,7 +407,9 @@ async function claimNextAttempt(deps: PublicationDeps, now: Date): Promise<Claim
       attemptId: attemptRow.id,
       post,
       authorUrn: account.external_urn,
+      accountName: account.display_name,
       encryptedToken: account.access_token_enc,
+      webhook: account.publish_mode === 'webhook' && account.webhook_url !== null && account.webhook_secret !== null ? { url: account.webhook_url, secret: account.webhook_secret } : null,
       body: version?.body ?? null,
       media,
     };
@@ -420,13 +430,15 @@ async function processNextAttempt(deps: PublicationDeps, clock: () => Date, repo
   const claimed = await claimNextAttempt(deps, clock());
   if (claimed === null) return false;
 
-  let outcome: { ok: true; postUrn: string; url: string } | { ok: false; error: LinkedInError };
-  const prepared = await prepare(deps, claimed);
+  let outcome: { ok: true; postUrn: string | null; url: string | null } | { ok: false; error: LinkedInError };
+  const prepared = claimed.webhook === null ? await prepare(deps, claimed) : await prepareWebhook(deps, claimed);
   if (!prepared.ok) {
     outcome = prepared;
+  } else if (claimed.webhook !== null) {
+    outcome = await sendToWebhook(deps, claimed, claimed.webhook, prepared.text, prepared.images, clock());
   } else {
     try {
-      const result = await deps.linkedin.publish(prepared.token, {
+      const result = await deps.linkedin.publish('token' in prepared ? String(prepared.token) : '', {
         authorUrn: claimed.authorUrn,
         text: prepared.text,
         images: prepared.images,
@@ -482,10 +494,83 @@ async function prepare(
   return { ok: true, token, text: claimed.body, images };
 }
 
+/** LNK-08 : texte et images, sans jeton LinkedIn. */
+async function prepareWebhook(
+  deps: PublicationDeps,
+  claimed: ClaimedAttempt,
+): Promise<{ ok: true; text: string; images: PublishImage[] } | { ok: false; error: LinkedInError }> {
+  if (claimed.body === null) return { ok: false, error: localFailure('Le post n’a pas de texte', false) };
+  const images: PublishImage[] = [];
+  try {
+    for (const item of claimed.media) {
+      images.push({ bytes: await deps.media.read(item.storage_key), mime: item.mime as LinkedInImageMime, ...(item.alt_text === null ? {} : { altText: item.alt_text }) });
+    }
+  } catch (error) {
+    return { ok: false, error: localFailure(`Image illisible : ${error instanceof Error ? error.message : String(error)}`, true) };
+  }
+  return { ok: true, text: claimed.body, images };
+}
+
+/**
+ * LNK-08 : envoi du post validé au webhook du client (Make, Zapier, n8n…), signé :
+ * en-tête X-Signature « t=<secondes>,v1=<HMAC-SHA256 hex de "t.corps"> ». Réponse 2xx :
+ * publié (avec l'URN et le lien LinkedIn si le scénario les renvoie en JSON). Pas de
+ * réponse ou 5xx : issue incertaine, comme pour LinkedIn (aucune nouvelle tentative).
+ */
+async function sendToWebhook(
+  deps: PublicationDeps,
+  claimed: ClaimedAttempt,
+  webhook: { url: string; secret: Uint8Array },
+  text: string,
+  images: readonly PublishImage[],
+  now: Date,
+): Promise<{ ok: true; postUrn: string | null; url: string | null } | { ok: false; error: LinkedInError }> {
+  let secret: string;
+  try {
+    secret = deps.cipher.decrypt(webhook.secret, `webhook:${claimed.post.account_id}`);
+  } catch {
+    return { ok: false, error: localFailure('Secret du webhook illisible : enregistrez de nouveau l’adresse du webhook', false) };
+  }
+  const body = JSON.stringify({
+    event: 'post.a_publier',
+    postId: claimed.post.id,
+    idempotencyKey: claimed.attemptId,
+    account: { id: claimed.post.account_id, name: claimed.accountName, urn: claimed.authorUrn },
+    text,
+    images: images.map((i, index) => ({ position: index + 1, mime: i.mime, altText: i.altText ?? null, base64: Buffer.from(i.bytes).toString('base64') })),
+    sentAt: now.toISOString(),
+  });
+  const t = Math.floor(now.getTime() / 1000);
+  const signature = createHmac('sha256', secret).update(`${t}.${body}`).digest('hex');
+  let response: Response;
+  try {
+    response = await (deps.fetch ?? globalThis.fetch)(webhook.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-signature': `t=${t},v1=${signature}`, 'x-idempotency-key': claimed.attemptId },
+      body,
+      redirect: 'error',
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (error) {
+    return { ok: false, error: new LinkedInError({ kind: 'network', phase: 'post_create', outcome: 'unknown', message: `Webhook injoignable ou sans réponse : ${error instanceof Error ? error.message : String(error)}` }) };
+  }
+  if (!response.ok) {
+    const uncertain = response.status >= 500;
+    return {
+      ok: false,
+      error: new LinkedInError({ kind: uncertain ? 'server' : 'invalid', phase: 'post_create', outcome: uncertain ? 'unknown' : 'not_created', status: response.status, message: `Le webhook a répondu ${response.status}` }),
+    };
+  }
+  const json = (await response.json().catch(() => ({}))) as { urn?: unknown; url?: unknown };
+  const urn = typeof json.urn === 'string' && /^urn:li:(share|ugcPost):\d+$/.test(json.urn) ? json.urn : null;
+  const url = typeof json.url === 'string' && /^https:\/\/(www\.)?linkedin\.com\//.test(json.url) ? json.url : null;
+  return { ok: true, postUrn: urn, url };
+}
+
 async function recordSuccess(
   deps: PublicationDeps,
   claimed: ClaimedAttempt,
-  result: { postUrn: string; url: string },
+  result: { postUrn: string | null; url: string | null },
   at: Date,
   report: PublicationReport,
 ) {
@@ -499,6 +584,8 @@ async function recordSuccess(
       published_at: at,
       external_post_urn: result.postUrn,
       external_post_url: result.url,
+      // LNK-08 : publié par le scénario du client, sans identifiant LinkedIn connu.
+      published_manually: result.postUrn === null,
       publish_lease_until: null,
       last_error: null,
     });
