@@ -6,7 +6,7 @@ import { Flash } from '../../../../components/flash.tsx';
 import { StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { ideaStatusAction, saveIdeaAction } from '../actions.ts';
+import { ideaStatusAction, repurposeAction, saveIdeaAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Idées' };
 export const dynamic = 'force-dynamic';
@@ -104,6 +104,21 @@ export default async function IdeasPage({
             <button type="submit" className="primary">
               Proposer
             </button>
+          </form>
+        </details>
+      )}
+
+      {canPropose && view === 'ouvertes' && (
+        <details>
+          <summary>Décliner un article en idées</summary>
+          <form action={repurposeAction.bind(null, workspaceId)} className="stack">
+            <label htmlFor="article">Adresse d’un article (votre blog, un média, une page de votre site)</label>
+            <input id="article" name="article" type="url" inputMode="url" required maxLength={1000} placeholder="https://…" aria-describedby="article-aide" />
+            <p id="article-aide" className="hint">
+              L’IA lit l’article et en tire trois angles de posts distincts (un conseil, un fait marquant, une question…), ajoutés ici comme idées pour tous les comptes. Elle ne
+              s’appuie que sur ce que dit l’article.
+            </p>
+            <button type="submit">Tirer trois idées de l’article</button>
           </form>
         </details>
       )}

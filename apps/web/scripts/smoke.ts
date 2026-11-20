@@ -378,6 +378,12 @@ try {
     `HTTP ${addedSlot.status} → ${addedSlot.headers.get('location') ?? ''}`,
   );
 
+  // Déclinaison d'un article en idées : formulaire proposé ; adresse interne refusée sans appel à l'IA.
+  const ideasHtml = (await (await get(`/idees/${workspaceId}`, claire)).text()).replace(/<!-- -->/g, '');
+  check('idées : « Décliner un article en idées » proposé', ideasHtml.includes('Décliner un article en idées') && ideasHtml.includes('Tirer trois idées de l’article'));
+  const repurposed = await submitForm(`/idees/${workspaceId}`, claire, 'Tirer trois idées', { article: 'http://127.0.0.1/blog' });
+  check('déclinaison : adresse interne refusée', (repurposed.headers.get('location') ?? '').includes('site_illisible'), `HTTP ${repurposed.status} → ${repurposed.headers.get('location') ?? ''}`);
+
   // GEN-09 : source de veille ajoutée depuis la ligne éditoriale (la relève, réseau compris, est testée à part).
   const feedUrl = `https://veille.exemple.fr/flux-${Date.now()}.xml`;
   const addedSource = await submitForm(linePath, alexis, 'Suivre cette source', { adresse: feedUrl, libelle: 'Veille de test' });

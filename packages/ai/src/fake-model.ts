@@ -33,6 +33,7 @@ export class FakeModel implements TextModel {
   #demo(request: ModelCall<unknown>): unknown {
     if (request.purpose === 'verify') return { issues: [] };
     if (request.purpose === 'interpret' && request.task.startsWith('Propose la ligne éditoriale')) return demoEditorialProposal(request.task);
+    if (request.purpose === 'interpret' && request.task.startsWith('Décline l’article')) return demoAngles(request.task);
     if (request.purpose === 'interpret') return demoInterpretation(request.task);
     if (request.purpose === 'visual' && (request.images?.length ?? 0) > 0) {
       // Contrôle d'une image (VIS-11) : le générateur simulé ne produit que des dégradés.
@@ -103,6 +104,18 @@ function demoEditorialProposal(task: string): unknown {
     tone: 'Vouvoiement, « nous », ton professionnel et concret.',
     bannedPhrases: [],
     toVerify: ['Quels chiffres ou références clients peuvent être cités ?'],
+    ignoredInstructions: [],
+  };
+}
+
+/** Angles de démonstration : tirés du titre de l'article, marqués comme tels. */
+function demoAngles(task: string): unknown {
+  const count = Number(/: (\d+) angles distincts/.exec(task)?.[1] ?? 3);
+  const article = /<document type="article"[^>]*>\n([\s\S]*?)\n<\/document>/.exec(task)?.[1] ?? '';
+  const subject = (article.split('\n').find((l) => l.trim().length > 3) ?? 'l’article').trim().slice(0, 80);
+  const kinds = ['Le conseil pratique', 'Le fait marquant', 'L’erreur fréquente', 'La question au lecteur', 'Le retour d’expérience'];
+  return {
+    angles: kinds.slice(0, count).map((kind) => ({ title: `${kind} : ${subject} (démonstration)`, details: 'Angle de démonstration, sans IA.' })),
     ignoredInstructions: [],
   };
 }

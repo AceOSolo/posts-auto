@@ -1,9 +1,10 @@
 'use server';
 
-import { ForbiddenError, NotFoundError, RefusedError, saveIdea, setIdeaStatus } from '@posts-auto/services';
+import { ModelError } from '@posts-auto/ai';
+import { ForbiddenError, NotFoundError, RefusedError, ideasFromArticle, saveIdea, setIdeaStatus } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database } from '../../../server/context.ts';
+import { database, model, usdToEur } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,5 +56,18 @@ export async function ideaStatusAction(workspaceId: string, ideaId: string, stat
     if (!UUID.test(ideaId)) throw new NotFoundError('Idée');
     await setIdeaStatus(database(), userId, workspaceId, ideaId, status, now);
     return `idee-${status}`;
+  });
+}
+
+/** Déclinaison d'un article en idées : l'IA en tire plusieurs angles, déposés comme idées. */
+export async function repurposeAction(workspaceId: string, form: FormData): Promise<void> {
+  await run(workspaceId, async (userId, now) => {
+    try {
+      const outcome = await ideasFromArticle(database(), model(), userId, workspaceId, text(form, 'article'), now, { usdToEur: usdToEur() });
+      return outcome.suspicious.length > 0 ? 'idees-declinees-consignes' : 'idees-declinees';
+    } catch (error) {
+      if (error instanceof ModelError) return 'ia-indisponible';
+      throw error;
+    }
   });
 }
