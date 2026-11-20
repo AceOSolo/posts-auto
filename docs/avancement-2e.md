@@ -109,3 +109,9 @@ Périmètre : exigences du lot 2 classées S (souhaitées) ou C (confort) qui ne
 - **Création** : « Faire un carrousel PDF », sur la page d’un post dont le visuel a au moins deux points clés. Le PDF commence par une page de couverture (titre), puis une page par point, au plus 9, avec le modèle « Citation » aux couleurs de la charte et le logo.
 - **Publication** : le carrousel remplace le visuel du post et part comme **document LinkedIn natif**, par l’API Documents : envoi du PDF, puis post avec le document. « Refaire le visuel » revient à une image.
 - **Aperçu** : le PDF s’ouvre depuis l’aperçu du post. Avec un webhook (LNK-08), le PDF est transmis au scénario comme les images.
+
+## SIT-09 : version anglaise du site vitrine (fait, 20 novembre 2026)
+
+- **Page `/en`** : promesse, fonctionnement, tarifs avec le simulateur, questions fréquentes et demande de démonstration. Après la demande, on revient sur la page anglaise. Elle a ses données structurées et des liens d’autres langues (`hreflang` fr et en), et elle figure dans le sitemap.
+- **Ce qui reste en français** : l’application elle-même et la rédaction par l’IA, ce que la page indique. L’anglais du service relève du lot 3.
+- **À faire** : ajouter un lien « English » dans l’en-tête du site. L’en-tête est en cours de refonte (charte Rostra), il n’a donc pas été modifié ici.

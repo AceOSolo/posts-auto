@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: '*', allow: ['/', '/inscription', '/comment-fonctionne-la-redaction', '/mentions-legales', '/cgu', '/cgv', '/confidentialite', '/cookies', '/sous-traitants', '/llms.txt'], disallow: ['/api/', '/admin', '/media/', '/valider/', '/connexion/'] }],
+    rules: [{ userAgent: '*', allow: ['/', '/en', '/inscription', '/comment-fonctionne-la-redaction', '/mentions-legales', '/cgu', '/cgv', '/confidentialite', '/cookies', '/sous-traitants', '/llms.txt'], disallow: ['/api/', '/admin', '/media/', '/valider/', '/connexion/'] }],
     sitemap: `${appUrl()}/sitemap.xml`,
   };
 }

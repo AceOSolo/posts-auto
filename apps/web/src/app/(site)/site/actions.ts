@@ -24,5 +24,7 @@ export async function requestDemoAction(form: FormData): Promise<void> {
     if (error instanceof RefusedError) message = error.code;
     else throw error;
   }
-  redirect(`/?message=${encodeURIComponent(message)}#demo`);
+  // SIT-09 : retour sur la version de la page d'où vient la demande.
+  const page = form.get('langue') === 'en' ? '/en' : '/';
+  redirect(`${page}?message=${encodeURIComponent(message)}#demo`);
 }
