@@ -128,11 +128,14 @@ describe('règles portées par les contraintes', () => {
     await expect(attempt).rejects.toThrow(/posts_current_version_fk/);
   });
 
-  it('un post publié a forcément une date et une référence LinkedIn', async () => {
+  it('un post publié a forcément une date et une référence LinkedIn, sauf publication manuelle (PUB-09)', async () => {
     const accountId = await createAccount(db, ws());
     await expect(
       createPost(db, ws(), accountId, { status: 'publie', scheduled_at: new Date('2026-11-26T11:00:00Z') }),
-    ).rejects.toThrow(/posts_check/);
+    ).rejects.toThrow(/posts_published_check/);
+    await expect(
+      createPost(db, ws(), accountId, { status: 'publie', scheduled_at: new Date('2026-11-26T12:00:00Z'), published_at: new Date('2026-11-26T12:00:00Z'), published_manually: true }),
+    ).resolves.toBeTypeOf('string');
   });
 
   it('week_start est toujours un lundi, lu sous forme de date sans fuseau', async () => {

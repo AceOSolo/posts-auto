@@ -204,6 +204,17 @@ export function notificationMail(kind: string, payload: Record<string, unknown>,
         footer,
       );
     }
+    case 'rapport_mensuel': {
+      // SUI-05 : le PDF est joint à l'envoi.
+      const month = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', month: 'long', year: 'numeric' }).format(new Date(str(payload['month'])));
+      return compose(
+        ctx,
+        `Rapport LinkedIn de ${month}`,
+        [`Le rapport LinkedIn de ${month} est joint à cet e-mail : posts publiés, statistiques, posts les plus engageants et enseignements du mois.`],
+        { label: 'Voir le tableau de bord', url: `${ctx.appUrl}/tableau/${encodeURIComponent(workspaceId)}` },
+        footer,
+      );
+    }
     case 'impaye': {
       // FAC-06 : relances à J+3 et J+7, suspension à J+14.
       const billingAction = { label: 'Mettre à jour le paiement', url: `${ctx.appUrl}/abonnement/${encodeURIComponent(workspaceId)}` };

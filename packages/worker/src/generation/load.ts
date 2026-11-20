@@ -23,6 +23,7 @@ import {
   type ReferencePost,
   accountProfileForSystem,
   currentEditorialLine,
+  latestInsightsGuidance,
   offerItems,
   referencePostsOf,
 } from '@posts-auto/services';
@@ -141,6 +142,7 @@ export async function loadAccounts(trx: Tx, workspaceId: string, now: Date, acco
   const rows = await query.execute();
   const since = new Date(now.getTime() - REPEAT_WINDOW_DAYS * 86_400_000);
   const accounts: AccountData[] = [];
+  const insights = await latestInsightsGuidance(trx, workspaceId);
   for (const row of rows) {
     const profile = await accountProfileForSystem(trx, row.id);
     if (profile === null) continue;
@@ -159,7 +161,8 @@ export async function loadAccounts(trx: Tx, workspaceId: string, now: Date, acco
       profile,
       holderUserId: row.holder_user_id,
       examples: await referencePostsOf(trx, row.id),
-      learned: learned?.summary ?? '',
+      // SUI-04 : enseignements du mois écoulé, réinjectés dans la rédaction.
+      learned: [learned?.summary ?? '', insights === '' ? '' : `Enseignements du mois dernier : ${insights}`].filter((x) => x !== '').join('\n'),
       recent: recent.map((r) => ({ date: r.scheduled_at.toISOString().slice(0, 10), text: r.body })),
     });
   }

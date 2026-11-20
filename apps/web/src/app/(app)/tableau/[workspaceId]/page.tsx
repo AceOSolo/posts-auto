@@ -1,10 +1,11 @@
-import { NotFoundError, workspaceDashboard } from '@posts-auto/services';
+import { NotFoundError, monthlyOverview, workspaceDashboard } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { STATUS_LABELS } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
+import { reportEmailAction } from './actions.ts';
 
 export const metadata: Metadata = { title: 'Tableau de bord' };
 export const dynamic = 'force-dynamic';
@@ -18,8 +19,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   let dashboard;
+  let monthly;
   try {
     dashboard = await workspaceDashboard(database(), userId, workspaceId, new Date());
+    monthly = await monthlyOverview(database(), userId, workspaceId, new Date());
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
@@ -146,6 +149,57 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           </div>
         )}
         <p className="hint">Données produites par l’outil seulement. Le détail semaine par semaine est dans le document de la semaine.</p>
+      </section>
+
+      {/* SUI-03 à SUI-05 : statistiques LinkedIn, enseignements, rapport mensuel. */}
+      <section aria-labelledby="statistiques">
+        <h2 id="statistiques">Statistiques LinkedIn du mois</h2>
+        {monthly.totals.withStats === 0 ? (
+          <p className="muted">
+            Pas encore de statistiques ce mois-ci : elles sont relevées à J+1, J+7 et J+30 après la publication, quand LinkedIn les donne pour le compte.
+          </p>
+        ) : (
+          <ul className="stat-tiles">
+            <li>
+              <strong>{new Intl.NumberFormat('fr-FR').format(monthly.totals.impressions)}</strong> impressions
+            </li>
+            <li>
+              <strong>{monthly.totals.reactions}</strong> réactions
+            </li>
+            <li>
+              <strong>{monthly.totals.comments}</strong> commentaires
+            </li>
+            <li>
+              <strong>{monthly.totals.shares}</strong> partages
+            </li>
+          </ul>
+        )}
+        {monthly.followers.map((f) => (
+          <p key={f.name}>
+            Abonnés de {f.name} : {f.start} → {f.end}
+          </p>
+        ))}
+        <h3>Enseignements du mois dernier</h3>
+        {monthly.lastInsights === null || monthly.lastInsights.insights.length === 0 ? (
+          <p className="muted">Pas encore assez de posts mesurés ou de décisions pour tirer un enseignement fiable.</p>
+        ) : (
+          <ul>
+            {monthly.lastInsights.insights.map((i) => (
+              <li key={i.title}>
+                <strong>{i.title}</strong> · {i.detail}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="hint">Ces enseignements sont transmis à la rédaction du mois en cours.</p>
+        <p>
+          <a href={`/tableau/${workspaceId}/rapport`}>Rapport PDF du mois en cours</a> · <a href={`/tableau/${workspaceId}/rapport?mois=precedent`}>du mois dernier</a>
+        </p>
+        {monthly.canManage && (
+          <form action={reportEmailAction.bind(null, workspaceId, !monthly.reportByEmail)}>
+            <button type="submit">{monthly.reportByEmail ? 'Ne plus recevoir le rapport chaque mois' : 'Recevoir le rapport PDF chaque mois par e-mail'}</button>
+          </form>
+        )}
       </section>
     </>
   );

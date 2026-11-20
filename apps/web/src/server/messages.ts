@@ -230,6 +230,8 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   'lien-enregistre': { tone: 'success', text: 'Lien du post enregistré.' },
   lien_linkedin_invalide: { tone: 'error', text: 'Collez le lien du post tel que LinkedIn l’affiche (linkedin.com/posts/… ou linkedin.com/feed/update/…).' },
   pas_manuel: { tone: 'error', text: 'Ce post n’a pas été envoyé pour publication manuelle.' },
+  'rapport-par-email': { tone: 'success', text: 'Le rapport PDF sera envoyé chaque début de mois aux administrateurs de l’espace.' },
+  'rapport-sans-email': { tone: 'success', text: 'Le rapport mensuel ne sera plus envoyé par e-mail.' },
   'espace-cree': { tone: 'success', text: 'Espace créé. Suivez les étapes ci-dessous pour le préparer.' },
   nom_espace_invalide: { tone: 'error', text: 'Donnez un nom à l’espace (80 caractères au plus).' },
   espace_existe: { tone: 'error', text: 'Un espace porte déjà ce nom.' },

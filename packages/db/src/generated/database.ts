@@ -46,6 +46,13 @@ export interface AccountDelegates {
   workspace_id: string;
 }
 
+export interface AccountFollowers {
+  account_id: string;
+  captured_on: string;
+  followers: number;
+  workspace_id: string;
+}
+
 export interface AccountProfiles {
   account_id: string;
   ai_image_ratio: Generated<Numeric>;
@@ -298,6 +305,20 @@ export interface MediaAssets {
   workspace_id: string;
 }
 
+export interface MonthlyInsights {
+  created_at: Generated<Timestamp>;
+  insights: Json;
+  model: string | null;
+  month: string;
+  workspace_id: string;
+}
+
+export interface MonthlyReportsSent {
+  month: string;
+  sent_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
 export interface NotificationPrefs {
   email: Generated<boolean>;
   in_app: Generated<boolean>;
@@ -483,6 +504,18 @@ export interface Posts {
   updated_at: Generated<Timestamp>;
   version_no: Generated<number>;
   week_start: string;
+  workspace_id: string;
+}
+
+export interface PostStats {
+  available: Generated<boolean>;
+  captured_at: Generated<Timestamp>;
+  comments: number | null;
+  day_offset: number;
+  impressions: number | null;
+  post_id: string;
+  reactions: number | null;
+  shares: number | null;
   workspace_id: string;
 }
 
@@ -770,6 +803,7 @@ export interface Workspaces {
   max_posts_per_account_per_day: Generated<number>;
   max_posts_per_slot: Generated<number>;
   min_gap_minutes: Generated<number>;
+  monthly_report_email: Generated<boolean>;
   name: string;
   onboarding_done_at: Timestamp | null;
   org_id: string;
@@ -784,6 +818,7 @@ export interface Workspaces {
 export interface DB {
   account_consents: AccountConsents;
   account_delegates: AccountDelegates;
+  account_followers: AccountFollowers;
   account_profiles: AccountProfiles;
   ai_usage: AiUsage;
   announcements: Announcements;
@@ -803,6 +838,8 @@ export interface DB {
   learned_preferences: LearnedPreferences;
   login_tokens: LoginTokens;
   media_assets: MediaAssets;
+  monthly_insights: MonthlyInsights;
+  monthly_reports_sent: MonthlyReportsSent;
   notification_prefs: NotificationPrefs;
   notifications: Notifications;
   offer_items: OfferItems;
@@ -815,6 +852,7 @@ export interface DB {
   platform_settings: PlatformSettings;
   post_media: PostMedia;
   post_requests: PostRequests;
+  post_stats: PostStats;
   post_status_history: PostStatusHistory;
   post_versions: PostVersions;
   posts: Posts;

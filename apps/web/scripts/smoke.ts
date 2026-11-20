@@ -671,6 +671,17 @@ try {
   const rightCode = await submitForm('/connexion/code', claireAgain, 'Vérifier', { code: totpCode(totpSecret, new Date(Date.now() + 30_000)) });
   check('bon code : accès ouvert', /\/$/.test(rightCode.headers.get('location') ?? '') && (await get('/', claireAgain)).status === 200, `HTTP ${rightCode.status} → ${rightCode.headers.get('location')}`);
 
+  // SUI-03 à SUI-05 : statistiques, enseignements, rapport mensuel.
+  const statsHtml = (await (await get(`/tableau/${workspaceId}`, alexis)).text()).replace(/<!-- -->/g, '');
+  check('tableau de bord : statistiques LinkedIn et enseignements du mois (SUI-03, SUI-04)', statsHtml.includes('Statistiques LinkedIn du mois') && statsHtml.includes('Enseignements du mois dernier'));
+  const reportPdf = await get(`/tableau/${workspaceId}/rapport`, alexis);
+  const reportBytes = new Uint8Array(await reportPdf.arrayBuffer());
+  check('rapport mensuel en PDF (SUI-05)', reportPdf.headers.get('content-type') === 'application/pdf' && Buffer.from(reportBytes.slice(0, 5)).toString() === '%PDF-', `HTTP ${reportPdf.status}`);
+  const reportByMail = await submitForm(`/tableau/${workspaceId}`, alexis, 'Recevoir le rapport PDF chaque mois par e-mail', {});
+  check('envoi automatique du rapport activé (SUI-05)', (reportByMail.headers.get('location') ?? '').includes('rapport-par-email'), `HTTP ${reportByMail.status}`);
+  await submitForm(`/tableau/${workspaceId}`, alexis, 'Ne plus recevoir le rapport chaque mois', {});
+  check('rapport d’un autre client → 404', (await get(`/tableau/${workspaceId}/rapport`, await sessionFor('exterieur@demo.example.test').catch(() => ''))).status !== 200);
+
   // PUB-09 : publication manuelle, puis retour à l'automatique.
   const toManual = await submitForm(`/comptes/${workspaceId}`, alexis, 'Passer en publication manuelle (par e-mail)', {});
   const manualCount = (await asSystem(db, (trx) => trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspaceId).where('publish_mode', '=', 'manual').execute())).length;

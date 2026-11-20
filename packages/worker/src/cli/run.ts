@@ -12,6 +12,8 @@
  * - Veille : toutes les heures, nouveaux articles des flux RSS des espaces (GEN-09).
  * - Apprentissage : chaque jour, préférences des titulaires tirées de leurs corrections (EDI-06).
  * - Rendez-vous récurrents : chaque jour, occurrences des 60 prochains jours (EDI-08).
+ * - Statistiques LinkedIn : toutes les 6 heures, à J+1, J+7 et J+30 ; abonnés des pages (SUI-03).
+ * - Bilan du mois : enseignements (SUI-04) et rapport PDF par e-mail (SUI-05), en début de mois.
  * - Facturation : toutes les heures (quantités, relances d'impayé, alertes de quota, FAC-02 à FAC-06).
  * - Visuels à refaire : toutes les minutes (VIS-13). Les visuels des nouveaux posts sont
  *   préparés avec eux par la rédaction, les demandes et les reprises (VIS-03).
@@ -33,10 +35,13 @@ import { DEFAULT_DATABASE_URL, createDatabase } from '@posts-auto/db';
 import {
   FakeLinkedIn,
   FakeLinkedInOAuth,
+  FakeLinkedInStats,
   LinkedInHttpClient,
   type LinkedInOAuth,
   LinkedInOAuthClient,
   type LinkedInPublisher,
+  type LinkedInStats,
+  LinkedInStatsClient,
 } from '@posts-auto/linkedin';
 import { type BillingProvider, FakeBilling, StripeBilling, mailerFromEnv } from '@posts-auto/services';
 import { imageGeneratorFromEnv } from '@posts-auto/visuals';
@@ -47,6 +52,8 @@ import { runLearningTick } from '../generation/learning.ts';
 import { materializeRecurringEvents } from '../generation/recurring-events.ts';
 import { runReworkTick } from '../generation/reworks.ts';
 import { runSourcesTick } from '../sources/sources-job.ts';
+import { runMonthlyTick } from '../stats/monthly-job.ts';
+import { runStatsTick } from '../stats/stats-job.ts';
 import { runGenerationTick } from '../generation/weekly.ts';
 import { runEmailDispatch } from '../notifications/email-dispatch.ts';
 import { runValidationReminders } from '../notifications/reminders.ts';
@@ -67,6 +74,7 @@ const media = new FileMediaStore(env['MEDIA_ROOT'] ?? path.join(repoRoot, '.medi
 const cipher = TokenCipher.fromEnv(env);
 const fake = env['LINKEDIN_MODE'] === 'fake';
 const linkedin: LinkedInPublisher = fake ? new FakeLinkedIn() : new LinkedInHttpClient({ apiVersion: env['LINKEDIN_API_VERSION'] ?? '202610' });
+const linkedinStats: LinkedInStats = fake ? new FakeLinkedInStats() : new LinkedInStatsClient({ apiVersion: env['LINKEDIN_API_VERSION'] ?? '202610' });
 const appUrl = (env['APP_URL'] ?? 'http://localhost:3000').replace(/\/$/, '');
 const redirectUri = `${appUrl}/comptes/connecter/retour`;
 const mailer = mailerFromEnv(env);
@@ -103,6 +111,8 @@ const scheduler = startScheduler(
     { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick(writing) },
     { name: 'visuels', intervalMs: 60_000, run: () => runVisualTick(writing) },
     { name: 'facturation', intervalMs: 60 * 60_000, run: () => runBillingTick({ db, provider: billing, media }) },
+    { name: 'statistiques', intervalMs: 6 * 3_600_000, run: () => runStatsTick({ db, stats: linkedinStats, cipher }) },
+    { name: 'bilan-mensuel', intervalMs: 6 * 3_600_000, run: () => runMonthlyTick({ db }) },
     { name: 'veille', intervalMs: 60 * 60_000, run: () => runSourcesTick({ db }) },
     { name: 'apprentissage', intervalMs: 24 * 3_600_000, run: () => runLearningTick({ db, model, usdToEur }) },
     { name: 'evenements', intervalMs: 24 * 3_600_000, run: async () => ({ crees: await materializeRecurringEvents(db, new Date()) }) },

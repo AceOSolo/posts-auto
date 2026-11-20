@@ -9,7 +9,7 @@
  * - Une ligne n'est traitée que par un processus à la fois (verrou de ligne).
  */
 import { type Database, asSystem } from '@posts-auto/db';
-import { MailError, type MailMessage, type Mailer, createApprovalLink, notificationMail } from '@posts-auto/services';
+import { MailError, type MailMessage, type Mailer, createApprovalLink, monthlyReportData, notificationMail, parisMonth, renderMonthlyReportPdf } from '@posts-auto/services';
 import type { MediaStore } from '../media/media-store.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -113,6 +113,14 @@ export async function runEmailDispatch(deps: EmailDispatchDeps): Promise<EmailDi
         );
         // Une image illisible n'empêche pas l'envoi du texte ; le lien du post permet de la récupérer.
         attachments = read.filter((a) => a !== null);
+      }
+
+      // SUI-05 : rapport mensuel produit au moment de l'envoi.
+      if (row.kind === 'rapport_mensuel' && row.workspace_id !== null && typeof payload['month'] === 'string') {
+        const { start, end } = parisMonth(new Date(payload['month']));
+        const data = await monthlyReportData(trx, row.workspace_id, start, end);
+        const label = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit' }).format(start);
+        attachments = [{ name: `rapport-${label}.pdf`, content: await renderMonthlyReportPdf(data) }];
       }
 
       try {
