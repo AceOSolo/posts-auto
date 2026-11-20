@@ -5,7 +5,7 @@
 import path from 'node:path';
 import { type TextModel, modelFromEnv } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, type Database, createDatabase } from '@posts-auto/db';
-import { FakeLinkedInOAuth, type LinkedInOAuth, LinkedInOAuthClient } from '@posts-auto/linkedin';
+import { FakeLinkedInOAuth, FakeLinkedInPages, type LinkedInOAuth, LinkedInOAuthClient, type LinkedInPages, LinkedInPagesClient } from '@posts-auto/linkedin';
 import { FileMediaStore, type MediaStore, TokenCipher } from '@posts-auto/worker';
 import { type Mailer, mailerFromEnv } from '@posts-auto/services';
 
@@ -46,6 +46,12 @@ export function linkedinOAuth(): LinkedInOAuth | null {
   const clientSecret = process.env['LINKEDIN_CLIENT_SECRET'];
   if (!clientId || !clientSecret) return null;
   return new LinkedInOAuthClient({ clientId, clientSecret, redirectUri });
+}
+
+/** LNK-02 : pages administrées (Community Management API), ou simulées (LINKEDIN_MODE=fake). */
+export function linkedinPages(): LinkedInPages {
+  if (process.env['LINKEDIN_MODE'] === 'fake') return new FakeLinkedInPages();
+  return new LinkedInPagesClient({ apiVersion: process.env['LINKEDIN_API_VERSION'] ?? '202610' });
 }
 
 /** Chiffrement des jetons (SEC-02) ; null si les clés ne sont pas configurées. */

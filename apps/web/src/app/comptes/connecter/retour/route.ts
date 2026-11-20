@@ -4,9 +4,9 @@
  */
 import { timingSafeEqual } from 'node:crypto';
 import { LinkedInError } from '@posts-auto/linkedin';
-import { NotFoundError, RefusedError, connectProfile } from '@posts-auto/services';
+import { ForbiddenError, NotFoundError, RefusedError, connectProfile, startPageConnection } from '@posts-auto/services';
 import { cookies, headers } from 'next/headers';
-import { appUrl, database, linkedinOAuth, tokenCipher } from '../../../../server/context.ts';
+import { appUrl, database, linkedinOAuth, linkedinPages, tokenCipher } from '../../../../server/context.ts';
 import { OAUTH_COOKIE, decodeOAuthState } from '../../../../server/oauth-state.ts';
 import { currentUserId } from '../../../../server/session.ts';
 
@@ -42,6 +42,19 @@ export async function GET(request: Request) {
   if (!code) return back(accounts, 'connexion-annulee');
 
   const ip = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim();
+  if (pending.mode === 'pages') {
+    // LNK-02 : pages administrées listées, la personne coche celles à ajouter.
+    try {
+      const pendingId = await startPageConnection(database(), { oauth, pages: linkedinPages(), cipher }, { userId, workspaceId: pending.workspaceId, code }, new Date());
+      return Response.redirect(`${appUrl()}/comptes/${pending.workspaceId}/pages?attente=${pendingId}`, 303);
+    } catch (error) {
+      if (error instanceof NotFoundError) return back('/', 'interdit');
+      if (error instanceof ForbiddenError) return back(accounts, 'interdit');
+      if (error instanceof RefusedError) return back(accounts, error.code);
+      if (error instanceof LinkedInError) return back(accounts, 'linkedin-erreur');
+      throw error;
+    }
+  }
   try {
     const result = await connectProfile(
       database(),

@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { disconnectAction } from '../actions.ts';
+import { disconnectAction, startPagesConnection } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Comptes LinkedIn' };
 export const dynamic = 'force-dynamic';
@@ -38,11 +38,15 @@ export default async function AccountsPage({
     <>
       <h1>Comptes LinkedIn</h1>
       <Flash code={message} />
-      <p>
+      <div className="actions">
         <Link href={`/comptes/${workspaceId}/connecter`} className="button">
           {hasMine ? 'Reconnecter mon profil LinkedIn' : 'Connecter mon profil LinkedIn'}
         </Link>
-      </p>
+        {/* LNK-02 : une personne qui administre les pages sur LinkedIn les ajoute en une fois. */}
+        <form action={startPagesConnection.bind(null, workspaceId)}>
+          <button type="submit">Connecter des pages d’entreprise</button>
+        </form>
+      </div>
       {accounts.length === 0 ? (
         <p className="muted">Aucun compte connecté dans cet espace.</p>
       ) : (

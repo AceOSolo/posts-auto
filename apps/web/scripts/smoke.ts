@@ -237,6 +237,23 @@ try {
     );
     const accountsPage = await (await get(`/comptes/${workspaceId}`, claire)).text();
     check('page des comptes : échéance de la connexion affichée (LNK-03)', accountsPage.includes('Connexion valable jusqu’au'));
+
+    // LNK-02 : pages d'entreprise administrées, choisies après l'autorisation.
+    const alexisCookie = `session=${alexis}; __Host-session=${alexis}`;
+    const accountsHtml = await (await get(`/comptes/${workspaceId}`, alexis)).text();
+    const pagesForm = [...accountsHtml.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/g)].find((m) => (m[1] ?? '').includes('Connecter des pages'));
+    const pagesFields = new FormData();
+    for (const input of (pagesForm?.[1] ?? '').matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) pagesFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+    const toPages = await fetch(`${BASE}/comptes/${workspaceId}`, { method: 'POST', body: pagesFields, redirect: 'manual', headers: { cookie: alexisCookie, origin: BASE } });
+    const pagesCookie = toPages.headers.getSetCookie().find((c) => c.startsWith('li_oauth='))?.split(';')[0] ?? '';
+    const pagesCallback = await fetch(toPages.headers.get('location') ?? '', { redirect: 'manual', headers: { cookie: `${alexisCookie}; ${pagesCookie}` } });
+    const choosePath = (pagesCallback.headers.get('location') ?? '').replace(BASE, '');
+    const chooseHtml = choosePath.includes('/pages?attente=') ? (await (await get(choosePath, alexis)).text()).replace(/<!-- -->/g, '') : '';
+    check('pages d’entreprise : liste des pages administrées après l’autorisation (LNK-02)', chooseHtml.includes('Page de démonstration') && chooseHtml.includes('Filiale de démonstration'), `→ ${choosePath}`);
+    const firstPage = /name="pages" value="([^"]+)"/.exec(chooseHtml)?.[1] ?? '';
+    const pagesAdded = await submitForm(choosePath, alexis, 'Ajouter les pages cochées', { pages: firstPage });
+    const pageRow = await asSystem(db, (trx) => trx.selectFrom('social_accounts').select(['kind', 'display_name']).where('external_urn', '=', firstPage).where('workspace_id', '=', workspaceId).executeTakeFirst());
+    check('pages d’entreprise : page cochée ajoutée avec son jeton', (pagesAdded.headers.get('location') ?? '').includes('page-connectee') && pageRow?.kind === 'page', `HTTP ${pagesAdded.status}`);
   }
 
   // Invitation d'une personne par l'administratrice (ONB-07).

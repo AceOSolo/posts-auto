@@ -11,7 +11,7 @@
 | Organisations, espaces, rôles | Fait | `packages/db` (migrations 001-006), `packages/services/src/access.ts` |
 | Invitations, rôles, retrait de membres (ONB-07) | Fait | Page « Réglages » de l'espace |
 | Connexion LinkedIn des **profils** (LNK-01) | Fait, à brancher | Parcours testé en mode simulé ; attend l'application A |
-| Connexion LinkedIn des **pages** (LNK-02) | À faire | Attend la Community Management API |
+| Connexion LinkedIn des **pages** (LNK-02) | Fait le 20/11/2026, avec LinkedIn simulé | Lecture des pages administrées (organizationAcls, organizations) à vérifier dès l'accès à la Community Management API |
 | Fiche du compte : titulaire, délégués, consentement, échéance (LNK-03, ROL-01, LNK-09) | Fait | Pages « Comptes » et « Réglages » |
 | Surveillance et renouvellement des connexions (LNK-04) | Fait | Tâche quotidienne `connexions` |
 | Déconnexion, pause d'un compte (LNK-05, LNK-07) | Fait | — |

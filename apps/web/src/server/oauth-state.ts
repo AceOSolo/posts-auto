@@ -10,6 +10,8 @@ export interface OAuthState {
   readonly state: string;
   readonly workspaceId: string;
   readonly aiLearning: boolean;
+  /** Profil de la personne (LNK-01) ou pages d'entreprise qu'elle administre (LNK-02). */
+  readonly mode: 'profile' | 'pages';
 }
 
 export function encodeOAuthState(value: OAuthState): string {
@@ -21,7 +23,7 @@ export function decodeOAuthState(raw: string | undefined): OAuthState | null {
   try {
     const value = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Partial<OAuthState>;
     if (typeof value.state !== 'string' || typeof value.workspaceId !== 'string' || typeof value.aiLearning !== 'boolean') return null;
-    return { state: value.state, workspaceId: value.workspaceId, aiLearning: value.aiLearning };
+    return { state: value.state, workspaceId: value.workspaceId, aiLearning: value.aiLearning, mode: value.mode === 'pages' ? 'pages' : 'profile' };
   } catch {
     return null;
   }

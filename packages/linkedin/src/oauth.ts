@@ -144,16 +144,18 @@ export class FakeLinkedInOAuth implements LinkedInOAuth {
     this.#redirectUri = redirectUri;
   }
 
-  authorizationUrl(state: string): string {
+  authorizationUrl(state: string, scopes: readonly string[] = PROFILE_SCOPES): string {
     const url = new URL(this.#redirectUri);
-    url.searchParams.set('code', `fake-${state.slice(0, 12)}`);
+    // Le code simulé garde la trace des permissions demandées (pages d'entreprise : LNK-02).
+    url.searchParams.set('code', `fake-${scopes.includes('w_organization_social') ? 'p-' : ''}${state.slice(0, 12)}`);
     url.searchParams.set('state', state);
     return url.toString();
   }
 
   async exchangeCode(code: string, now: Date): Promise<TokenSet> {
     if (!code.startsWith('fake-')) throw authError('Code inconnu');
-    return { accessToken: `token-${code}`, expiresAt: new Date(now.getTime() + 60 * 86_400_000), refreshToken: null, refreshExpiresAt: null, scopes: [...PROFILE_SCOPES] };
+    const scopes = code.startsWith('fake-p-') ? [...PROFILE_SCOPES, 'w_organization_social', 'r_organization_admin'] : [...PROFILE_SCOPES];
+    return { accessToken: `token-${code}`, expiresAt: new Date(now.getTime() + 60 * 86_400_000), refreshToken: null, refreshExpiresAt: null, scopes };
   }
 
   async refresh(): Promise<TokenSet> {

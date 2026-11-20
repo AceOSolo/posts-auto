@@ -325,6 +325,21 @@ export interface OrgMembers {
   user_id: string;
 }
 
+export interface PageConnections {
+  access_token_enc: Buffer;
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  id: Generated<string>;
+  oauth_client_id: string;
+  pages: Json;
+  refresh_expires_at: Timestamp | null;
+  refresh_token_enc: Buffer | null;
+  scopes: string[];
+  token_expires_at: Timestamp;
+  user_id: string;
+  workspace_id: string;
+}
+
 export interface PlanningCells {
   account_id: string | null;
   content: string;
@@ -660,6 +675,7 @@ export interface DB {
   offer_items: OfferItems;
   org_members: OrgMembers;
   organizations: Organizations;
+  page_connections: PageConnections;
   planning_cells: PlanningCells;
   post_media: PostMedia;
   post_requests: PostRequests;
