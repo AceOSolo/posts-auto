@@ -4,6 +4,7 @@
  */
 import { NotFoundError, cellKey, planningGrid } from '@posts-auto/services';
 import { database } from '../../../../../server/context.ts';
+import { csvResponse, toCsv } from '../../../../../server/csv.ts';
 import { currentUserId } from '../../../../../server/session.ts';
 
 export const dynamic = 'force-dynamic';
@@ -11,11 +12,6 @@ export const dynamic = 'force-dynamic';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATE: Record<string, string> = { planned: 'prévu', drafted: 'rédigé', validated: 'validé', published: 'publié', set_aside: 'mis de côté' };
 
-/** Cellule CSV : guillemets doublés, et neutralisation des formules (=, +, -, @) à l'ouverture dans un tableur. */
-function cell(value: string): string {
-  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
 
 export async function GET(request: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
@@ -36,12 +32,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ work
       (grid.entries[cellKey(row.row, w.weekStart)] ?? []).map((e) => `${e.content} [${STATE[e.status.state] ?? e.status.state}]`).join('\n'),
     ),
   ]);
-  const csv = `﻿${[header, ...lines].map((line) => line.map(cell).join(';')).join('\r\n')}\r\n`;
-  return new Response(csv, {
-    headers: {
-      'content-type': 'text/csv; charset=utf-8',
-      'content-disposition': `attachment; filename="planning-${grid.weeks[0]?.weekStart ?? 'export'}.csv"`,
-      'cache-control': 'no-store',
-    },
-  });
+  return csvResponse(toCsv([header, ...lines]), `planning-${grid.weeks[0]?.weekStart ?? 'export'}.csv`);
 }

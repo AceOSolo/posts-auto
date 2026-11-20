@@ -24,7 +24,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </Link>
           {workspaces.map((workspace) => (
             <span key={workspace.id} className="nav-group">
-              <Link href={`/equipe/${workspace.id}`}>Équipe · {workspace.name}</Link>
+              <Link href={`/tableau/${workspace.id}`}>Tableau de bord · {workspace.name}</Link>
+              <Link href={`/equipe/${workspace.id}`}>Équipe</Link>
               <Link href={`/comptes/${workspace.id}`}>Comptes</Link>
               <Link href={`/planning/${workspace.id}`}>Planning</Link>
               <Link href={`/idees/${workspace.id}`}>Idées et demandes</Link>

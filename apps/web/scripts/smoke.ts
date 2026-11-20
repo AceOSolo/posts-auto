@@ -119,6 +119,11 @@ try {
   const alexis = await sessionFor('alexis@demo.example.test');
   const team = await get(`/equipe/${withMarker.workspace_id}`, alexis);
   check('vue équipe (VAL-07)', team.status === 200 && (await team.text()).includes('Vue équipe'));
+  const dashboardHtml = (await (await get(`/tableau/${withMarker.workspace_id}`, alexis)).text()).replace(/<!-- -->/g, '');
+  check('tableau de bord : semaine, attentes, départs, indicateurs (SUI-01, SUI-02)', dashboardHtml.includes('Cette semaine') && dashboardHtml.includes('En attente de validation') && dashboardHtml.includes('Indicateurs des 8 dernières semaines'));
+  const postsCsv = await get(`/tableau/${withMarker.workspace_id}/export`, alexis);
+  const postsCsvText = await postsCsv.text();
+  check('export CSV de tous les posts (SUI-06)', postsCsv.headers.get('content-type')?.startsWith('text/csv') === true && postsCsvText.includes('"Créneau";"Compte"') && postsCsvText.split('\r\n').length > 3);
 
   const claire = await sessionFor('claire@demo.example.test');
   const claireHome = await (await get('/', claire)).text();
@@ -584,6 +589,7 @@ try {
   check('REC-01 : post d’un autre client → 404', (await get(`/posts/${withPhotos.id}`, outsider)).status === 404);
   check('REC-01 : image d’un autre client → 404', (await get(`/media/${assetId}`, outsider)).status === 404);
   check('REC-01 : planning d’un autre client non exportable → 404', (await get(`/planning/${workspaceId}/export`, outsider)).status === 404);
+  check('REC-01 : posts d’un autre client non exportables → 404', (await get(`/tableau/${workspaceId}/export`, outsider)).status === 404);
 } finally {
   await db.destroy();
 }
