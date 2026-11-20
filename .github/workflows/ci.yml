@@ -57,6 +57,85 @@ jobs:
       - name: Tests et couverture (seuil 80 %)
         run: npm run test:coverage
 
+  # Tests dans le navigateur (Playwright + axe), ordinateur et téléphone, sur l'application
+  # compilée, les données de démonstration et les fournisseurs simulés.
+  navigateur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: posts_auto
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/posts_auto
+      APP_URL: http://localhost:3001
+      LINKEDIN_MODE: fake
+      BILLING_MODE: fake
+      SSO_MODE: fake
+      CANVA_MODE: fake
+      AI_MODE: fake
+      IMAGE_MODE: fake
+      STRIPE_WEBHOOK_SECRET: whsec_ci
+      TOKEN_ENCRYPTION_KEY_ID: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Dépendances
+        run: npm ci --no-fund --no-audit
+
+      - name: Navigateur Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Clé de chiffrement jetable
+        run: echo "TOKEN_ENCRYPTION_KEYS=ci:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
+      - name: Base, données de démonstration, compilation
+        run: |
+          npm run migrate -w @posts-auto/db
+          npm run seed -w @posts-auto/web
+          npm run build -w @posts-auto/web
+
+      - name: Démarrage de l'application
+        working-directory: apps/web
+        run: |
+          nohup node ../../node_modules/next/dist/bin/next start --port 3001 > ../../serveur.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fs http://localhost:3001/sante > /dev/null && exit 0
+            sleep 1
+          done
+          cat ../../serveur.log
+          exit 1
+
+      - name: Tests dans le navigateur
+        run: npm run e2e -w @posts-auto/web
+
+      - name: Rapport en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-navigateur
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+            serveur.log
+          retention-days: 7
+
   # Image de production, publiée sur GitHub Container Registry après des vérifications réussies
   # sur main (docs/deploiement.md). Sur une demande de fusion : construite, pas publiée.
   image:
