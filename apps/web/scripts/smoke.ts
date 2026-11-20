@@ -11,7 +11,7 @@ import { FakeImageGenerator } from '@posts-auto/visuals';
 import { FileMediaStore, runGenerationTick, runVisualTick } from '@posts-auto/worker';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink } from '@posts-auto/services';
+import { consumeLoginLink, createApiKey, createApprovalLink, readZip, requestLoginLink, requestSignup } from '@posts-auto/services';
 
 const BASE = process.env['APP_URL'] ?? 'http://localhost:3000';
 const db = createDatabase(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL, { maxConnections: 2 });
@@ -507,6 +507,38 @@ try {
     `HTTP ${exported.status}`,
   );
   if (process.env['SMOKE_EXPORT_PATH']) writeFileSync(process.env['SMOKE_EXPORT_PATH'], zipBytes);
+
+  // Lot 2, ONB-01 à ONB-03, ONB-08 : inscription en libre-service puis démarrage.
+  const signupPage = await get('/inscription');
+  check('page d’inscription publique (ONB-01)', signupPage.status === 200 && (await signupPage.text()).includes('Créer un compte'));
+  const newcomer = `nouveau-${Date.now()}@demo.example.test`;
+  const signupForm = await submitForm('/inscription', '', 'Recevoir mon lien de confirmation', { email: newcomer, nom: 'Nouvelle Cliente', organisation: 'Atelier Démo', type: 'entreprise' });
+  check('demande d’inscription par le formulaire : lien envoyé, rien de créé', (signupForm.headers.get('location') ?? '').includes('inscription-envoyee') && (await asSystem(db, (trx) => trx.selectFrom('users').select('id').where('email', '=', newcomer).execute())).length === 0, `HTTP ${signupForm.status}`);
+  // Le lien est envoyé par e-mail ; ici, une seconde demande donne un jeton connu.
+  const signup = await requestSignup(db, { email: newcomer, fullName: 'Nouvelle Cliente', orgName: 'Atelier Démo', orgKind: 'entreprise' }, new Date());
+  if (signup.kind === 'confirm') {
+    const confirmPage = await get(`/inscription/confirmer?jeton=${encodeURIComponent(signup.token)}`);
+    const confirmHtml = await confirmPage.text();
+    check('lien de confirmation : la page ne crée rien avant le clic', confirmHtml.includes('Créer mon espace') && (await asSystem(db, (trx) => trx.selectFrom('users').select('id').where('email', '=', newcomer).execute())).length === 0);
+    const confirmFields = new FormData();
+    for (const input of confirmHtml.matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) confirmFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
+    const created = await fetch(`${BASE}/inscription/confirmer`, { method: 'POST', body: confirmFields, redirect: 'manual', headers: { origin: BASE } });
+    const location = created.headers.get('location') ?? '';
+    const newSession = /(?:__Host-)?session=([^;]+)/.exec(created.headers.get('set-cookie') ?? '')?.[1] ?? '';
+    check('« Créer mon espace » : organisation créée, session ouverte, assistant de démarrage (ONB-02)', /\/demarrage\/[0-9a-f-]{36}/.test(location) && newSession !== '', `HTTP ${created.status} → ${location}`);
+    const newWorkspace = /\/demarrage\/([0-9a-f-]{36})/.exec(location)?.[1] ?? '';
+    const wizard = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('assistant de démarrage : six étapes, aucune faite (ONB-03)', wizard.includes('Prêt à publier à 0 sur 6') && wizard.includes('Première rédaction'));
+    const company = await submitForm(`/demarrage/${newWorkspace}`, newSession, '>Enregistrer<', { nom: 'Atelier Démo', site: 'atelier-demo.fr', secteur: 'Menuiserie', taille: '1-9' });
+    const afterCompany = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('étape 1 « Votre entreprise » enregistrée', (company.headers.get('location') ?? '').includes('entreprise-enregistree') && afterCompany.includes('Prêt à publier à 1 sur 6'), `HTTP ${company.status}`);
+    const newHome = (await (await get('/', newSession)).text()).replace(/<!-- -->/g, '');
+    check('indicateur « prêt à publier » sur « Mes posts » (ONB-08)', newHome.includes('prêt à publier à 1 sur 6') && newHome.includes('Continuer le démarrage'));
+    check('pas d’indicateur pour l’espace déjà en place', !(await (await get('/', alexis)).text()).includes('Continuer le démarrage'));
+    check('le nouveau client ne voit pas l’espace de démonstration', (await get(`/planning/${workspaceId}`, newSession)).status === 404);
+  } else {
+    check('inscription : jeton de confirmation obtenu', false, signup.kind);
+  }
 
   // REC-01 : une personne d'un autre client ne voit ni le post ni l'image.
   await asSystem(db, (trx) =>

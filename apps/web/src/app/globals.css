@@ -123,6 +123,14 @@ fieldset.zone { background: var(--surface); }
 .badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: var(--border); vertical-align: middle; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0; }
 .filters a[aria-current='page'] { font-weight: 700; text-decoration: none; }
+/* Démarrage (ONB-03, ONB-08). */
+.onboarding-indicator { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.onboarding-indicator progress, progress { width: 160px; height: 10px; vertical-align: middle; accent-color: var(--primary); }
+.onboarding-steps { list-style: none; padding: 0; display: grid; gap: 12px; }
+.onboarding-steps li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+.onboarding-steps li.done { opacity: 0.8; }
+.onboarding-steps h2 { font-size: 1.05rem; margin: 0 0 4px; }
+.onboarding-steps h2 span[aria-hidden] { display: inline-block; min-width: 1.6em; color: var(--primary); }
 .logo-preview { display: block; max-width: 200px; height: 60px; object-fit: contain; margin-bottom: 6px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

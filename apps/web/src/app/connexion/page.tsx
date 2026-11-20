@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Flash } from '../../components/flash.tsx';
 import { currentUserId } from '../../server/session.ts';
@@ -21,6 +22,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           Recevoir mon lien
         </button>
       </form>
+      <p className="hint">
+        Pas encore de compte ? <Link href="/inscription">Créer un compte</Link> (essai gratuit, sans carte bancaire).
+      </p>
     </main>
   );
 }

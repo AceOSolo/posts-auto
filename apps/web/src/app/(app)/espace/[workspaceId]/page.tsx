@@ -1,5 +1,6 @@
 import { listDelegates, listMembers, listWorkspaceAccounts } from '@posts-auto/services';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
@@ -39,6 +40,9 @@ export default async function WorkspaceSettingsPage({
     <>
       <h1>Réglages de l’espace</h1>
       <Flash code={message} />
+      <p>
+        <Link href={`/demarrage/${workspaceId}`}>Assistant de démarrage</Link> : entreprise, comptes, ligne éditoriale, charte, créneaux, première rédaction.
+      </p>
 
       <section aria-labelledby="membres">
         <h2 id="membres">Membres</h2>

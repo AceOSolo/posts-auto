@@ -13,7 +13,7 @@
  */
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { addMinutes } from '@posts-auto/core';
-import { type Database, asSystem } from '@posts-auto/db';
+import { type Database, type Tx, asSystem } from '@posts-auto/db';
 
 export const LOGIN_LINK_TTL_MINUTES = 15;
 export const LOGIN_LINKS_PER_WINDOW = 5;
@@ -101,24 +101,28 @@ export async function consumeLoginLink(
 
     const user = await trx.selectFrom('users').select('id').where('email', '=', consumed.email).executeTakeFirst();
     if (user === undefined) return { ok: false, reason: 'invalid_or_expired' };
-
-    const sessionToken = newToken();
-    const expiresAt = addMinutes(now, SESSION_TTL_DAYS * 24 * 60);
-    await trx
-      .insertInto('sessions')
-      .values({
-        user_id: user.id,
-        token_hash: hashToken(sessionToken),
-        created_at: now,
-        last_seen_at: now,
-        expires_at: expiresAt,
-        ip: meta.ip ?? null,
-        user_agent: meta.userAgent?.slice(0, 500) ?? null,
-      })
-      .execute();
-    await trx.updateTable('users').set({ last_login_at: now }).where('id', '=', user.id).execute();
-    return { ok: true, session: { userId: user.id, sessionToken, expiresAt } };
+    return { ok: true, session: await openSession(trx, user.id, now, meta) };
   });
+}
+
+/** Ouvre une session (30 jours glissants) dans la transaction système de l'appelant. */
+export async function openSession(trx: Tx, userId: string, now: Date, meta: { ip?: string; userAgent?: string } = {}): Promise<SessionGrant> {
+  const sessionToken = newToken();
+  const expiresAt = addMinutes(now, SESSION_TTL_DAYS * 24 * 60);
+  await trx
+    .insertInto('sessions')
+    .values({
+      user_id: userId,
+      token_hash: hashToken(sessionToken),
+      created_at: now,
+      last_seen_at: now,
+      expires_at: expiresAt,
+      ip: meta.ip ?? null,
+      user_agent: meta.userAgent?.slice(0, 500) ?? null,
+    })
+    .execute();
+  await trx.updateTable('users').set({ last_login_at: now }).where('id', '=', userId).execute();
+  return { userId, sessionToken, expiresAt };
 }
 
 export interface ActiveSession {

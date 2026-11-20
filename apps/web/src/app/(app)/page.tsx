@@ -1,5 +1,5 @@
 import type { PostStatus } from '@posts-auto/core';
-import { type PostCard, hasConnectedProfile, listMyPosts, listMyWorkspaces } from '@posts-auto/services';
+import { type PostCard, hasConnectedProfile, listMyPosts, listMyWorkspaces, pendingOnboardings } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Flash } from '../../components/flash.tsx';
@@ -53,13 +53,23 @@ export default async function MyPostsPage({ searchParams }: { searchParams: Prom
   const userId = await requireUserId();
   const { message } = await searchParams;
   const posts = await listMyPosts(database(), userId, new Date());
-  const [workspaces, connected] = await Promise.all([listMyWorkspaces(database(), userId), hasConnectedProfile(database(), userId)]);
+  const [workspaces, connected, onboardings] = await Promise.all([listMyWorkspaces(database(), userId), hasConnectedProfile(database(), userId), pendingOnboardings(database(), userId)]);
   const firstWorkspace = workspaces[0];
 
   return (
     <>
       <h1>Mes posts</h1>
       <Flash code={message} />
+      {/* ONB-08 : « prêt à publier » tant que l'assistant de démarrage n'est pas terminé. */}
+      {onboardings.map((o) => (
+        <p key={o.workspaceId} className="card onboarding-indicator">
+          <strong>
+            {o.workspaceName} : prêt à publier à {o.doneCount} sur {o.total}
+          </strong>
+          <progress value={o.doneCount} max={o.total} aria-label={`Démarrage : ${o.doneCount} étapes sur ${o.total}`} />
+          <Link href={`/demarrage/${o.workspaceId}`}>Continuer le démarrage</Link>
+        </p>
+      ))}
       {!connected && firstWorkspace && (
         <p className="card">
           Pour que des posts puissent partir sur votre profil, connectez-le à LinkedIn (une minute, une seule fois).{' '}

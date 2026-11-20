@@ -71,6 +71,20 @@ export function loginLinkMail(ctx: TemplateContext, url: string): RenderedMail {
   );
 }
 
+/** ONB-01 : confirmation d'une inscription (lien valable 1 heure). */
+export function signupMail(ctx: TemplateContext, url: string): RenderedMail {
+  return compose(
+    ctx,
+    'Confirmez la création de votre espace',
+    [
+      'Pour créer votre espace et démarrer votre essai gratuit de 14 jours, confirmez votre adresse avec le bouton ci-dessous. Le lien est valable une heure et ne sert qu’une fois.',
+      'Si vous n’avez rien demandé, ignorez cet e-mail : rien ne sera créé.',
+    ],
+    { label: 'Créer mon espace', url },
+    null,
+  );
+}
+
 /** ONB-07 : invitation dans un espace, avec un lien de connexion (valable 15 minutes). */
 export function invitationMail(ctx: TemplateContext, url: string, workspaceName: string, inviterName: string | null): RenderedMail {
   return compose(

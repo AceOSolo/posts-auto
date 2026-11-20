@@ -74,7 +74,8 @@ describe('bibliothèque de modèles (VIS-01, VIS-02)', () => {
   });
 
   it('duplique, archive et restaure un modèle', async () => {
-    const [first] = (await getTemplateLibrary(db, people.editor, workspaceId, NOW)).templates;
+    // Choisi par sa clé : l'ordre de la bibliothèque dépend des dates de création.
+    const first = (await getTemplateLibrary(db, people.editor, workspaceId, NOW)).templates.find((t) => t.galleryKey === 'titre-points');
     const copy = await duplicateTemplate(db, people.editor, first?.id as string, NOW);
     expect((await getTemplate(db, people.editor, copy)).name).toBe('Titre et points clés (copie)');
     await setTemplateArchived(db, people.editor, copy, true, NOW);

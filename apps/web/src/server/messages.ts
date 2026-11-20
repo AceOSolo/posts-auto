@@ -160,6 +160,19 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   'photo-retiree-mediatheque': { tone: 'success', text: 'Photo retirée de la médiathèque.' },
   trop_de_photos: { tone: 'error', text: 'Au plus 20 photos à la fois.' },
   part_photos_invalide: { tone: 'error', text: 'Part des visuels avec photo inconnue.' },
+  'inscription-envoyee': { tone: 'success', text: 'C’est noté : un lien vous attend dans votre boîte e-mail (pensez aux indésirables). Il est valable une heure.' },
+  inscription_email: { tone: 'error', text: 'Adresse e-mail invalide.' },
+  inscription_nom: { tone: 'error', text: 'Indiquez votre nom.' },
+  inscription_organisation: { tone: 'error', text: 'Indiquez le nom de votre entreprise ou de votre agence.' },
+  inscription_type: { tone: 'error', text: 'Choisissez entreprise ou agence.' },
+  inscription_lien: { tone: 'error', text: 'Ce lien a déjà servi ou a expiré : refaites la demande.' },
+  'entreprise-enregistree': { tone: 'success', text: 'Entreprise enregistrée.' },
+  entreprise_nom: { tone: 'error', text: 'Indiquez le nom.' },
+  entreprise_secteur: { tone: 'error', text: 'Indiquez le secteur d’activité.' },
+  entreprise_taille: { tone: 'error', text: 'Choisissez une taille.' },
+  entreprise_site: { tone: 'error', text: 'Adresse du site invalide.' },
+  'demarrage-ferme': { tone: 'success', text: 'Assistant de démarrage fermé. Il reste accessible depuis les réglages de l’espace.' },
+  'demarrage-rouvert': { tone: 'success', text: 'Assistant de démarrage rouvert.' },
 };
 
 export function messageFor(code: string | string[] | undefined): { tone: 'success' | 'error'; text: string } | null {

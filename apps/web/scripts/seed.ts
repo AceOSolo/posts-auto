@@ -79,7 +79,12 @@ await asSystem(db, async (trx) => {
 
   const org = await trx.insertInto('organizations').values({ name: ORG_NAME, kind: 'entreprise' }).returning('id').executeTakeFirstOrThrow();
   await trx.insertInto('org_members').values({ org_id: org.id, user_id: users['jp'] as string, role: 'owner' }).execute();
-  const ws = await trx.insertInto('workspaces').values({ org_id: org.id, name: 'Secutop' }).returning('id').executeTakeFirstOrThrow();
+  // Espace déjà mis en place : l'assistant de démarrage (ONB-03) ne s'y affiche pas.
+  const ws = await trx
+    .insertInto('workspaces')
+    .values({ org_id: org.id, name: 'Secutop', website: 'https://www.secutop.fr', sector: 'Prévention des risques professionnels', company_size: '10-49', onboarding_done_at: new Date() })
+    .returning('id')
+    .executeTakeFirstOrThrow();
   await trx
     .insertInto('workspace_members')
     .values([

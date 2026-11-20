@@ -490,6 +490,18 @@ export interface Sessions {
   user_id: string;
 }
 
+export interface SignupRequests {
+  created_at: Generated<Timestamp>;
+  email: string;
+  expires_at: Timestamp;
+  full_name: string;
+  org_kind: string;
+  org_name: string;
+  requested_ip: string | null;
+  token_hash: string;
+  used_at: Timestamp | null;
+}
+
 export interface SocialAccounts {
   avatar_url: string | null;
   billable: Generated<boolean>;
@@ -603,6 +615,7 @@ export interface Workspaces {
   allowed_hours: Generated<Json>;
   auto_generation: Generated<boolean>;
   branding: Json | null;
+  company_size: string | null;
   created_at: Generated<Timestamp>;
   generation_cron: Generated<string>;
   generation_requested_at: Timestamp | null;
@@ -613,6 +626,7 @@ export interface Workspaces {
   max_posts_per_slot: Generated<number>;
   min_gap_minutes: Generated<number>;
   name: string;
+  onboarding_done_at: Timestamp | null;
   org_id: string;
   sector: string | null;
   slot_step_minutes: Generated<number>;
@@ -657,6 +671,7 @@ export interface DB {
   request_accounts: RequestAccounts;
   request_photos: RequestPhotos;
   sessions: Sessions;
+  signup_requests: SignupRequests;
   social_accounts: SocialAccounts;
   social_tokens: SocialTokens;
   source_items: SourceItems;
