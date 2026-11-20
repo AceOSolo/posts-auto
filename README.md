@@ -10,6 +10,7 @@ SaaS de posts LinkedIn rédigés par IA, validés par chaque titulaire et publi�
 - [Avancement de l'incrément 1a](./docs/avancement-1a.md) : critères de recette, preuves, ce qui reste à brancher.
 - [Avancement de l'incrément 1b](./docs/avancement-1b.md) : planning, rédaction par l'IA, reprises ; ce qui reste à brancher.
 - [Avancement de l'incrément 1c](./docs/avancement-1c.md) : visuels (modèles, médiathèque, images générées) ; ce qui reste à brancher.
+- [Avancement de l'incrément 2a](./docs/avancement-2a.md) : inscription en libre-service, essai gratuit, assistant de démarrage.
 - [API d'échange](./docs/api-echange.md) : comment la tâche Claude actuelle dépose ses posts et lit les décisions (incrément 1a), et comment reprendre ses idées et ses demandes (incrément 1b).
 
 ## Structure

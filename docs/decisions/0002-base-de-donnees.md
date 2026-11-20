@@ -60,3 +60,12 @@ Le schéma du cahier des charges (section 7) s'appuie sur des fonctions propres 
 | Table `visual_tasks` (`photo_mode` : garder, changer, sans photo) | « Refaire le visuel », traité par le worker avec bail et essais |
 | `workspaces.image_budget_monthly` | Budget d'images générées par mois (VIS-05) |
 | `ai_usage.purpose = 'visual'` | Remplissage d'un modèle par l'IA, compté à part (GEN-11) |
+
+## Lot 2, incrément 2a (migrations 020 et 021)
+
+| Écart ou ajout | Raison |
+| --- | --- |
+| Table `signup_requests`, réservée au système comme `login_tokens` | Inscription en libre-service (ONB-01) : rien n'est créé avant la confirmation de l'adresse |
+| `workspaces.company_size`, `workspaces.onboarding_done_at` | Assistant de démarrage (ONB-03, étape 1) ; l'avancement est calculé, seule la fermeture est enregistrée |
+| Espaces existants marqués « démarrés » | Ils ont été mis en place à la main (Secutop) |
+| Essai : `organizations.trial_ends_at` (existant) sans `stripe_customer_id` | ONB-06 ; pas de nouvelle colonne |
