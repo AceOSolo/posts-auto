@@ -15,6 +15,7 @@ import { addMinutes } from '@posts-auto/core';
 import { type Database, asSystem } from '@posts-auto/db';
 import { LOGIN_LINKS_PER_WINDOW, LOGIN_RATE_WINDOW_MINUTES, type SessionGrant, hashToken, newToken, normalizeEmail, openSession, requestLoginLink } from '../auth/auth.ts';
 import { audit, cleanText } from '../audit.ts';
+import { workspaceDefaults } from '../admin/platform.ts';
 
 export const SIGNUP_LINK_TTL_MINUTES = 60;
 export const SIGNUPS_PER_IP_PER_HOUR = 10;
@@ -134,7 +135,7 @@ export async function confirmSignup(db: Database, token: string, now: Date, meta
     // ONB-02 : le premier espace ; pour une agence, celui de son premier client, à renommer.
     const workspace = await trx
       .insertInto('workspaces')
-      .values({ org_id: org.id, name: request.org_kind === 'agence' ? 'Premier client' : request.org_name, created_at: now })
+      .values({ org_id: org.id, name: request.org_kind === 'agence' ? 'Premier client' : request.org_name, created_at: now, ...(await workspaceDefaults(trx)) })
       .returning('id')
       .executeTakeFirstOrThrow();
     await trx.insertInto('workspace_members').values({ workspace_id: workspace.id, user_id: user.id, role: 'admin', created_at: now }).execute();

@@ -18,6 +18,7 @@ import { audit } from '../audit.ts';
 import { TRIAL_MAX_ACCOUNTS, canConnectAccount, trialStateForWorkspace } from '../billing/trial.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 import { CONSENT_TEXT_VERSION, type TokenEncryptor } from './accounts.ts';
+import { accountProfileDefaults } from '../admin/platform.ts';
 
 export const PAGE_CHOICE_MINUTES = 15;
 
@@ -190,7 +191,7 @@ export async function confirmPageConnection(
           .values({ workspace_id: input.workspaceId, account_id: accountId, user_id: input.userId, kind: 'publish', text_version: CONSENT_TEXT_VERSION, granted_at: now })
           .execute();
       }
-      await trx.insertInto('account_profiles').values({ account_id: accountId, workspace_id: input.workspaceId }).onConflict((oc) => oc.column('account_id').doNothing()).execute();
+      await trx.insertInto('account_profiles').values({ account_id: accountId, workspace_id: input.workspaceId, ...(await accountProfileDefaults(trx)) }).onConflict((oc) => oc.column('account_id').doNothing()).execute();
       await audit(trx, { workspaceId: input.workspaceId, actorUserId: input.userId, action: existing ? 'page.reconnectee' : 'page.connectee', entity: 'social_account', entityId: accountId, details: { urn: page.urn }, at: now });
     }
     await trx.deleteFrom('page_connections').where('id', '=', pending.id).execute();

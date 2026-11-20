@@ -1,6 +1,6 @@
 'use server';
 
-import { consumeLoginLink, loginLinkMail, requestLoginLink, revokeSession } from '@posts-auto/services';
+import { consumeLoginLink, endSupportSession, loginLinkMail, requestLoginLink, revokeSession } from '@posts-auto/services';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { appUrl, database, mailer } from '../../server/context.ts';
@@ -40,6 +40,8 @@ export async function confirmLogin(formData: FormData): Promise<void> {
 
 export async function logout(): Promise<void> {
   const token = await sessionToken();
+  // ADM-02 : la fin d'une session du support est inscrite au journal du client.
+  if (token !== undefined) await endSupportSession(database(), token, new Date());
   if (token !== undefined) await revokeSession(database(), token, new Date());
   await clearSessionCookie();
   redirect('/connexion');

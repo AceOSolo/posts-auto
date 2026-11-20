@@ -12,6 +12,7 @@ import { type LinkedInOAuth } from '@posts-auto/linkedin';
 import { loadAccess } from '../access.ts';
 import { TRIAL_MAX_ACCOUNTS, canConnectAccount, trialStateForWorkspace } from '../billing/trial.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
+import { accountProfileDefaults } from '../admin/platform.ts';
 
 /** Version du texte de consentement affiché (conservée avec chaque consentement). */
 export const CONSENT_TEXT_VERSION = 'consentement-v1-2026-11';
@@ -156,7 +157,7 @@ export async function connectProfile(
 
     await trx
       .insertInto('account_profiles')
-      .values({ account_id: accountId, workspace_id: input.workspaceId })
+      .values({ account_id: accountId, workspace_id: input.workspaceId, ...(await accountProfileDefaults(trx)) })
       .onConflict((oc) => oc.column('account_id').doNothing())
       .execute();
 

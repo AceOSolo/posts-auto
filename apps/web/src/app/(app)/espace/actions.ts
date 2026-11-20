@@ -1,16 +1,18 @@
 'use server';
 
 import {
+  changeMemberRole,
   ForbiddenError,
+  grantSupportAccess,
+  invitationMail,
+  inviteMember,
   MEMBER_ROLES,
   type MemberRole,
   NotFoundError,
   RefusedError,
-  changeMemberRole,
-  invitationMail,
-  inviteMember,
   removeMember,
   requestLoginLink,
+  revokeSupportAccess,
   setAccountPaused,
   setDelegates,
 } from '@posts-auto/services';
@@ -100,5 +102,21 @@ export async function pauseAction(workspaceId: string, accountId: string, formDa
     if (!UUID.test(accountId)) throw new NotFoundError('Compte');
     const status = await setAccountPaused(database(), userId, accountId, formData.get('pause') === 'oui', now);
     return status === 'paused' ? 'compte-en-pause' : status === 'connected' ? 'compte-repris' : 'compte-repris-expire';
+  });
+}
+
+/** ADM-02 : accord pour une intervention du support, limité dans le temps. */
+export async function grantSupportAction(workspaceId: string, formData: FormData): Promise<void> {
+  await run(workspaceId, async (userId, now) => {
+    await grantSupportAccess(database(), userId, workspaceId, { hours: Number.parseInt(String(formData.get('heures') ?? ''), 10), reason: String(formData.get('motif') ?? '') }, now);
+    return 'support-accorde';
+  });
+}
+
+export async function revokeSupportAction(workspaceId: string, grantId: string): Promise<void> {
+  await run(workspaceId, async (userId, now) => {
+    if (!UUID.test(grantId)) throw new NotFoundError('Accès');
+    await revokeSupportAccess(database(), userId, workspaceId, grantId, now);
+    return 'support-retire';
   });
 }

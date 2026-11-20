@@ -671,6 +671,59 @@ try {
   const rightCode = await submitForm('/connexion/code', claireAgain, 'Vérifier', { code: totpCode(totpSecret, new Date(Date.now() + 30_000)) });
   check('bon code : accès ouvert', /\/$/.test(rightCode.headers.get('location') ?? '') && (await get('/', claireAgain)).status === 200, `HTTP ${rightCode.status} → ${rightCode.headers.get('location')}`);
 
+  // ADM-01 à ADM-06 : back-office de l'éditeur.
+  check('back-office introuvable pour un client', (await get('/admin', alexis)).status === 404);
+  const editorUser = await asSystem(db, async (trx) => {
+    const user = await trx
+      .insertInto('users')
+      .values({ email: 'editeur@demo.example.test', full_name: 'Éditeur SimplX' })
+      .onConflict((oc) => oc.column('email').doUpdateSet({ full_name: 'Éditeur SimplX', created_at: new Date() }))
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    await trx.insertInto('platform_admins').values({ user_id: user.id }).onConflict((oc) => oc.column('user_id').doNothing()).execute();
+    await trx.deleteFrom('user_totp').where('user_id', '=', user.id).execute();
+    return user.id;
+  });
+  const editor = await sessionFor('editeur@demo.example.test');
+  const noMfa = await get('/admin', editor);
+  check('back-office : double authentification exigée d’abord', noMfa.status === 307 && (noMfa.headers.get('location') ?? '').includes('mfa_requise_admin'), `HTTP ${noMfa.status}`);
+  await submitForm('/securite', editor, 'Activer la double authentification', {});
+  const editorSecret = /data-secret="([A-Z2-7]+)"/.exec(await (await get('/securite', editor)).text())?.[1] ?? '';
+  await submitForm('/securite', editor, '>Confirmer<', { code: totpCode(editorSecret, new Date()) });
+  const adminHome = (await (await get('/admin', editor)).text()).replace(/<!-- -->/g, '');
+  check('ADM-01 : liste des organisations avec formule, usage, revenu, paiement', adminHome.includes('Secutop') && adminHome.includes('Revenu mensuel HT') && adminHome.includes('Dernière activité'), editorUser);
+  const secutopOrg = await asSystem(db, (trx) => trx.selectFrom('workspaces').select('org_id').where('id', '=', workspaceId).executeTakeFirstOrThrow());
+  check('ADM-01 : fiche d’une organisation (espaces, personnes)', (await (await get(`/admin/organisations/${secutopOrg.org_id}`, editor)).text()).includes('Double authentification'));
+  const supervisionHtml = await (await get('/admin/supervision', editor)).text();
+  check('ADM-03 : supervision (files, erreurs LinkedIn, connexions, coûts IA)', supervisionHtml.includes('Files de travail') && supervisionHtml.includes('Erreurs LinkedIn par type') && supervisionHtml.includes('Coûts de l’IA par fournisseur'));
+  const settingsSaved = await submitForm('/admin/parametres', editor, 'Enregistrer les paramètres', {
+    image_budget_monthly: '30',
+    max_posts_per_account_per_day: '2',
+    max_posts_per_slot: '2',
+    min_gap_minutes: '30',
+    posts_per_week: '1',
+    ai_image_ratio_percent: '50',
+  });
+  check('ADM-04 : paramètres par défaut enregistrés ; modèles et consignes affichés', (settingsSaved.headers.get('location') ?? '').includes('parametres-enregistres') && (await (await get('/admin/parametres', editor)).text()).includes('Consignes (version'), `HTTP ${settingsSaved.status}`);
+  const galleryHtml = await (await get('/admin/galerie', editor)).text();
+  const galleryPreview = await get('/admin/galerie/apercu?modele=titre-points', editor);
+  check('ADM-05 : galerie de départ avec aperçus', galleryHtml.includes('Retirer de la galerie') && galleryPreview.headers.get('content-type') === 'image/png');
+  const announced = await submitForm('/admin/annonces', editor, 'Publier l’annonce', { message: 'Nouveau : test de fumée', niveau: 'info' });
+  check('ADM-06 : annonce publiée, visible par les clients', (announced.headers.get('location') ?? '').includes('annonce-publiee') && (await (await get('/', alexis)).text()).includes('test de fumée'), `HTTP ${announced.status}`);
+  await submitForm('/admin/annonces', editor, '>Retirer<', {});
+
+  // ADM-02 : accès du support accordé par le client, session « en tant que », trace.
+  const granted = await submitForm(`/espace/${workspaceId}`, alexis, 'Accorder l’accès au support', { heures: '2', motif: 'Test de fumée' });
+  check('ADM-02 : accès accordé par l’administratrice de l’espace', (granted.headers.get('location') ?? '').includes('support-accorde'), `HTTP ${granted.status}`);
+  const opened = await submitForm('/admin', editor, 'Ouvrir une session support', {});
+  const supportSession = /(?:__Host-)?session=([^;]+)/.exec(opened.headers.get('set-cookie') ?? '')?.[1] ?? '';
+  const supportHome = supportSession === '' ? '' : await (await get(`/tableau/${workspaceId}`, supportSession)).text();
+  check('ADM-02 : session du support ouverte au nom du client, bandeau affiché', (opened.headers.get('location') ?? '').includes(`/tableau/${workspaceId}`) && supportHome.includes('Session du support'), `HTTP ${opened.status}`);
+  const supportTrail = await asSystem(db, (trx) => trx.selectFrom('audit_log').select('action').where('workspace_id', '=', workspaceId).where('action', 'like', 'support.%').execute());
+  check('ADM-02 : accord et ouverture inscrits au journal d’audit du client', supportTrail.some((r) => r.action === 'support.acces_accorde') && supportTrail.some((r) => r.action === 'support.session_ouverte'));
+  await submitForm(`/espace/${workspaceId}`, alexis, 'Retirer l’accès', {});
+  check('ADM-02 : accès retiré, la session du support est fermée', (await get(`/tableau/${workspaceId}`, supportSession)).status === 307);
+
   // REC-01 : une personne d'un autre client ne voit ni le post ni l'image.
   await asSystem(db, (trx) =>
     trx

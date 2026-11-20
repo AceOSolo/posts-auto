@@ -1,11 +1,11 @@
-import { listDelegates, listMembers, listWorkspaceAccounts } from '@posts-auto/services';
+import { SUPPORT_MAX_HOURS, listDelegates, listMembers, listSupportGrants, listWorkspaceAccounts } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { changeRoleAction, delegatesAction, inviteAction, pauseAction, removeMemberAction } from '../actions.ts';
+import { changeRoleAction, delegatesAction, grantSupportAction, inviteAction, pauseAction, removeMemberAction, revokeSupportAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Réglages de l’espace' };
 export const dynamic = 'force-dynamic';
@@ -34,6 +34,8 @@ export default async function WorkspaceSettingsPage({
   const { members, canManage } = await listMembers(db, userId, workspaceId);
   if (members.length === 0 && !canManage) notFound();
   const accounts = await listWorkspaceAccounts(db, userId, workspaceId);
+  const supportGrants = canManage ? await listSupportGrants(db, userId, workspaceId, new Date()) : [];
+  const when = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const delegates = new Map(await Promise.all(accounts.map(async (account) => [account.id, new Set(await listDelegates(db, userId, account.id))] as const)));
 
   return (
@@ -138,6 +140,40 @@ export default async function WorkspaceSettingsPage({
           ))}
         </ul>
       </section>
+
+      {canManage && (
+        <section aria-labelledby="support">
+          <h2 id="support">Accès du support</h2>
+          <p className="hint">
+            Pour qu’une personne du support puisse voir l’espace comme vous le voyez et vous aider, accordez-lui un accès limité dans le temps. Ses interventions sont inscrites au journal
+            d’audit ; vous pouvez retirer l’accès à tout moment.
+          </p>
+          {supportGrants.length > 0 && (
+            <ul>
+              {supportGrants.map((g) => (
+                <li key={g.id}>
+                  Accordé par {g.grantedBy} jusqu’au {when.format(g.expiresAt)}
+                  {g.reason && <> · « {g.reason} »</>}
+                  <form action={revokeSupportAction.bind(null, workspaceId, g.id)} className="inline-fields">
+                    <button type="submit">Retirer l’accès</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form action={grantSupportAction.bind(null, workspaceId)} className="stack">
+            <label>
+              Durée (heures, {SUPPORT_MAX_HOURS} au plus)
+              <input name="heures" type="number" min={1} max={SUPPORT_MAX_HOURS} defaultValue={24} required />
+            </label>
+            <label>
+              Motif (facultatif)
+              <input name="motif" maxLength={500} />
+            </label>
+            <button type="submit">Accorder l’accès au support</button>
+          </form>
+        </section>
+      )}
     </>
   );
 }

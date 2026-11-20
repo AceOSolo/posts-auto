@@ -13,6 +13,7 @@ import { sql } from 'kysely';
 import { workspaceRole } from '../access.ts';
 import { audit } from '../audit.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
+import { workspaceDefaults } from '../admin/platform.ts';
 
 export const WORKSPACE_NAME_MAX = 80;
 
@@ -103,7 +104,7 @@ export async function createWorkspace(db: Database, userId: string, fromWorkspac
     if (max !== null && count.n >= max) throw new RefusedError('limite_espaces', `Votre formule permet ${max} espace${max > 1 ? 's' : ''}.`);
     const duplicate = await trx.selectFrom('workspaces').select('id').where('org_id', '=', orgId).where(sql`lower(name)`, '=', name.toLowerCase()).executeTakeFirst();
     if (duplicate !== undefined) throw new RefusedError('espace_existe', 'Un espace porte déjà ce nom.');
-    const ws = await trx.insertInto('workspaces').values({ org_id: orgId, name, created_at: now }).returning('id').executeTakeFirstOrThrow();
+    const ws = await trx.insertInto('workspaces').values({ org_id: orgId, name, created_at: now, ...(await workspaceDefaults(trx)) }).returning('id').executeTakeFirstOrThrow();
     await trx.insertInto('workspace_members').values({ workspace_id: ws.id, user_id: userId, role: 'admin', created_at: now }).execute();
     return ws.id;
   });

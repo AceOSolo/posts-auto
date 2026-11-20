@@ -121,7 +121,9 @@ export async function mfaStatus(db: Database, userId: string, now: Date): Promis
       .select([
         'u.created_at',
         't.user_id as totp',
-        sql<boolean>`exists (select 1 from org_members o where o.user_id = u.id and o.role = 'owner') or exists (select 1 from workspace_members m where m.user_id = u.id and m.role = 'admin')`.as('required'),
+        sql<boolean>`exists (select 1 from org_members o where o.user_id = u.id and o.role = 'owner') or exists (select 1 from workspace_members m where m.user_id = u.id and m.role = 'admin') or exists (select 1 from platform_admins p where p.user_id = u.id)`.as(
+          'required',
+        ),
       ])
       .where('u.id', '=', userId)
       .executeTakeFirstOrThrow();

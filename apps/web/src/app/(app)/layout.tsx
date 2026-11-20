@@ -1,8 +1,8 @@
-import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, listMyWorkspaces, listNotifications, mfaStatus, ownedOrganizations, trialBanners } from '@posts-auto/services';
+import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, activeAnnouncements, isPlatformAdmin, listMyWorkspaces, listNotifications, mfaStatus, ownedOrganizations, trialBanners } from '@posts-auto/services';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { database } from '../../server/context.ts';
-import { requireUserId } from '../../server/session.ts';
+import { currentSession, requireUserId } from '../../server/session.ts';
 import { logout } from '../connexion/actions.ts';
 
 /** Pages réservées aux personnes connectées. */
@@ -13,6 +13,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const trials = await trialBanners(database(), userId, new Date());
   const owned = await ownedOrganizations(database(), userId);
   const mfa = await mfaStatus(database(), userId, new Date());
+  const platformAdmin = await isPlatformAdmin(database(), userId);
+  const announcements = await activeAnnouncements(database(), new Date());
+  const support = (await currentSession())?.supportAdminId ?? null;
   return (
     <>
       <header className="topbar">
@@ -44,6 +47,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               {org.kind === 'agence' ? 'Clients' : 'Espaces'}
             </Link>
           ))}
+          {platformAdmin && <Link href="/admin">Back-office</Link>}
           <Link href="/moi">Mon compte</Link>
           <form action={logout}>
             <button type="submit" className="link">
@@ -52,6 +56,18 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </form>
         </span>
       </header>
+      {/* ADM-02 : session ouverte par le support, avec l'accord du client. */}
+      {support !== null && (
+        <p className="trial-banner expired" role="status">
+          <strong>Session du support</strong> : ouverte avec votre accord, inscrite au journal d’audit. Elle se termine à la déconnexion ou à la fin de l’accord.
+        </p>
+      )}
+      {/* ADM-06 : annonces de l'éditeur. */}
+      {announcements.map((a) => (
+        <p key={a.id} className={`trial-banner${a.level === 'maintenance' ? ' expired' : ''}`} role="status">
+          <strong>{a.level === 'maintenance' ? 'Maintenance' : 'Nouveau'}</strong> : {a.message}
+        </p>
+      ))}
       {/* ONB-06 : état de l'essai gratuit, pour qui gère l'espace. */}
       {trials.map((trial) => (
         <p key={trial.orgId} className={`trial-banner${trial.expired ? ' expired' : ''}`} role="status">

@@ -132,6 +132,8 @@ export interface ActiveSession {
   readonly expiresAt: Date;
   /** SEC-04 : la personne a activé la double authentification et n'a pas encore saisi son code. */
   readonly mfaPending: boolean;
+  /** ADM-02 : session ouverte par le support de l'éditeur (identifiant de la personne du support). */
+  readonly supportAdminId: string | null;
 }
 
 /** Identifie la personne derrière un cookie de session, et prolonge la session (30 jours glissants). */
@@ -147,6 +149,7 @@ export async function resolveSession(db: Database, sessionToken: string, now: Da
         'token_hash',
         'expires_at',
         'last_seen_at',
+        'support_admin_id',
         sql<boolean>`mfa_verified_at is null and exists (select 1 from user_totp t where t.user_id = sessions.user_id and t.confirmed_at is not null)`.as('mfa_pending'),
       ])
       .where('token_hash', '=', hash)
@@ -157,11 +160,12 @@ export async function resolveSession(db: Database, sessionToken: string, now: Da
     if (session === undefined || !timingSafeEqual(Buffer.from(session.token_hash), Buffer.from(hash))) return null;
 
     let expiresAt = session.expires_at;
-    if (now.getTime() - session.last_seen_at.getTime() > SESSION_TOUCH_MINUTES * 60_000) {
+    // Une session du support finit avec l'accord du client : elle n'est jamais prolongée.
+    if (session.support_admin_id === null && now.getTime() - session.last_seen_at.getTime() > SESSION_TOUCH_MINUTES * 60_000) {
       expiresAt = addMinutes(now, SESSION_TTL_DAYS * 24 * 60);
       await trx.updateTable('sessions').set({ last_seen_at: now, expires_at: expiresAt }).where('id', '=', session.id).execute();
     }
-    return { userId: session.user_id, sessionId: session.id, expiresAt, mfaPending: session.mfa_pending };
+    return { userId: session.user_id, sessionId: session.id, expiresAt, mfaPending: session.mfa_pending, supportAdminId: session.support_admin_id };
   });
 }
 

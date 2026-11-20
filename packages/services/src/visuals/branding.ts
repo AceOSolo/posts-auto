@@ -5,7 +5,8 @@
  * sombre, et logo (une image de la médiathèque de l'espace).
  */
 import type { Tx } from '@posts-auto/db';
-import { type Brand, galleryTemplates, parseBrand } from '@posts-auto/visuals';
+import { type Brand, parseBrand } from '@posts-auto/visuals';
+import { galleryCatalog } from '../admin/gallery.ts';
 
 export interface Branding extends Brand {
   readonly logoAssetId: string | null;
@@ -32,7 +33,7 @@ export async function ensureGalleryTemplates(trx: Tx, workspaceId: string, creat
   const existing = await trx.selectFrom('templates').select('id').where('workspace_id', '=', workspaceId).limit(1).executeTakeFirst();
   if (existing !== undefined) return 0;
   const brand = await loadBranding(trx, workspaceId);
-  const rows = galleryTemplates(brand).map((t) => ({
+  const rows = (await galleryCatalog(trx, brand)).map((t) => ({
     workspace_id: workspaceId,
     name: t.name,
     format: t.definition.format,

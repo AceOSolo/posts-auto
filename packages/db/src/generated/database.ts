@@ -85,6 +85,16 @@ export interface AiUsage {
   workspace_id: string;
 }
 
+export interface Announcements {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  ends_at: Timestamp;
+  id: Generated<string>;
+  level: Generated<string>;
+  message: string;
+  starts_at: Generated<Timestamp>;
+}
+
 export interface ApiKeys {
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -191,6 +201,16 @@ export interface Events {
   title: string;
   updated_at: Generated<Timestamp>;
   workspace_id: string;
+}
+
+export interface GalleryEntries {
+  active: Generated<boolean>;
+  definition: Json | null;
+  key: string;
+  name: string | null;
+  position: Generated<number>;
+  updated_at: Generated<Timestamp>;
+  with_photo: Generated<boolean>;
 }
 
 export interface GenerationRuns {
@@ -380,6 +400,18 @@ export interface Plans {
   updated_at: Generated<Timestamp>;
 }
 
+export interface PlatformAdmins {
+  created_at: Generated<Timestamp>;
+  user_id: string;
+}
+
+export interface PlatformSettings {
+  key: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  value: Json;
+}
+
 export interface PostMedia {
   alt_text: string | null;
   asset_id: string;
@@ -547,6 +579,8 @@ export interface Sessions {
   mfa_failures: Generated<number>;
   mfa_verified_at: Timestamp | null;
   revoked_at: Timestamp | null;
+  support_admin_id: string | null;
+  support_grant_id: string | null;
   token_hash: string;
   user_agent: string | null;
   user_id: string;
@@ -641,6 +675,16 @@ export interface Subscriptions {
   status: string;
   stripe_subscription_id: string | null;
   updated_at: Generated<Timestamp>;
+}
+
+export interface SupportGrants {
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  granted_by: string;
+  id: Generated<string>;
+  reason: string | null;
+  revoked_at: Timestamp | null;
+  workspace_id: string;
 }
 
 export interface Templates {
@@ -740,6 +784,7 @@ export interface DB {
   account_delegates: AccountDelegates;
   account_profiles: AccountProfiles;
   ai_usage: AiUsage;
+  announcements: Announcements;
   api_keys: ApiKeys;
   approval_links: ApprovalLinks;
   audit_log: AuditLog;
@@ -749,6 +794,7 @@ export interface DB {
   editorial_lines: EditorialLines;
   event_accounts: EventAccounts;
   events: Events;
+  gallery_entries: GalleryEntries;
   generation_runs: GenerationRuns;
   idea_accounts: IdeaAccounts;
   ideas: Ideas;
@@ -763,6 +809,8 @@ export interface DB {
   page_connections: PageConnections;
   planning_cells: PlanningCells;
   plans: Plans;
+  platform_admins: PlatformAdmins;
+  platform_settings: PlatformSettings;
   post_media: PostMedia;
   post_requests: PostRequests;
   post_status_history: PostStatusHistory;
@@ -781,6 +829,7 @@ export interface DB {
   source_items: SourceItems;
   subject_bank: SubjectBank;
   subscriptions: Subscriptions;
+  support_grants: SupportGrants;
   templates: Templates;
   totp_recovery_codes: TotpRecoveryCodes;
   usage_alerts: UsageAlerts;
