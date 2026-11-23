@@ -30,8 +30,11 @@ test.describe('site vitrine (SIT-01 à SIT-09)', () => {
   });
 
   test('version anglaise et pages légales', async ({ page }) => {
-    await page.goto('/en');
+    await page.goto('/');
+    await page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'English' }).click();
+    await expect(page).toHaveURL(/\/en$/);
     await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'English' })).toBeHidden();
     await expectNoHorizontalScroll(page);
     for (const path of ['/mentions-legales', '/cgu', '/cgv', '/confidentialite', '/cookies', '/sous-traitants']) {
       await page.goto(path);

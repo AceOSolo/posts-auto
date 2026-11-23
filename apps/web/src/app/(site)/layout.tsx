@@ -14,6 +14,9 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
           <a href="/#fonctionnement">Comment ça marche</a>
           <a href="/#tarifs">Tarifs</a>
           <a href="/#faq">Questions</a>
+          <Link href="/en" hrefLang="en" lang="en" className="lien-english">
+            English
+          </Link>
           <Link href="/connexion">Connexion</Link>
           <Link href="/inscription" className="button primary">
             Essai gratuit

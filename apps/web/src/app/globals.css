@@ -393,6 +393,7 @@ table.tracking th[scope='row'], table.tracking thead th:first-child { text-align
 .site-header nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; }
 .site-header nav a:not(.button) { color: var(--text); text-decoration: none; font-weight: 600; }
 .site-header nav a:not(.button):hover { color: var(--link); }
+.site:has(main[lang="en"]) .lien-english { display: none; }
 .site .button.primary { border-color: var(--primary); }
 .site main, .site .site-main { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 .hero { padding: 48px 0 40px; display: grid; gap: 32px; align-items: center; }
