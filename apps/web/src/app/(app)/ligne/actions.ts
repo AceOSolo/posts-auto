@@ -42,7 +42,7 @@ async function run(workspaceId: string, anchor: string, action: (userId: string,
   revalidatePath(`/ligne/${workspaceId}`);
   if (succeeded && afterSuccess !== undefined) {
     revalidatePath(`/demarrage/${workspaceId}`);
-    redirect(`${afterSuccess}&message=${encodeURIComponent(message)}`);
+    redirect(`${afterSuccess}?message=${encodeURIComponent(message)}`);
   }
   redirect(`/ligne/${workspaceId}?message=${encodeURIComponent(message)}#${anchor}`);
 }
@@ -104,7 +104,7 @@ export async function saveLineAction(workspaceId: string, form: FormData): Promi
       now,
     );
     return result.changed.length === 0 ? 'ligne-inchangee' : 'ligne-enregistree';
-  }, text(form, 'depuis') === 'demarrage' ? `/demarrage/${workspaceId}?mode=rapide` : undefined);
+  }, text(form, 'depuis') === 'demarrage' ? `/demarrage/${workspaceId}` : undefined);
 }
 
 /** EDI-03 : ajoute (itemId null) ou modifie une offre. */
