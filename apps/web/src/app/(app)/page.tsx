@@ -3,6 +3,7 @@ import { type PostCard, hasConnectedProfile, listMyPosts, listMyWorkspaces, pend
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Flash } from '../../components/flash.tsx';
+import decision from '../../components/post-decision.module.css';
 import { PostPreview } from '../../components/post-preview.tsx';
 import { StatusBadge } from '../../components/status-badge.tsx';
 import { database } from '../../server/context.ts';
@@ -28,19 +29,28 @@ function Card({ post }: { post: PostCard }) {
       </p>
       <PostPreview accountName={post.accountName} accountKind={post.accountKind} body={post.body} media={post.media} />
       {post.lastError && <p className="flash error">{post.lastError}</p>}
-      <div className="actions">
-        {quickValidate && (
+      {post.status === 'a_valider' ? (
+        <div className={decision.bar}>
           <form action={validateAction.bind(null, post.id)}>
             <input type="hidden" name="retour" value="liste" />
-            <button type="submit" className="primary">
+            <button type="submit" className={`primary ${decision.action} ${decision.validate}`} disabled={!quickValidate}>
               Valider
             </button>
           </form>
-        )}
-        <Link href={`/posts/${post.id}`} className="button">
-          {post.status === 'a_valider' ? 'Voir et corriger' : 'Voir le détail'}
-        </Link>
-      </div>
+          <Link href={`/posts/${post.id}?action=modifier#decision`} className={`button ${decision.action} ${decision.modify}`}>
+            Modifier
+          </Link>
+          <Link href={`/posts/${post.id}?action=refuser#decision`} className={`button ${decision.action} ${decision.refuse}`}>
+            Refuser
+          </Link>
+        </div>
+      ) : (
+        <div className="actions">
+          <Link href={`/posts/${post.id}`} className="button">
+            Voir le détail
+          </Link>
+        </div>
+      )}
       {post.status === 'a_valider' && post.hasBlockingMarkers && (
         <p className="hint">Ce post contient un passage à compléter avant validation.</p>
       )}

@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import decision from '../../../../components/post-decision.module.css';
 import { PostPreview } from '../../../../components/post-preview.tsx';
 import { STATUS_LABELS, StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
@@ -95,6 +96,10 @@ export default async function PostPage({
     throw error;
   }
   const can = new Set(post.actions.commands);
+  const canModify = post.actions.canEdit || can.has('requestChanges');
+  // Sans JavaScript : le panneau ouvert est porté par l'adresse. Un passage à compléter ouvre la correction.
+  const modifyOpen = canModify && (query['action'] === 'modifier' || (post.hasBlockingMarkers && post.actions.canEdit));
+  const refuseOpen = can.has('refuse') && query['action'] === 'refuser';
   const hooks = post.actions.canEdit && post.status === 'a_valider' ? await pendingHooks(database(), userId, post.id, new Date()) : [];
   // VIS-13 : le visuel préparé à partir d'un modèle, et ce qu'on peut faire de sa photo.
   const visual = post.media.find((m) => m.kind === 'rendered') ?? null;
@@ -167,6 +172,118 @@ export default async function PostPage({
           <Link href="/comment-fonctionne-la-redaction">Comment fonctionne la rédaction</Link>
         </p>
       )}
+
+      {/* VAL-02 : trois décisions, sans menu à déplier. */}
+      <section id="decision" aria-label="Décision">
+        {(can.has('validate') || canModify || can.has('refuse')) && (
+          <div className={decision.bar}>
+            {can.has('validate') && (
+              <form action={validateAction.bind(null, post.id)}>
+                <button
+                  type="submit"
+                  className={`primary ${decision.action} ${decision.validate}`}
+                  disabled={post.hasBlockingMarkers}
+                  {...(post.hasBlockingMarkers ? { 'aria-describedby': 'markers-hint' } : {})}
+                >
+                  Valider
+                </button>
+              </form>
+            )}
+            {canModify && (
+              <Link
+                href={modifyOpen ? `/posts/${post.id}#decision` : `/posts/${post.id}?action=modifier#decision`}
+                className={`button ${decision.action} ${decision.modify} ${modifyOpen ? decision.current : ''}`}
+                aria-expanded={modifyOpen}
+              >
+                Modifier
+              </Link>
+            )}
+            {can.has('refuse') && (
+              <Link
+                href={refuseOpen ? `/posts/${post.id}#decision` : `/posts/${post.id}?action=refuser#decision`}
+                className={`button ${decision.action} ${decision.refuse} ${refuseOpen ? decision.current : ''}`}
+                aria-expanded={refuseOpen}
+              >
+                Refuser
+              </Link>
+            )}
+          </div>
+        )}
+        {can.has('validate') && post.hasBlockingMarkers && (
+          <p id="markers-hint" className="hint">
+            Complétez les passages surlignés avant de valider ({post.markers.length}).
+          </p>
+        )}
+
+        {modifyOpen && (
+          <div className={decision.panel}>
+            {post.actions.canEdit && (
+              <form action={editTextAction.bind(null, post.id)} className="stack">
+                <input type="hidden" name="statut" value={post.status} />
+                <label htmlFor="texte">Corriger le texte moi-même</label>
+                <textarea id="texte" name="texte" defaultValue={post.body} rows={12} maxLength={3000} required />
+                <button type="submit">Enregistrer le texte</button>
+              </form>
+            )}
+            {can.has('requestChanges') && (
+              <form action={requestChangesAction.bind(null, post.id)} className="stack">
+                <label htmlFor="note">Ou demander à l’IA de le refaire</label>
+                <textarea id="note" name="note" rows={3} required placeholder="Ex. : raccourcir, citer le salon de mars, ton plus personnel…" />
+                <button type="submit">Envoyer la demande</button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {refuseOpen && (
+          <div className={decision.panel}>
+            <h3>Pourquoi refuser ce sujet ?</h3>
+            <form action={refuseAction.bind(null, post.id)} className={decision.reasons}>
+              {Object.entries(REFUSAL_REASONS)
+                .filter(([value]) => value !== 'autre')
+                .map(([value, label]) => (
+                  <button key={value} type="submit" name="motif" value={value}>
+                    {label}
+                  </button>
+                ))}
+            </form>
+            <form action={refuseAction.bind(null, post.id)} className="stack">
+              <input type="hidden" name="motif" value="autre" />
+              <label htmlFor="precision">Autre raison</label>
+              <textarea id="precision" name="precision" rows={2} required />
+              <button type="submit">Refuser</button>
+            </form>
+            <Link href={`/posts/${post.id}#decision`} className={decision.close}>
+              Annuler
+            </Link>
+          </div>
+        )}
+      </section>
+
+      <section className="decide" aria-label="Autres actions">
+        {post.actions.canReschedule && (
+          <details>
+            <summary>Changer la date et l’heure</summary>
+            <form action={rescheduleAction.bind(null, post.id)} className="stack">
+              <label htmlFor="creneau">Nouveau créneau (heure de {post.timeZone === 'Europe/Paris' ? 'Paris' : post.timeZone})</label>
+              <input id="creneau" name="creneau" type="datetime-local" required defaultValue={localInputValue(post.scheduledAt, post.timeZone)} />
+              <button type="submit">Changer le créneau</button>
+            </form>
+          </details>
+        )}
+        {can.has('withdraw') && (
+          <form action={withdrawAction.bind(null, post.id)}>
+            <button type="submit">Retirer la validation</button>
+          </form>
+        )}
+        {can.has('retry') && (
+          <form action={retryAction.bind(null, post.id)}>
+            <button type="submit" className="primary">
+              Réessayer la publication
+            </button>
+          </form>
+        )}
+      </section>
 
       {(visual !== null || task !== null || post.actions.canRedoVisual) && (
         <section className="visual" aria-labelledby="visuel">
@@ -306,90 +423,6 @@ export default async function PostPage({
           )}
         </details>
       )}
-
-      <section className="decide" aria-label="Décision">
-        {can.has('validate') && (
-          <form action={validateAction.bind(null, post.id)}>
-            <button type="submit" className="primary" disabled={post.hasBlockingMarkers} aria-describedby="markers-hint">
-              Valider
-            </button>
-            {post.hasBlockingMarkers && (
-              <p id="markers-hint" className="hint">
-                Complétez les passages surlignés avant de valider ({post.markers.length}).
-              </p>
-            )}
-          </form>
-        )}
-
-        {post.actions.canEdit && (
-          <details open={post.hasBlockingMarkers}>
-            <summary>Corriger le texte</summary>
-            <form action={editTextAction.bind(null, post.id)} className="stack">
-              <input type="hidden" name="statut" value={post.status} />
-              <label htmlFor="texte">Texte du post</label>
-              <textarea id="texte" name="texte" defaultValue={post.body} rows={12} maxLength={3000} required />
-              <button type="submit">Enregistrer le texte</button>
-            </form>
-          </details>
-        )}
-
-        {can.has('requestChanges') && (
-          <details>
-            <summary>Demander une modification</summary>
-            <form action={requestChangesAction.bind(null, post.id)} className="stack">
-              <label htmlFor="note">Ce qu’il faut changer</label>
-              <textarea id="note" name="note" rows={3} required placeholder="Ex. : raccourcir, citer le salon de mars, ton plus personnel…" />
-              <button type="submit">Envoyer la demande</button>
-            </form>
-          </details>
-        )}
-
-        {can.has('refuse') && (
-          <details>
-            <summary>Refuser ce sujet</summary>
-            <form action={refuseAction.bind(null, post.id)} className="stack">
-              <label htmlFor="motif">Motif</label>
-              <select id="motif" name="motif" required defaultValue="">
-                <option value="" disabled>
-                  Choisir un motif
-                </option>
-                {Object.entries(REFUSAL_REASONS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <label htmlFor="precision">Précision (obligatoire pour « Autre »)</label>
-              <textarea id="precision" name="precision" rows={2} />
-              <button type="submit">Refuser</button>
-            </form>
-          </details>
-        )}
-
-        {post.actions.canReschedule && (
-          <details>
-            <summary>Changer la date et l’heure</summary>
-            <form action={rescheduleAction.bind(null, post.id)} className="stack">
-              <label htmlFor="creneau">Nouveau créneau (heure de {post.timeZone === 'Europe/Paris' ? 'Paris' : post.timeZone})</label>
-              <input id="creneau" name="creneau" type="datetime-local" required defaultValue={localInputValue(post.scheduledAt, post.timeZone)} />
-              <button type="submit">Changer le créneau</button>
-            </form>
-          </details>
-        )}
-
-        {can.has('withdraw') && (
-          <form action={withdrawAction.bind(null, post.id)}>
-            <button type="submit">Retirer la validation</button>
-          </form>
-        )}
-        {can.has('retry') && (
-          <form action={retryAction.bind(null, post.id)}>
-            <button type="submit" className="primary">
-              Réessayer la publication
-            </button>
-          </form>
-        )}
-      </section>
 
       {/* PUB-08 : mention d'une page d'entreprise, au format de l'API LinkedIn. */}
       {post.actions.canEdit && (

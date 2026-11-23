@@ -60,7 +60,7 @@ Le tableau sert de procès-verbal : cocher, dater, noter l'anomalie éventuelle.
 | O1 | Connexion Google avec une adresse Google Workspace | Connecté, double authentification demandée si active | ☐ |
 | O2 | Connexion Microsoft avec une adresse de domaine vérifié | Connecté ; adresse non vérifiée : refus clair | ☐ |
 | O3 | Canva : connecter, ajouter un modèle de marque, préparer un visuel | Copie dans le Canva du client, PNG dans le post | ☐ |
-| O4 | Webhook vers un scénario Make (LNK-08) | Signature vérifiée par le scénario, post publié par Make | ☐ |
+| O4 | ~~Webhook vers un scénario Make (LNK-08)~~ | Sans objet : option retirée le 23/11/2026 | — |
 | **Exploitation** | | | |
 | X1 | Sauvegarde immédiate, puis restauration dans une base d'essai | Base restaurée, données présentes | ☐ |
 | X2 | Redémarrage du serveur | Tout redémarre seul, aucun post manqué ni publié deux fois | ☐ |

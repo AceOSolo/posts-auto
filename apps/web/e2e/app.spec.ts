@@ -18,7 +18,7 @@ test.describe('application (VAL, PLA, VIS, SUI)', () => {
     await page.goto('/');
     // La carte du post qui contient un passage à compléter.
     const card = page.locator('article, li').filter({ hasText: 'passage à compléter' }).first();
-    await card.getByRole('link', { name: /Voir et corriger|Voir le détail/ }).click();
+    await card.getByRole('link', { name: /^Modifier$|Voir le détail/ }).click();
     await expect(page.locator('.marker').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /^Valider/ }).first()).toBeDisabled();
     await expectNoHorizontalScroll(page);

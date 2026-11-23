@@ -24,6 +24,7 @@ const post = (status: PostStatus, hasBlockingMarkers = false) => ({ status, hasB
 const SAMPLE_COMMANDS: Record<PostCommand['type'], PostCommand> = {
   submit: { type: 'submit' },
   validate: { type: 'validate' },
+  autoValidate: { type: 'autoValidate' },
   requestChanges: { type: 'requestChanges', note: 'Raccourcir le 2e paragraphe' },
   refuse: { type: 'refuse', reason: 'deja_traite' },
   withdraw: { type: 'withdraw' },
@@ -72,6 +73,12 @@ describe('cycle de vie d’un post (6.1)', () => {
       const exits = Object.values(TRANSITIONS).filter((rule) => rule.from.includes(status));
       expect(exits.length, status).toBeGreaterThan(0);
     }
+  });
+
+  it('VAL-11 : la validation automatique est réservée au système et respecte les marqueurs', () => {
+    expect(applyPostCommand(post('a_valider'), { type: 'autoValidate' }, system, at)).toMatchObject({ ok: true, status: 'valide', decision: null });
+    expect(applyPostCommand(post('a_valider'), { type: 'autoValidate' }, holder, at)).toEqual({ ok: false, error: 'actor_not_allowed' });
+    expect(applyPostCommand(post('a_valider', true), { type: 'autoValidate' }, system, at)).toEqual({ ok: false, error: 'blocking_markers' });
   });
 
   it('enregistre la transition (ancien statut, nouveau, acteur, date, motif)', () => {

@@ -20,6 +20,7 @@ class StubOAuth implements LinkedInOAuth {
   checks: string[] = [];
   refreshFails = false;
   profileStatus: number | null = null;
+  picture: string | null = null;
   authorizationUrl(): string {
     return '';
   }
@@ -34,7 +35,7 @@ class StubOAuth implements LinkedInOAuth {
   async memberProfile(accessToken: string): Promise<MemberProfile> {
     this.checks.push(accessToken);
     if (this.profileStatus !== null) throw authError(this.profileStatus);
-    return { sub: 'x', urn: 'urn:li:person:x', name: 'X', pictureUrl: null };
+    return { sub: 'x', urn: 'urn:li:person:x', name: 'X', pictureUrl: this.picture };
   }
 }
 
@@ -94,6 +95,20 @@ async function clearNotifications() {
 }
 
 describe('surveillance des connexions LinkedIn (LNK-04)', () => {
+  it('vérification quotidienne : la photo est rafraîchie, et conservée si LinkedIn n’en renvoie pas', async () => {
+    await clearNotifications();
+    const accountId = await connected({ expiresInDays: 30 });
+    const picture = () => asSystem(db, (trx) => trx.selectFrom('social_accounts').select('avatar_url').where('id', '=', accountId).executeTakeFirstOrThrow());
+    const oauth = new StubOAuth();
+    oauth.picture = 'https://media.example/photo-neuve.jpg';
+    await runTokenCheck({ db, oauth, cipher, clock: () => NOW });
+    expect((await picture()).avatar_url).toBe('https://media.example/photo-neuve.jpg');
+
+    oauth.picture = null;
+    await runTokenCheck({ db, oauth, cipher, clock: () => inDays(1) });
+    expect((await picture()).avatar_url).toBe('https://media.example/photo-neuve.jpg');
+  });
+
   it('à 10 jours de l’échéance : « expire bientôt », alerte au titulaire et à l’admin, une seule fois', async () => {
     await clearNotifications();
     const accountId = await connected({ expiresInDays: 10 });

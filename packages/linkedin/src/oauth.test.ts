@@ -75,13 +75,15 @@ describe('OAuth LinkedIn (LNK-01)', () => {
 });
 
 describe('OAuth simulé (développement)', () => {
-  it('renvoie directement vers l’adresse de retour et fournit un jeton et une identité', async () => {
+  it('passe par l’écran simulé et fournit un jeton, une identité et une photo', async () => {
     const fake = new FakeLinkedInOAuth('http://localhost:3000/comptes/connecter/retour');
     const url = new URL(fake.authorizationUrl('etat-abcdefghijklmnop'));
+    expect(url.pathname).toBe('/comptes/connecter/simulation');
     expect(url.searchParams.get('state')).toBe('etat-abcdefghijklmnop');
     const tokens = await fake.exchangeCode(url.searchParams.get('code') as string, NOW);
     const profile = await fake.memberProfile(tokens.accessToken);
     expect(profile.urn).toMatch(/^urn:li:person:demo/);
+    expect(profile.pictureUrl).toMatch(/^data:image\/svg\+xml,/);
     await expect(fake.exchangeCode('autre', NOW)).rejects.toMatchObject({ kind: 'auth' });
   });
 });

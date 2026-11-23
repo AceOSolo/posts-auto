@@ -132,9 +132,14 @@ export class LinkedInOAuthClient implements LinkedInOAuth {
   }
 }
 
+/** Photo du faux LinkedIn : un portrait stylisé, pour voir la carte du compte en recette. */
+const FAKE_PICTURE = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" fill="#2bb59a"/><circle cx="48" cy="37" r="18" fill="#fff4e2"/><path d="M14 96c3-24 17-36 34-36s31 12 34 36z" fill="#1e1a45"/></svg>',
+)}`;
+
 /**
- * Faux LinkedIn pour le développement et les tests : l'autorisation renvoie directement
- * vers l'adresse de retour, avec un code qui encode l'identité choisie.
+ * Faux LinkedIn pour le développement et les tests : l'autorisation passe par un écran
+ * simulé, voisin de l'adresse de retour, avec un code qui encode l'identité choisie.
  */
 export class FakeLinkedInOAuth implements LinkedInOAuth {
   readonly clientId = 'fake-client';
@@ -145,7 +150,7 @@ export class FakeLinkedInOAuth implements LinkedInOAuth {
   }
 
   authorizationUrl(state: string, scopes: readonly string[] = PROFILE_SCOPES): string {
-    const url = new URL(this.#redirectUri);
+    const url = new URL('simulation', this.#redirectUri);
     // Le code simulé garde la trace des permissions demandées (pages d'entreprise : LNK-02).
     url.searchParams.set('code', `fake-${scopes.includes('w_organization_social') ? 'p-' : ''}${state.slice(0, 12)}`);
     url.searchParams.set('state', state);
@@ -164,6 +169,6 @@ export class FakeLinkedInOAuth implements LinkedInOAuth {
 
   async memberProfile(accessToken: string): Promise<MemberProfile> {
     const sub = `demo${accessToken.replace(/\W/g, '').slice(-10)}`;
-    return { sub, urn: `urn:li:person:${sub}`, name: 'Profil de démonstration', pictureUrl: null };
+    return { sub, urn: `urn:li:person:${sub}`, name: 'Profil de démonstration', pictureUrl: FAKE_PICTURE };
   }
 }

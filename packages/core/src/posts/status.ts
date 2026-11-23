@@ -100,6 +100,8 @@ export type PostCommand =
   | { readonly type: 'submit' }
   /** VAL-02 : valider. Impossible tant qu'il reste un marqueur bloquant (VAL-03). */
   | { readonly type: 'validate' }
+  /** VAL-11 : validé par le système, le titulaire ayant activé « publier sans me demander ». */
+  | { readonly type: 'autoValidate' }
   /** VAL-02 : demander une modification, note obligatoire. */
   | { readonly type: 'requestChanges'; readonly note: string }
   /** VAL-02 : refuser, motif obligatoire ; « autre » exige une précision. */
@@ -140,6 +142,7 @@ interface TransitionRule {
 export const TRANSITIONS: Readonly<Record<PostCommandType, TransitionRule>> = {
   submit: { from: ['brouillon'], to: 'a_valider', by: ['system'] },
   validate: { from: ['a_valider'], to: 'valide', by: ['decider'] },
+  autoValidate: { from: ['a_valider'], to: 'valide', by: ['system'] },
   requestChanges: { from: ['a_valider'], to: 'modif', by: ['decider'] },
   refuse: { from: ['a_valider'], to: 'refuse', by: ['decider'] },
   withdraw: { from: ['valide'], to: 'a_valider', by: ['decider', 'manager', 'system'] },
@@ -218,6 +221,7 @@ function nonEmpty(value: string | undefined): value is string {
 function guard(post: PostSnapshot, command: PostCommand): CommandError | null {
   switch (command.type) {
     case 'validate':
+    case 'autoValidate':
       return post.hasBlockingMarkers ? 'blocking_markers' : null;
     case 'requestChanges':
       return nonEmpty(command.note) ? null : 'note_required';
@@ -230,8 +234,13 @@ function guard(post: PostSnapshot, command: PostCommand): CommandError | null {
   }
 }
 
+/** VAL-11 : motif inscrit à l'historique d'un post validé sans relecture. */
+export const AUTO_VALIDATION_REASON = 'Validé automatiquement : le titulaire a activé « publier sans me demander »';
+
 function reasonOf(command: PostCommand): string | null {
   switch (command.type) {
+    case 'autoValidate':
+      return AUTO_VALIDATION_REASON;
     case 'requestChanges':
       return command.note.trim();
     case 'refuse':

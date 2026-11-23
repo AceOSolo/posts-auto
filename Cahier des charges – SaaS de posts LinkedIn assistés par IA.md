@@ -168,7 +168,7 @@ Chaque exigence porte un code (module + numéro) et une priorité M / S / C (sec
 | LNK-05 | Déconnexion : révocation du jeton, suppression des secrets, posts à venir repassés « à valider » avec un motif | M |
 | LNK-06 | Un compte LinkedIn ne peut appartenir qu'à un seul espace actif (contrôle sur l'identifiant LinkedIn) | M |
 | LNK-07 | Activation / pause d'un compte sans le déconnecter (plus de génération ni de publication, plus facturé à partir du mois suivant) | S |
-| LNK-08 | Connexion « Make » optionnelle par compte (webhook sortant) pour les clients qui veulent publier via leurs propres scénarios (section 8) | C |
+| LNK-08 | **Retiré le 23/11/2026** : la publication est entièrement gérée par le service, le client n'a aucun scénario à brancher (anciennement : connexion « Make » optionnelle par webhook sortant) | — |
 | LNK-09 | Consentement du titulaire, recueilli à la connexion de son compte, horodaté et retirable à tout moment : publication en son nom, conservation des données de profil nécessaires, utilisation de ses posts et de leurs statistiques pour améliorer la rédaction (EDI-06, SUI-04). Le retrait du consentement à l'apprentissage n'empêche pas la publication ; le retrait total vaut déconnexion (LNK-05). Pour un salarié, l'adhésion reste volontaire (section 10.2) \[L5, M7\] | M |
 
 ### 5.4 Ligne éditoriale et fiches de compte (EDI)
@@ -265,6 +265,7 @@ Deux entrées distinctes, comme aujourd'hui : l'**idée** est un sujet à placer
 | VAL-08 | Un post validé peut être retiré (repassé « à valider ») ou corrigé tant qu'il n'est pas parti ; au-delà, seule la modification sur LinkedIn est possible (S : édition via l'API si disponible) | M |
 | VAL-09 | Historique du post : versions du texte, décisions (qui, quand, délégation), replanifications, reprises | M |
 | VAL-10 | Tout est tracé dans le journal d'audit de l'espace | M |
+| VAL-11 | « Publier sans me demander » : option désactivée par défaut, activée par le titulaire seul pour son propre compte, avec accord tracé. Restent à valider : marqueurs, contenus issus d'un article, d'une idée ou d'une demande (M6), reprises, posts retouchés par une personne, visuels en attente ou illisibles. À la désactivation, les posts validés automatiquement et pas encore partis repassent « à valider » | S |
 
 ### 5.10 Publication (PUB)
 

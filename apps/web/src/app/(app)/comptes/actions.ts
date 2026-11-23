@@ -2,8 +2,8 @@
 
 import { randomBytes } from 'node:crypto';
 import { PAGE_SCOPES, PROFILE_SCOPES } from '@posts-auto/linkedin';
-import { ForbiddenError, NotFoundError, RefusedError, confirmPageConnection, disconnectAccount, setAccountWebhook, setPublishMode } from '@posts-auto/services';
-import { cookies } from 'next/headers';
+import { ForbiddenError, NotFoundError, RefusedError, confirmPageConnection, disconnectAccount, setAutoValidate, setPublishMode } from '@posts-auto/services';
+import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { database, linkedinOAuth, tokenCipher } from '../../../server/context.ts';
 import { OAUTH_COOKIE, type OAuthState, encodeOAuthState } from '../../../server/oauth-state.ts';
@@ -83,7 +83,26 @@ export async function disconnectAction(workspaceId: string, accountId: string): 
   redirect(`/comptes/${workspaceId}?message=${message}`);
 }
 
-/** PUB-09 : publication manuelle (envoi par e-mail au créneau) ou automatique. */
+/** VAL-11 : « Publier sans me demander », activé par le titulaire avec son accord explicite. */
+export async function autoValidateAction(workspaceId: string, accountId: string, formData: FormData): Promise<void> {
+  if (!UUID.test(workspaceId) || !UUID.test(accountId)) notFound();
+  const userId = await requireUserId();
+  const enabled = formData.get('actif') === 'oui';
+  if (enabled && formData.get('accord') !== 'oui') redirect(`/comptes/${workspaceId}?message=accord-validation-auto`);
+  const forwarded = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim();
+  const ip = forwarded && /^[\d.:a-f]+$/i.test(forwarded) ? forwarded : undefined;
+  let message = enabled ? 'validation-auto-activee' : 'validation-auto-desactivee';
+  try {
+    await setAutoValidate(database(), userId, accountId, enabled, new Date(), ip);
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    if (error instanceof ForbiddenError) message = 'interdit';
+    else throw error;
+  }
+  redirect(`/comptes/${workspaceId}?message=${message}`);
+}
+
+/** PUB-09 : mise en pause (le post validé est envoyé par e-mail au créneau) ou publication automatique. */
 export async function publishModeAction(workspaceId: string, accountId: string, formData: FormData): Promise<void> {
   if (!UUID.test(workspaceId) || !UUID.test(accountId)) notFound();
   const userId = await requireUserId();
@@ -94,31 +113,6 @@ export async function publishModeAction(workspaceId: string, accountId: string, 
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     if (error instanceof ForbiddenError) message = 'interdit';
-    else throw error;
-  }
-  redirect(`/comptes/${workspaceId}?message=${message}`);
-}
-
-/** LNK-08 : publication par un scénario du client ; le secret de signature est montré une fois. */
-export async function webhookAction(workspaceId: string, accountId: string, formData: FormData): Promise<void> {
-  if (!UUID.test(workspaceId) || !UUID.test(accountId)) notFound();
-  const userId = await requireUserId();
-  const cipher = tokenCipher();
-  if (cipher === null) redirect(`/comptes/${workspaceId}?message=chiffrement-non-configure`);
-  let message = 'webhook-enregistre';
-  try {
-    const secret = await setAccountWebhook(database(), cipher, userId, accountId, String(formData.get('webhook') ?? ''), new Date());
-    (await cookies()).set('secret-webhook', Buffer.from(cipher.encrypt(secret, `webhook-affichage:${userId}`)).toString('base64url'), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/comptes',
-      maxAge: 600,
-    });
-  } catch (error) {
-    if (error instanceof NotFoundError) notFound();
-    if (error instanceof ForbiddenError) message = 'interdit';
-    else if (error instanceof RefusedError) message = error.code;
     else throw error;
   }
   redirect(`/comptes/${workspaceId}?message=${message}`);

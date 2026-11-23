@@ -6,7 +6,7 @@
  * Les jetons sont des données réservées au système : l'autorisation est vérifiée sous
  * l'identité de la personne (RLS), puis l'écriture des jetons se fait en contexte système.
  */
-import { type Actor, applyPostCommand } from '@posts-auto/core';
+import { AUTO_VALIDATION_REASON, type Actor, applyPostCommand } from '@posts-auto/core';
 import { type Database, asSystem, asUser } from '@posts-auto/db';
 import { type LinkedInOAuth } from '@posts-auto/linkedin';
 import { loadAccess } from '../access.ts';
@@ -135,7 +135,8 @@ export async function connectProfile(
       .where('revoked_at', 'is', null)
       .execute();
     for (const consent of active) {
-      if (!wanted.has(consent.kind)) await trx.updateTable('account_consents').set({ revoked_at: now }).where('id', '=', consent.id).execute();
+      // VAL-11 : « publier sans me demander » survit à une reconnexion ; il se retire à part.
+      if (consent.kind !== 'auto_validate' && !wanted.has(consent.kind)) await trx.updateTable('account_consents').set({ revoked_at: now }).where('id', '=', consent.id).execute();
     }
     const missing = [...wanted].filter((kind) => !active.some((consent) => consent.kind === kind));
     if (missing.length > 0) {
@@ -226,6 +227,78 @@ export async function disconnectAccount(db: Database, userId: string, accountId:
   });
 }
 
+export const AUTO_VALIDATE_TEXT_VERSION = 'publier-sans-me-demander-v1-2026-11';
+const AUTO_VALIDATE_OFF_REASON = 'Publication sans validation désactivée par le titulaire : nouvelle validation nécessaire';
+
+/**
+ * VAL-11 : « Publier sans me demander ». Seul le titulaire décide, pour son propre compte. À la
+ * désactivation, les posts validés automatiquement et pas encore partis repassent « à valider ».
+ */
+export async function setAutoValidate(db: Database, userId: string, accountId: string, enabled: boolean, now: Date, ip?: string): Promise<void> {
+  const account = await asUser(db, userId, async (trx) => {
+    const row = await trx.selectFrom('social_accounts').select(['workspace_id', 'holder_user_id']).where('id', '=', accountId).executeTakeFirst();
+    if (row === undefined) throw new NotFoundError('Compte');
+    if (row.holder_user_id !== userId) throw new ForbiddenError('autoValidate');
+    return row;
+  });
+
+  const system: Actor = { kind: 'system' };
+  await asSystem(db, async (trx) => {
+    const active = await trx
+      .selectFrom('account_consents')
+      .select('id')
+      .where('account_id', '=', accountId)
+      .where('user_id', '=', userId)
+      .where('kind', '=', 'auto_validate')
+      .where('revoked_at', 'is', null)
+      .executeTakeFirst();
+    if (enabled === (active !== undefined)) return;
+
+    if (enabled) {
+      await trx
+        .insertInto('account_consents')
+        .values({ workspace_id: account.workspace_id, account_id: accountId, user_id: userId, kind: 'auto_validate', text_version: AUTO_VALIDATE_TEXT_VERSION, granted_at: now, ip: ip ?? null })
+        .execute();
+    } else {
+      await trx.updateTable('account_consents').set({ revoked_at: now }).where('id', '=', (active as { id: string }).id).execute();
+      const automatic = await trx
+        .selectFrom('posts as p')
+        .select('p.id')
+        .where('p.account_id', '=', accountId)
+        .where('p.status', '=', 'valide')
+        .where('p.decided_by', 'is', null)
+        .where(({ exists, selectFrom }) => exists(selectFrom('post_status_history as h').select('h.id').whereRef('h.post_id', '=', 'p.id').where('h.reason', '=', AUTO_VALIDATION_REASON)))
+        .forUpdate('p')
+        .execute();
+      for (const post of automatic) {
+        const result = applyPostCommand({ status: 'valide', hasBlockingMarkers: false }, { type: 'withdraw', reason: AUTO_VALIDATE_OFF_REASON }, system, now);
+        if (!result.ok) continue;
+        await trx.updateTable('posts').set({ status: result.status }).where('id', '=', post.id).execute();
+        await trx
+          .insertInto('post_status_history')
+          .values({ workspace_id: account.workspace_id, post_id: post.id, from_status: 'valide', to_status: result.status, actor_kind: 'user', actor_user_id: userId, reason: AUTO_VALIDATE_OFF_REASON, at: now })
+          .execute();
+      }
+    }
+
+    const ws = await trx.selectFrom('workspaces').select('org_id').where('id', '=', account.workspace_id).executeTakeFirstOrThrow();
+    await trx
+      .insertInto('audit_log')
+      .values({
+        org_id: ws.org_id,
+        workspace_id: account.workspace_id,
+        actor_user_id: userId,
+        actor_kind: 'user',
+        action: enabled ? 'compte.validation_auto_activee' : 'compte.validation_auto_desactivee',
+        entity: 'social_account',
+        entity_id: accountId,
+        ip: ip ?? null,
+        at: now,
+      })
+      .execute();
+  });
+}
+
 /** La personne a-t-elle un profil LinkedIn connecté (ou qui expire bientôt) ? */
 export async function hasConnectedProfile(db: Database, userId: string): Promise<boolean> {
   const row = await asUser(db, userId, (trx) =>
@@ -256,6 +329,8 @@ export interface AccountSummary {
   readonly publishMode: 'auto' | 'manual' | 'webhook';
   /** LNK-08 : adresse du webhook (hôte seulement), quand le compte publie par un scénario. */
   readonly webhookHost: string | null;
+  /** VAL-11 : le titulaire a activé « publier sans me demander ». */
+  readonly autoValidate: boolean;
 }
 
 /** LNK-03 : comptes d'un espace avec l'état de leur connexion. */
@@ -303,6 +378,15 @@ export async function listWorkspaceAccounts(db: Database, userId: string, worksp
       .where('account_id', 'in', accounts.rows.map((row) => row.id))
       .execute(),
   );
+  const autoValidated = await asSystem(db, (trx) =>
+    trx
+      .selectFrom('account_consents')
+      .select(['account_id', 'user_id'])
+      .where('account_id', 'in', accounts.rows.map((row) => row.id))
+      .where('kind', '=', 'auto_validate')
+      .where('revoked_at', 'is', null)
+      .execute(),
+  );
   return accounts.rows.map((row) => {
     const token = tokens.find((t) => t.account_id === row.id);
     const isMine = row.holder_user_id === userId;
@@ -322,6 +406,7 @@ export async function listWorkspaceAccounts(db: Database, userId: string, worksp
         const hook = webhooks.find((w) => w.account_id === row.id);
         return hook === undefined ? null : new URL(hook.url).host;
       })(),
+      autoValidate: autoValidated.some((consent) => consent.account_id === row.id && consent.user_id === row.holder_user_id),
     };
   });
 }

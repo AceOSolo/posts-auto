@@ -232,7 +232,9 @@ try {
   consentFields.append('accord', 'oui');
   const claireCookie = `session=${claire}; __Host-session=${claire}`;
   const toLinkedIn = await fetch(`${BASE}/comptes/${workspaceId}/connecter`, { method: 'POST', body: consentFields, redirect: 'manual', headers: { cookie: claireCookie, origin: BASE } });
-  const authorizeUrl = toLinkedIn.headers.get('location') ?? '';
+  // Mode simulé : on saute l'écran « Autoriser » pour aller directement à l'adresse de retour.
+  const afterConsent = (location: string | null) => (location ?? '').replace('/comptes/connecter/simulation', '/comptes/connecter/retour');
+  const authorizeUrl = afterConsent(toLinkedIn.headers.get('location'));
   const stateCookie = toLinkedIn.headers.getSetCookie().find((c) => c.startsWith('li_oauth='))?.split(';')[0] ?? '';
   if (authorizeUrl.includes('linkedin.com')) {
     check('connexion LinkedIn : redirection vers LinkedIn (serveur en mode réel, parcours non testé ici)', authorizeUrl.includes('state='));
@@ -245,7 +247,7 @@ try {
     // Nouvel essai complet (le cookie d'état est à usage unique).
     const retry = await fetch(`${BASE}/comptes/${workspaceId}/connecter`, { method: 'POST', body: consentFields, redirect: 'manual', headers: { cookie: claireCookie, origin: BASE } });
     const retryCookie = retry.headers.getSetCookie().find((c) => c.startsWith('li_oauth='))?.split(';')[0] ?? '';
-    const callback = await fetch(retry.headers.get('location') ?? '', { redirect: 'manual', headers: { cookie: `${claireCookie}; ${retryCookie}` } });
+    const callback = await fetch(afterConsent(retry.headers.get('location')), { redirect: 'manual', headers: { cookie: `${claireCookie}; ${retryCookie}` } });
     const connected = await asSystem(db, (trx) =>
       trx
         .selectFrom('social_accounts as a')
@@ -273,7 +275,7 @@ try {
     for (const input of (pagesForm?.[1] ?? '').matchAll(/<input type="hidden" name="([^"]+)"(?: value="([^"]*)")?/g)) pagesFields.append(decodeEntities(input[1] ?? ''), decodeEntities(input[2] ?? ''));
     const toPages = await fetch(`${BASE}/comptes/${workspaceId}`, { method: 'POST', body: pagesFields, redirect: 'manual', headers: { cookie: alexisCookie, origin: BASE } });
     const pagesCookie = toPages.headers.getSetCookie().find((c) => c.startsWith('li_oauth='))?.split(';')[0] ?? '';
-    const pagesCallback = await fetch(toPages.headers.get('location') ?? '', { redirect: 'manual', headers: { cookie: `${alexisCookie}; ${pagesCookie}` } });
+    const pagesCallback = await fetch(afterConsent(toPages.headers.get('location')), { redirect: 'manual', headers: { cookie: `${alexisCookie}; ${pagesCookie}` } });
     const choosePath = (pagesCallback.headers.get('location') ?? '').replace(BASE, '');
     const chooseHtml = choosePath.includes('/pages?attente=') ? (await (await get(choosePath, alexis)).text()).replace(/<!-- -->/g, '') : '';
     check('pages d’entreprise : liste des pages administrées après l’autorisation (LNK-02)', chooseHtml.includes('Page de démonstration') && chooseHtml.includes('Filiale de démonstration'), `→ ${choosePath}`);
@@ -787,9 +789,9 @@ try {
   }
 
   // PUB-09 : publication manuelle, puis retour à l'automatique.
-  const toManual = await submitForm(`/comptes/${workspaceId}`, alexis, 'Passer en publication manuelle (par e-mail)', {});
+  const toManual = await submitForm(`/comptes/${workspaceId}`, alexis, 'Mettre en pause', {});
   const manualCount = (await asSystem(db, (trx) => trx.selectFrom('social_accounts').select('id').where('workspace_id', '=', workspaceId).where('publish_mode', '=', 'manual').execute())).length;
-  const backToAuto = await submitForm(`/comptes/${workspaceId}`, alexis, 'Revenir à la publication automatique', {});
+  const backToAuto = await submitForm(`/comptes/${workspaceId}`, alexis, 'Reprendre la publication', {});
   check(
     'PUB-09 : compte en publication manuelle (par e-mail), puis retour à l’automatique',
     (toManual.headers.get('location') ?? '').includes('publication-manuelle') && manualCount === 1 && (backToAuto.headers.get('location') ?? '').includes('publication-automatique'),
@@ -821,19 +823,9 @@ try {
   const badMention = await submitForm(`/posts/${withPhotos.id}`, alexis, 'Préparer la mention', { page: 'https://exemple.fr/pas-linkedin' });
   check('PUB-08 : mention d’une page proposée ; adresse qui n’est pas une page LinkedIn refusée', (badMention.headers.get('location') ?? '').includes('page_mention_invalide'), `HTTP ${badMention.status}`);
 
-  // LNK-08 : publication par un scénario du client (webhook).
-  const toWebhook = await submitForm(`/comptes/${workspaceId}`, alexis, 'Enregistrer le webhook', { webhook: 'https://hook.example.test/scenario' });
-  const webhookCookie = /secret-webhook=([^;]+)/.exec(toWebhook.headers.get('set-cookie') ?? '')?.[1] ?? '';
-  const accountsWithSecret = await fetch(`${BASE}/comptes/${workspaceId}`, { headers: { cookie: `session=${alexis}; __Host-session=${alexis}; secret-webhook=${webhookCookie}` } });
-  const webhookHtml = await accountsWithSecret.text();
-  check(
-    'LNK-08 : webhook enregistré, secret de signature montré une fois, mode affiché',
-    (toWebhook.headers.get('location') ?? '').includes('webhook-enregistre') && /whsec_[0-9a-f]{48}/.test(webhookHtml) && webhookHtml.includes('hook.example.test'),
-    `HTTP ${toWebhook.status}`,
-  );
-  const internalHook = await submitForm(`/comptes/${workspaceId}`, alexis, 'Enregistrer le webhook', { webhook: 'https://127.0.0.1/x' });
-  check('LNK-08 : webhook vers une adresse interne refusé', (internalHook.headers.get('location') ?? '').includes('webhook_invalide'));
-  await submitForm(`/comptes/${workspaceId}`, alexis, 'Revenir à la publication automatique', {});
+  // LNK-08 retiré : la publication est gérée par le service, sans scénario à brancher.
+  const accountCards = await (await get(`/comptes/${workspaceId}`, alexis)).text();
+  check('comptes : plus d’option de publication par un scénario', !accountCards.includes('Enregistrer le webhook') && !accountCards.includes('Publier par un scénario'));
 
   // ADM-01 à ADM-06 : back-office de l'éditeur.
   check('back-office introuvable pour un client', (await get('/admin', alexis)).status === 404);

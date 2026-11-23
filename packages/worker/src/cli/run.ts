@@ -1,6 +1,7 @@
 /**
  * Processus des tâches de fond : npm run start -w @posts-auto/worker
  *
+ * - Validation automatique : toutes les minutes, si le titulaire l'a activée (VAL-11).
  * - Publication : toutes les minutes (PUB-01 à PUB-05).
  * - Replanification : toutes les 15 minutes (RÈG-08 à RÈG-11).
  * - Connexions LinkedIn : chaque jour (LNK-04 : renouvellement, vérification, alertes).
@@ -65,6 +66,7 @@ import { runRescheduleTick } from '../scheduling/reschedule-job.ts';
 import { TokenCipher } from '../secrets/token-cipher.ts';
 import { canvaRenderer } from '../visuals/canva-renderer.ts';
 import { runVisualTick } from '../visuals/visual-job.ts';
+import { runAutoValidationTick } from '../validation/auto-validate.ts';
 
 const env = process.env;
 const log = (level: 'info' | 'error', event: string, details: Record<string, unknown> = {}) =>
@@ -110,6 +112,7 @@ log('info', 'demarrage', {
 
 const scheduler = startScheduler(
   [
+    { name: 'validation-auto', intervalMs: 60_000, run: () => runAutoValidationTick({ db }) },
     { name: 'publication', intervalMs: 60_000, run: () => runPublicationTick({ db, linkedin, media, cipher }) },
     { name: 'replanification', intervalMs: 15 * 60_000, run: () => runRescheduleTick({ db }) },
     { name: 'connexions', intervalMs: 24 * 3_600_000, run: () => runTokenCheck({ db, oauth, cipher }) },

@@ -46,6 +46,7 @@ interface Row {
   readonly workspace_id: string;
   readonly kind: string;
   readonly display_name: string | null;
+  readonly avatar_url: string | null;
   readonly status: string;
   readonly oauth_client_id: string;
   readonly access_token_enc: Buffer;
@@ -68,6 +69,7 @@ export async function runTokenCheck(deps: TokenCheckDeps): Promise<TokenCheckRep
         't.workspace_id',
         'a.kind',
         'a.display_name',
+        'a.avatar_url',
         'a.status',
         't.oauth_client_id',
         't.access_token_enc',
@@ -100,6 +102,7 @@ async function checkAccount(deps: TokenCheckDeps, row: Row, now: Date, report: T
   let refreshExpires = row.refresh_expires_at;
   let revoked = false;
   let refreshed = false;
+  let freshPicture: string | null = null;
 
   // 1. Renouvellement automatique.
   const refreshToken = row.refresh_token_enc;
@@ -126,8 +129,10 @@ async function checkAccount(deps: TokenCheckDeps, row: Row, now: Date, report: T
   const heartbeatDue = row.last_checked_at === null || now.getTime() - row.last_checked_at.getTime() >= HEARTBEAT_EVERY_HOURS * 3_600_000;
   if (oauth !== null && !refreshed && !revoked && row.kind === 'profile' && accessExpires.getTime() > now.getTime() && heartbeatDue) {
     try {
-      await oauth.memberProfile(cipher.decrypt(row.access_token_enc, row.account_id));
+      const profile = await oauth.memberProfile(cipher.decrypt(row.access_token_enc, row.account_id));
       update.last_checked_at = now;
+      // Les liens de photo de LinkedIn expirent : on garde le plus récent.
+      if (profile.pictureUrl !== null && profile.pictureUrl !== row.avatar_url) freshPicture = profile.pictureUrl;
     } catch (error) {
       if (error instanceof LinkedInError && error.kind === 'auth' && error.status === 401) revoked = true;
       // Toute autre erreur (réseau, LinkedIn indisponible) : on réessaiera au prochain passage.
@@ -150,7 +155,13 @@ async function checkAccount(deps: TokenCheckDeps, row: Row, now: Date, report: T
 
   await asSystem(deps.db, async (trx) => {
     if (Object.keys(update).length > 0) await trx.updateTable('social_tokens').set(update).where('account_id', '=', row.account_id).execute();
-    if (status !== row.status) await trx.updateTable('social_accounts').set({ status }).where('id', '=', row.account_id).execute();
+    if (status !== row.status || freshPicture !== null) {
+      await trx
+        .updateTable('social_accounts')
+        .set({ status, ...(freshPicture !== null ? { avatar_url: freshPicture } : {}) })
+        .where('id', '=', row.account_id)
+        .execute();
+    }
     if (alert !== null) {
       const recipients = await alertRecipients(trx, row.workspace_id, row.account_id);
       await notify(

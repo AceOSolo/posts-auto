@@ -1,4 +1,5 @@
 export * from './accounts/token-check.ts';
+export * from './validation/auto-validate.ts';
 export * from './billing/billing-job.ts';
 export * from './generation/learning.ts';
 export * from './generation/load.ts';
