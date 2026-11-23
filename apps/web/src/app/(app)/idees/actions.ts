@@ -1,7 +1,7 @@
 'use server';
 
 import { ModelError } from '@posts-auto/ai';
-import { ForbiddenError, NotFoundError, RefusedError, disableInboundAddress, ideasFromArticle, inboundConfigFromEnv, renewInboundAddress, saveIdea, setIdeaStatus } from '@posts-auto/services';
+import { ForbiddenError, NotFoundError, RefusedError, ideasFromArticle, inboundConfigFromEnv, renewInboundAddress, saveIdea, setIdeaStatus } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { database, model, usdToEur } from '../../../server/context.ts';
@@ -59,18 +59,11 @@ export async function ideaStatusAction(workspaceId: string, ideaId: string, stat
   });
 }
 
-/** IDE-07 : crée l'adresse d'e-mail de l'espace, ou la remplace. */
+/** IDE-07 : remplace l'adresse d'e-mail de l'espace, si elle a circulé. */
 export async function renewInboundAddressAction(workspaceId: string): Promise<void> {
   await run(workspaceId, async (userId, now) => {
     await renewInboundAddress(database(), userId, workspaceId, inboundConfigFromEnv(process.env), now);
     return 'adresse-email-prete';
-  });
-}
-
-export async function disableInboundAddressAction(workspaceId: string): Promise<void> {
-  await run(workspaceId, async (userId, now) => {
-    await disableInboundAddress(database(), userId, workspaceId, now);
-    return 'adresse-email-desactivee';
   });
 }
 

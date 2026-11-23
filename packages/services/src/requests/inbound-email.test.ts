@@ -7,7 +7,6 @@ import { listIdeas, listPostRequests } from './ideas-requests.ts';
 import {
   INBOUND_DAILY_LIMIT,
   type InboundEmail,
-  disableInboundAddress,
   handleInboundWebhook,
   inboundConfigFromEnv,
   inboundEmailSettings,
@@ -77,13 +76,22 @@ describe('configuration et adresse', () => {
     await expect(inboundEmailSettings(db, people.stranger, workspaceId, config)).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it('réserve la gestion de l’adresse à la gestion du contenu', async () => {
+  it('crée l’adresse d’elle-même à la première ouverture, une seule fois', async () => {
+    const org = await createOrganization(db);
+    const ws = org.workspaceIds[0] as string;
+    const [a, b] = await Promise.all([inboundEmailSettings(db, org.ownerId, ws, config), inboundEmailSettings(db, org.ownerId, ws, config)]);
+    expect(a.address).toMatch(/^idees-[a-z2-7]{26}@reply\.exemple\.test$/);
+    expect(b.address).toBe(a.address);
+    const owner = (await asSystem(db, (trx) => trx.selectFrom('users').select('email').where('id', '=', org.ownerId).executeTakeFirstOrThrow())).email;
+    expect((await processInboundEmail(db, media, config, mail({ from: owner, recipients: [a.address as string] }), NOW)).kind).toBe('idea');
+  });
+
+  it('réserve le changement d’adresse à la gestion du contenu', async () => {
     await expect(renewInboundAddress(db, people.contributor, workspaceId, config, NOW)).rejects.toBeInstanceOf(ForbiddenError);
-    await expect(disableInboundAddress(db, people.viewer, workspaceId, NOW)).rejects.toBeInstanceOf(ForbiddenError);
     await expect(renewInboundAddress(db, people.editor, workspaceId, null, NOW)).rejects.toMatchObject({ code: 'email_non_configure' });
   });
 
-  it('une adresse renouvelée remplace la précédente ; une adresse désactivée ne reçoit plus rien', async () => {
+  it('une adresse renouvelée remplace la précédente', async () => {
     const org = await createOrganization(db);
     const ws = org.workspaceIds[0] as string;
     const first = await renewInboundAddress(db, org.ownerId, ws, config, NOW);
@@ -92,8 +100,6 @@ describe('configuration et adresse', () => {
     const owner = (await asSystem(db, (trx) => trx.selectFrom('users').select('email').where('id', '=', org.ownerId).executeTakeFirstOrThrow())).email;
     expect(await processInboundEmail(db, media, config, mail({ from: owner, recipients: [first] }), NOW)).toEqual({ kind: 'ignored', reason: 'adresse_inconnue' });
     expect((await processInboundEmail(db, media, config, mail({ from: owner, recipients: [second] }), NOW)).kind).toBe('idea');
-    await disableInboundAddress(db, org.ownerId, ws, NOW);
-    expect(await processInboundEmail(db, media, config, mail({ from: owner, recipients: [second] }), NOW)).toEqual({ kind: 'ignored', reason: 'adresse_inconnue' });
   });
 });
 

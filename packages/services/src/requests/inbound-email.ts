@@ -82,9 +82,20 @@ export async function inboundEmailSettings(db: Database, userId: string, workspa
   const role = await asUser(db, userId, (trx) => workspaceRole(trx, userId, workspaceId));
   if (role === null) throw new NotFoundError('Espace');
   const canManage = canManageContent(role);
-  if (config === null || !canPropose(role)) return { available: config !== null && canPropose(role), address: null, canManage };
-  const row = await asSystem(db, (trx) => trx.selectFrom('workspace_inbound_email').select('rotation').where('workspace_id', '=', workspaceId).executeTakeFirst());
-  return { available: true, address: row === undefined ? null : addressOf(config, workspaceId, row.rotation), canManage };
+  if (config === null || !canPropose(role)) return { available: false, address: null, canManage };
+  // Rien à activer côté client : l'adresse existe dès que l'équipe ouvre ses idées.
+  const rotation = await asSystem(db, async (trx) => {
+    const read = () => trx.selectFrom('workspace_inbound_email').select('rotation').where('workspace_id', '=', workspaceId).executeTakeFirst();
+    const existing = await read();
+    if (existing !== undefined) return existing.rotation;
+    await trx
+      .insertInto('workspace_inbound_email')
+      .values({ workspace_id: workspaceId, rotation: 1, token_hash: hashToken(inboundToken(config.secret, workspaceId, 1)), created_by: userId })
+      .onConflict((oc) => oc.column('workspace_id').doNothing())
+      .execute();
+    return (await read())?.rotation ?? 1;
+  });
+  return { available: true, address: addressOf(config, workspaceId, rotation), canManage };
 }
 
 async function requireManager(db: Database, userId: string, workspaceId: string): Promise<void> {
@@ -93,7 +104,7 @@ async function requireManager(db: Database, userId: string, workspaceId: string)
   if (!canManageContent(role)) throw new ForbiddenError('manageInboundEmail');
 }
 
-/** Crée l'adresse de l'espace, ou la remplace : l'ancienne cesse aussitôt de fonctionner. */
+/** Remplace l'adresse de l'espace (si elle a circulé) : l'ancienne cesse aussitôt de fonctionner. */
 export async function renewInboundAddress(db: Database, userId: string, workspaceId: string, config: InboundEmailConfig | null, now: Date): Promise<string> {
   if (config === null) throw new RefusedError('email_non_configure', 'La réception d’e-mails n’est pas configurée.');
   await requireManager(db, userId, workspaceId);
@@ -109,14 +120,6 @@ export async function renewInboundAddress(db: Database, userId: string, workspac
       .execute();
     await audit(trx, { workspaceId, actorUserId: userId, action: existing === undefined ? 'email_entrant.active' : 'email_entrant.renouvele', entity: 'workspace', entityId: workspaceId, details: {}, at: now });
     return addressOf(config, workspaceId, rotation);
-  });
-}
-
-export async function disableInboundAddress(db: Database, userId: string, workspaceId: string, now: Date): Promise<void> {
-  await requireManager(db, userId, workspaceId);
-  await asSystem(db, async (trx) => {
-    await trx.deleteFrom('workspace_inbound_email').where('workspace_id', '=', workspaceId).execute();
-    await audit(trx, { workspaceId, actorUserId: userId, action: 'email_entrant.desactive', entity: 'workspace', entityId: workspaceId, details: {}, at: now });
   });
 }
 

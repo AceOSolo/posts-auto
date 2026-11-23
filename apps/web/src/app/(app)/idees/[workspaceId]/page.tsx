@@ -6,7 +6,7 @@ import { Flash } from '../../../../components/flash.tsx';
 import { StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { disableInboundAddressAction, ideaStatusAction, renewInboundAddressAction, repurposeAction, saveIdeaAction } from '../actions.ts';
+import { ideaStatusAction, renewInboundAddressAction, repurposeAction, saveIdeaAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Idées' };
 export const dynamic = 'force-dynamic';
@@ -127,34 +127,21 @@ export default async function IdeasPage({
         </details>
       )}
 
-      {inbound.available && view === 'ouvertes' && (inbound.address !== null || inbound.canManage) && (
+      {inbound.available && inbound.address !== null && view === 'ouvertes' && (
         <details>
           <summary>Proposer par e-mail</summary>
           <div className="stack">
-            {inbound.address !== null ? (
-              <>
-                <p>
-                  Adresse de cet espace : <code>{inbound.address}</code>
-                </p>
-                <p className="hint">
-                  Écrivez depuis l’adresse de votre compte Rostra. L’objet devient le titre et le message les détails. Un objet qui commence par « Demande : » crée une demande de post sur les
-                  comptes dont vous êtes titulaire. Gardez cette adresse pour votre équipe : rien n’est publié sans validation.
-                </p>
-              </>
-            ) : (
-              <p className="hint">Créez une adresse pour que votre équipe envoie ses idées et ses demandes par e-mail.</p>
-            )}
+            <p>
+              Écrivez à <code>{inbound.address}</code> depuis l’adresse de votre compte Rostra.
+            </p>
+            <p className="hint">
+              L’objet devient le titre et le message les détails. Un objet qui commence par « Demande : » crée une demande de post sur vos comptes. Gardez cette adresse pour votre équipe : rien
+              n’est publié sans validation.
+            </p>
             {inbound.canManage && (
-              <div className="actions">
-                <form action={renewInboundAddressAction.bind(null, workspaceId)}>
-                  <button type="submit">{inbound.address === null ? 'Créer l’adresse' : 'Changer l’adresse'}</button>
-                </form>
-                {inbound.address !== null && (
-                  <form action={disableInboundAddressAction.bind(null, workspaceId)}>
-                    <button type="submit">Désactiver</button>
-                  </form>
-                )}
-              </div>
+              <form action={renewInboundAddressAction.bind(null, workspaceId)}>
+                <button type="submit">Changer l’adresse</button>
+              </form>
             )}
           </div>
         </details>
