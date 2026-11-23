@@ -1,4 +1,4 @@
-import { NotFoundError, type PlannedEvent, listEvents, listWorkspaceAccounts, planningGrid } from '@posts-auto/services';
+import { NotFoundError, type PlannedEvent, listEvents, listWorkspaceAccounts, planningGrid, worldDaySuggestions } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -6,7 +6,7 @@ import { Flash } from '../../../../../components/flash.tsx';
 import { StatusBadge } from '../../../../../components/status-badge.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
-import { deleteEventAction, saveEventAction } from '../../actions.ts';
+import { addWorldDayAction, deleteEventAction, saveEventAction } from '../../actions.ts';
 import { PlanningNav } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Événements à relayer' };
@@ -75,12 +75,12 @@ export default async function EventsPage({
   let data;
   try {
     const { currentWeek } = await planningGrid(database(), userId, workspaceId, { weeks: 1 }, new Date());
-    data = await Promise.all([listEvents(database(), userId, workspaceId, currentWeek), listWorkspaceAccounts(database(), userId, workspaceId)]);
+    data = await Promise.all([listEvents(database(), userId, workspaceId, currentWeek), listWorkspaceAccounts(database(), userId, workspaceId), worldDaySuggestions(database(), userId, workspaceId, new Date())]);
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const [{ events, canEdit }, accountList] = data;
+  const [{ events, canEdit }, accountList, { suggestions }] = data;
   const accounts = accountList.map((a) => ({ id: a.id, name: a.name }));
   const nameOf = new Map(accounts.map((a) => [a.id, a.name]));
 
@@ -148,6 +148,36 @@ export default async function EventsPage({
           </li>
         ))}
       </ul>
+
+      {suggestions.length > 0 && (
+        <section aria-labelledby="journees-suggerees">
+          <h2 id="journees-suggerees">Journées à venir pour votre secteur</h2>
+          <p className="hint">Dates fixes, vérifiées sur le site de chaque organisme. Une journée ajoutée revient chaque année et sera relayée par vos pages, ou par tous vos comptes si vous n’avez pas de page. Vous pourrez changer les comptes ensuite.</p>
+          <ul className="cards">
+            {suggestions.map((suggestion) => (
+              <li key={suggestion.id} className="card">
+                <h3>
+                  {suggestion.title} {suggestion.matchesSector && <span className="badge">Votre secteur</span>}
+                </h3>
+                <p>{day(suggestion.date)}</p>
+                <p>
+                  Portée par {suggestion.organizer}.{' '}
+                  <a href={suggestion.source} rel="noopener noreferrer" target="_blank">
+                    Source officielle
+                  </a>
+                </p>
+                {canEdit && (
+                  <form action={addWorldDayAction.bind(null, workspaceId, suggestion.id)}>
+                    <button type="submit" aria-label={`Ajouter : ${suggestion.title}`}>
+                      Ajouter à mes événements
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {canEdit && (
         <details open={events.length === 0}>

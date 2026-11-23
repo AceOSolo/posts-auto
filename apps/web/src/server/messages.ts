@@ -117,6 +117,8 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   recurrence_invalide: { tone: 'error', text: 'Récurrence inconnue.' },
   'evenement-enregistre': { tone: 'success', text: 'Événement enregistré.' },
   'evenement-supprime': { tone: 'success', text: 'Événement supprimé.' },
+  'journee-ajoutee': { tone: 'success', text: 'Journée ajoutée à vos événements. Elle reviendra chaque année.' },
+  journee_deja_ajoutee: { tone: 'error', text: 'Cette journée est déjà dans vos événements.' },
   titre_requis: { tone: 'error', text: 'Donnez un titre.' },
   date_fin_invalide: { tone: 'error', text: 'La fin doit être le même jour ou après le début.' },
   fichier_trop_gros: { tone: 'error', text: 'Fichier trop lourd : 1 Mo au plus.' },

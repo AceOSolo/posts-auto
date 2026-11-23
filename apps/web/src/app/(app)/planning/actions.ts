@@ -3,6 +3,7 @@
 import { type PlannedEntry, type RowTarget, pamEntries, parseCsv, readPamLayout, readSubjectSheet } from '@posts-auto/core';
 import {
   addPlanningEntry,
+  addWorldDay,
   canManageContent,
   configureGeneration,
   deleteEvent,
@@ -169,6 +170,14 @@ export async function deleteEventAction(workspaceId: string, eventId: string): P
     if (!UUID.test(eventId)) throw new NotFoundError('Événement');
     await deleteEvent(database(), userId, workspaceId, eventId, now);
     return 'evenement-supprime';
+  });
+}
+
+/** PLA-10 : ajoute en un clic une journée suggérée. */
+export async function addWorldDayAction(workspaceId: string, dayId: string): Promise<void> {
+  await run(workspaceId, `/planning/${workspaceId}/evenements`, async (userId, now) => {
+    await addWorldDay(database(), userId, workspaceId, dayId, now);
+    return 'journee-ajoutee';
   });
 }
 
