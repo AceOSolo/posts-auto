@@ -7,7 +7,7 @@ import { StatusBadge } from '../../../../../components/status-badge.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { addWorldDayAction, deleteEventAction, saveEventAction } from '../../actions.ts';
-import { PlanningBack } from '../../planning-ui.tsx';
+import { IdeasBack } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Événements à relayer' };
 export const dynamic = 'force-dynamic';
@@ -86,7 +86,7 @@ export default async function EventsPage({
 
   return (
     <>
-      <PlanningBack workspaceId={workspaceId} />
+      <IdeasBack workspaceId={workspaceId} />
       <h1>Événements à relayer</h1>
       <Flash code={message} />
       <p className="hint">

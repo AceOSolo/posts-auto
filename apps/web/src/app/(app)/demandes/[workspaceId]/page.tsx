@@ -3,9 +3,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PageHeader } from '../../../../components/page-header.tsx';
 import { StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
+import { IdeasBack } from '../../planning/planning-ui.tsx';
 import { createRequestAction, interpretRequestAction } from '../actions.ts';
 import { RequestForm } from '../request-form.tsx';
 
@@ -46,21 +48,13 @@ export default async function RequestsPage({
 
   return (
     <>
-      <h1>Demandes de post</h1>
-      <div role="group" aria-label="Demandes affichées" className="segmented">
-        <Link href={`/demandes/${workspaceId}`} aria-current={all ? undefined : 'true'}>
-          Mes demandes
-        </Link>
-        <Link href={`/demandes/${workspaceId}?toutes=1`} aria-current={all ? 'true' : undefined}>
-          Toutes les demandes
-        </Link>
-      </div>
+      <IdeasBack workspaceId={workspaceId} />
+      <PageHeader title="Demandes de post" description="Un post précis, à une date donnée : il est rédigé dans l’heure puis soumis à validation." />
       <Flash code={message} />
 
       {canPropose && (
         <section aria-labelledby="nouvelle">
           <h2 id="nouvelle">Nouvelle demande</h2>
-          <p className="hint">Un post précis, sur un ou plusieurs comptes, à une date donnée. Il est rédigé dans l’heure puis soumis à validation.</p>
           <RequestForm
             accounts={accountList.map((a) => ({ id: a.id, name: a.name }))}
             action={createRequestAction.bind(null, workspaceId)}
@@ -70,7 +64,15 @@ export default async function RequestsPage({
       )}
 
       <section aria-labelledby="suivi">
-        <h2 id="suivi">{all ? 'Toutes les demandes' : 'Mes demandes'}</h2>
+        <h2 id="suivi">Suivi</h2>
+        <div role="group" aria-label="Demandes affichées" className="segmented">
+          <Link href={`/demandes/${workspaceId}`} aria-current={all ? undefined : 'true'}>
+            Mes demandes
+          </Link>
+          <Link href={`/demandes/${workspaceId}?toutes=1`} aria-current={all ? 'true' : undefined}>
+            Toutes les demandes
+          </Link>
+        </div>
         {requests.length === 0 && <p className="muted">Aucune demande.</p>}
         <ul className="cards">
           {requests.map((request) => (

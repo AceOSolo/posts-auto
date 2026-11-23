@@ -1,4 +1,3 @@
-import { parseCron } from '@posts-auto/core';
 import { NotFoundError, generationStatus } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -7,12 +6,12 @@ import { Flash } from '../../../../../components/flash.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { configureGenerationAction, requestGenerationAction } from '../../actions.ts';
+import { PlanningBack, WEEKDAYS, generationSchedule } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Rédaction' };
 export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const WEEKDAYS = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const dateTime = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Paris' });
 const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
 const STATUS: Record<string, string> = { running: 'En cours', done: 'Terminée', failed: 'Interrompue' };
@@ -36,15 +35,12 @@ export default async function GenerationPage({
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const schedule = parseCron(status.cron);
-  const day = schedule && schedule.daysOfWeek.size === 1 ? [...schedule.daysOfWeek][0] : 1;
-  const hour = schedule && schedule.hours.size === 1 ? [...schedule.hours][0] : 7;
-  const minute = schedule && schedule.minutes.size === 1 ? [...schedule.minutes][0] : 30;
-  const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  const { parsed, day, time } = generationSchedule(status.cron);
   const pending = status.requestedAt !== null && !status.running;
 
   return (
     <>
+      <PlanningBack workspaceId={workspaceId} />
       <h1>Rédaction par l’IA</h1>
       <Flash code={message} />
       <p className="hint">
@@ -64,8 +60,8 @@ export default async function GenerationPage({
           </form>
         )}
         <p className="muted">
-          {status.autoGeneration && schedule
-            ? `Rédaction automatique chaque ${WEEKDAYS[day ?? 1]} à ${time.replace(':', 'h')}.`
+          {status.autoGeneration && parsed
+            ? `Rédaction automatique chaque ${WEEKDAYS[day]} à ${time.replace(':', 'h')}.`
             : 'Rédaction automatique désactivée : la rédaction se lance avec le bouton.'}
         </p>
       </section>

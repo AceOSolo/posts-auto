@@ -452,8 +452,19 @@ table.planning th small { display: block; font-weight: normal; color: var(--mute
 table.planning tbody th { position: sticky; left: 0; background: var(--surface); text-align: left; min-width: 140px; z-index: 1; }
 table.planning .current { background: var(--surface-2); }
 table.planning .add { display: inline-block; min-width: 32px; min-height: 32px; text-align: center; text-decoration: none; color: var(--muted); }
+/* Le « + » d'une case vide n'apparaît qu'au survol, là où le survol existe. */
+@media (hover: hover) {
+  table.planning td .add { opacity: 0; }
+  table.planning td:hover .add, table.planning td .add:focus-visible { opacity: 1; }
+}
 .chip { display: block; margin: 0 0 4px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--text); background: var(--surface); }
-.legend .chip, .card .chip { display: inline-block; margin-right: 6px; }
+.chip-state { display: block; font-size: 0.72rem; font-weight: 700; }
+.chip-text { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
+ul.plain .chip, .card .chip { display: inline-block; margin-right: 6px; }
+/* Vue de la semaine : un extrait à l'écran, le texte entier à l'impression. */
+@media screen {
+  .week-post-body { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
+}
 .chip.state-planned { background: var(--surface); }
 .chip.state-drafted { background: var(--warning-bg); color: var(--warning-text); border-color: transparent; }
 .chip.state-validated { background: var(--info-bg); color: var(--info-text); border-color: transparent; }
@@ -481,7 +492,8 @@ ol.hooks form { display: contents; }
 /* PLA-09 : impression du planning (et enregistrement en PDF), paysage, sans navigation. */
 @media print {
   @page { size: landscape; margin: 10mm; }
-  .app-side, .app-notices, .subnav, .toolbar, .legend + details, .no-print, form, details { display: none !important; }
+  .app-side, .app-notices, .subnav, .toolbar, .no-print, form, details { display: none !important; }
+  .chip-text { display: block; }
   .app-shell { display: block; }
   .app-content { padding: 0; }
   .app-content > main { max-width: none; }

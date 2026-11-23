@@ -3,12 +3,14 @@ import { NotFoundError, cellKey, planningGrid, weekDocument } from '@posts-auto/
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { PageHeader } from '../../../../../components/page-header.tsx';
+import { PrintButton } from '../../../../../components/print-button.tsx';
 import { StatusBadge } from '../../../../../components/status-badge.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { PlanningBack, STATE_LABELS, mondayLabel } from '../../planning-ui.tsx';
 
-export const metadata: Metadata = { title: 'Document de la semaine' };
+export const metadata: Metadata = { title: 'Vue de la semaine' };
 export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,6 +25,11 @@ const ORIGINS: Record<string, string> = {
   external_source: 'Source externe',
 };
 const pct = (part: number, total: number) => (total === 0 ? '–' : `${Math.round((100 * part) / total)} %`);
+
+function weekTitle(week: string, currentWeek: string, isoWeek: number): string {
+  if (week === currentWeek) return 'cette semaine';
+  return week === addDays(currentWeek, 7) ? 'semaine prochaine' : `semaine ${isoWeek}`;
+}
 
 /** GEN-10 : document de semaine, imprimable (planning, posts, suivi des 8 dernières semaines). */
 export default async function WeekDocumentPage({
@@ -39,21 +46,25 @@ export default async function WeekDocumentPage({
   let data;
   try {
     const doc = await weekDocument(database(), userId, workspaceId, typeof du === 'string' ? du : undefined, new Date());
-    const grid = await planningGrid(database(), userId, workspaceId, { from: doc.weekStart, weeks: 1 }, new Date());
+    const grid = await planningGrid(database(), userId, workspaceId, { from: doc.weekStart, weeks: 2 }, new Date());
     data = { doc, grid };
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
   const { doc, grid } = data;
-  const rows = grid.rows.filter((row) => (grid.entries[cellKey(row.row, doc.weekStart)] ?? []).length > 0);
 
   return (
     <>
       <PlanningBack workspaceId={workspaceId} />
-      <h1>
-        {doc.workspaceName} · semaine {doc.isoWeek} <small className="muted">du {mondayLabel(doc.weekStart)}</small>
-      </h1>
+      <PageHeader
+        title={
+          <>
+            {doc.workspaceName} · semaine {doc.isoWeek} <small className="muted">du {mondayLabel(doc.weekStart)}</small>
+          </>
+        }
+        action={<PrintButton label="Imprimer ou PDF" />}
+      />
       <div className="toolbar split">
         <div className="segmented" role="group" aria-label="Semaine affichée">
           <Link href={`?du=${addDays(doc.weekStart, -7)}`} aria-label="Semaine précédente">
@@ -63,27 +74,39 @@ export default async function WeekDocumentPage({
             Suivante →
           </Link>
         </div>
-        <span className="hint no-print">Pour un PDF : imprimer la page, puis « Enregistrer au format PDF ».</span>
       </div>
 
-      <section aria-labelledby="planning-semaine">
-        <h2 id="planning-semaine">Planning de la semaine</h2>
-        {rows.length === 0 && <p className="muted">Aucun sujet au planning.</p>}
-        <ul className="plain">
-          {rows.map((row) => (
-            <li key={row.key}>
-              <strong>{row.label}</strong> :{' '}
-              {(grid.entries[cellKey(row.row, doc.weekStart)] ?? []).map((entry, i) => (
-                <span key={entry.id}>
-                  {i > 0 && ' ; '}
-                  {entry.content} <span className={`chip state-${entry.status.state}`}>{STATE_LABELS[entry.status.state]}</span>
-                  {entry.setAsideReason && <span className="muted"> ({entry.setAsideReason})</span>}
-                </span>
+      {/* PLA-08 : les sujets de la semaine et de la suivante, ceux à traiter d'abord, avec leur post ou le motif de mise de côté. */}
+      {grid.weeks.map((week) => {
+        const items = grid.rows
+          .flatMap((row) => (grid.entries[cellKey(row.row, week.weekStart)] ?? []).map((entry) => ({ row, entry })))
+          .sort((a, b) => Number(b.entry.status.needsAttention) - Number(a.entry.status.needsAttention));
+        return (
+          <section key={week.weekStart} aria-labelledby={`sujets-${week.weekStart}`}>
+            <h2 id={`sujets-${week.weekStart}`}>
+              Sujets · {weekTitle(week.weekStart, grid.currentWeek, week.isoWeek)} <small className="muted">du {mondayLabel(week.weekStart)}</small>
+            </h2>
+            {items.length === 0 && <p className="muted">Aucun sujet au planning.</p>}
+            <ul className="plain">
+              {items.map(({ row, entry }) => (
+                <li key={entry.id}>
+                  <span className={`chip state-${entry.status.state}`}>{STATE_LABELS[entry.status.state]}</span>
+                  {entry.status.needsAttention && <span className="badge status-erreur">À traiter</span>} <strong>{row.label}</strong> :{' '}
+                  <Link href={`/planning/${workspaceId}/case?ligne=${encodeURIComponent(row.key)}&semaine=${week.weekStart}`}>{entry.content}</Link>
+                  {entry.setAsideReason && <span className="muted"> · mis de côté : {entry.setAsideReason}</span>}
+                  {entry.posts.map((post) => (
+                    <span key={post.id} className="no-print">
+                      {' · '}
+                      <Link href={`/posts/${post.id}`}>Voir le post</Link> <StatusBadge status={post.status} />
+                    </span>
+                  ))}
+                  {entry.posts.length === 0 && entry.setAsideReason === null && <span className="muted"> · pas encore de post</span>}
+                </li>
               ))}
-            </li>
-          ))}
-        </ul>
-      </section>
+            </ul>
+          </section>
+        );
+      })}
 
       <section aria-labelledby="posts-semaine">
         <h2 id="posts-semaine">Posts de la semaine ({doc.posts.length})</h2>
@@ -95,7 +118,7 @@ export default async function WeekDocumentPage({
                 <span className="badge">{ORIGINS[post.origin] ?? post.origin}</span>
               </p>
               {post.subject && <p className="muted">{post.subject}</p>}
-              <p className="pre">{post.body}</p>
+              <p className="pre week-post-body">{post.body}</p>
               <p className="no-print">
                 <Link href={`/posts/${post.id}`}>Ouvrir le post</Link>
               </p>
@@ -108,7 +131,7 @@ export default async function WeekDocumentPage({
         <h2 id="suivi">Suivi des 8 dernières semaines</h2>
         <p className="hint">Données de l’outil uniquement : aucune statistique LinkedIn des profils personnels.</p>
         {doc.tracking.map((account) => (
-          <div key={account.accountId} className="grid-scroll">
+          <div key={account.accountId} className="grid-scroll" role="region" aria-label={`Suivi de ${account.accountName}`} tabIndex={0}>
             <table className="tracking">
               <caption>{account.accountName}</caption>
               <thead>

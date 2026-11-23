@@ -3,9 +3,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PageHeader } from '../../../../components/page-header.tsx';
 import { StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
+import { ideasMenu } from '../../planning/planning-ui.tsx';
 import { ideaStatusAction, renewInboundAddressAction, repurposeAction, saveIdeaAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Idées' };
@@ -64,7 +66,7 @@ export default async function IdeasPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceId } = await params;
-  const { message, vue } = await searchParams;
+  const { message, vue, ajouter } = await searchParams;
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   const view = typeof vue === 'string' && vue in VIEWS ? vue : 'ouvertes';
@@ -82,10 +84,75 @@ export default async function IdeasPage({
   const [{ ideas, canPropose, canManage }, accountList, inbound] = data;
   const accounts = accountList.map((a) => ({ id: a.id, name: a.name }));
   const nameOf = new Map(accounts.map((a) => [a.id, a.name]));
+  const hasInboundAddress = inbound.available && inbound.address !== null;
 
   return (
     <>
-      <h1>Idées</h1>
+      <PageHeader
+        title="Idées"
+        description="Des sujets à placer quand c’est pertinent : l’IA les reprend à la prochaine rédaction."
+        action={
+          canPropose ? (
+            <Link href={`/idees/${workspaceId}?ajouter=1#proposer`} className="button primary">
+              Proposer une idée
+            </Link>
+          ) : undefined
+        }
+        menu={ideasMenu(workspaceId)}
+      />
+      <Flash code={message} />
+
+      {canPropose && view === 'ouvertes' && (
+        <section id="proposer" aria-labelledby="proposer-titre" className="card" hidden={ideas.length > 0 && ajouter !== '1'}>
+          <h2 id="proposer-titre">Nouvelle idée</h2>
+          <form action={saveIdeaAction.bind(null, workspaceId, null)} className="stack">
+            <IdeaFields accounts={accounts} />
+            <button type="submit" className="primary">
+              Proposer
+            </button>
+          </form>
+          {ideas.length > 0 && (
+            <p>
+              <Link href={`/idees/${workspaceId}`}>Annuler</Link>
+            </p>
+          )}
+        </section>
+      )}
+
+      {(canPropose || hasInboundAddress) && view === 'ouvertes' && (
+        <details>
+          <summary>Autres façons d’ajouter des idées</summary>
+          {canPropose && (
+            <form action={repurposeAction.bind(null, workspaceId)} className="stack">
+              <label htmlFor="article">Décliner un article (votre blog, un média, une page de votre site)</label>
+              <input id="article" name="article" type="url" inputMode="url" required maxLength={1000} placeholder="https://…" aria-describedby="article-aide" />
+              <p id="article-aide" className="hint">
+                L’IA lit l’article et en tire trois angles de posts distincts (un conseil, un fait marquant, une question…), ajoutés ici comme idées pour tous les comptes. Elle ne
+                s’appuie que sur ce que dit l’article.
+              </p>
+              <button type="submit">Tirer trois idées de l’article</button>
+            </form>
+          )}
+          {hasInboundAddress && (
+            <div className="stack">
+              <h2>Proposer par e-mail</h2>
+              <p>
+                Écrivez à <code>{inbound.address}</code> depuis l’adresse de votre compte Rostra.
+              </p>
+              <p className="hint">
+                L’objet devient le titre et le message les détails. Un objet qui commence par « Demande : » crée une demande de post sur vos comptes. Gardez cette adresse pour votre équipe : rien
+                n’est publié sans validation.
+              </p>
+              {inbound.canManage && (
+                <form action={renewInboundAddressAction.bind(null, workspaceId)}>
+                  <button type="submit">Changer l’adresse</button>
+                </form>
+              )}
+            </div>
+          )}
+        </details>
+      )}
+
       <div role="group" aria-label="Idées affichées" className="segmented">
         {Object.entries(VIEWS).map(([key, v]) => (
           <Link key={key} href={`/idees/${workspaceId}?vue=${key}`} aria-current={key === view ? 'true' : undefined}>
@@ -93,58 +160,6 @@ export default async function IdeasPage({
           </Link>
         ))}
       </div>
-      <Flash code={message} />
-      <p className="hint">
-        Une idée est un sujet à placer quand c’est pertinent : l’IA la reprend lors d’une prochaine rédaction. Pour un post précis à une date
-        donnée, faites plutôt une <Link href={`/demandes/${workspaceId}`}>demande de post</Link>.
-      </p>
-
-      {canPropose && view === 'ouvertes' && (
-        <details open={ideas.length === 0}>
-          <summary>Proposer une idée</summary>
-          <form action={saveIdeaAction.bind(null, workspaceId, null)} className="stack">
-            <IdeaFields accounts={accounts} />
-            <button type="submit" className="primary">
-              Proposer
-            </button>
-          </form>
-        </details>
-      )}
-
-      {canPropose && view === 'ouvertes' && (
-        <details>
-          <summary>Décliner un article en idées</summary>
-          <form action={repurposeAction.bind(null, workspaceId)} className="stack">
-            <label htmlFor="article">Adresse d’un article (votre blog, un média, une page de votre site)</label>
-            <input id="article" name="article" type="url" inputMode="url" required maxLength={1000} placeholder="https://…" aria-describedby="article-aide" />
-            <p id="article-aide" className="hint">
-              L’IA lit l’article et en tire trois angles de posts distincts (un conseil, un fait marquant, une question…), ajoutés ici comme idées pour tous les comptes. Elle ne
-              s’appuie que sur ce que dit l’article.
-            </p>
-            <button type="submit">Tirer trois idées de l’article</button>
-          </form>
-        </details>
-      )}
-
-      {inbound.available && inbound.address !== null && view === 'ouvertes' && (
-        <details>
-          <summary>Proposer par e-mail</summary>
-          <div className="stack">
-            <p>
-              Écrivez à <code>{inbound.address}</code> depuis l’adresse de votre compte Rostra.
-            </p>
-            <p className="hint">
-              L’objet devient le titre et le message les détails. Un objet qui commence par « Demande : » crée une demande de post sur vos comptes. Gardez cette adresse pour votre équipe : rien
-              n’est publié sans validation.
-            </p>
-            {inbound.canManage && (
-              <form action={renewInboundAddressAction.bind(null, workspaceId)}>
-                <button type="submit">Changer l’adresse</button>
-              </form>
-            )}
-          </div>
-        </details>
-      )}
 
       {ideas.length === 0 && <p className="muted">Aucune idée ici.</p>}
       <ul className="cards">

@@ -6,7 +6,7 @@ import { Flash } from '../../../../../components/flash.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { deleteSubjectAction, placeSubjectAction, saveSubjectAction } from '../../actions.ts';
-import { PlanningBack, mondayLabel } from '../../planning-ui.tsx';
+import { IdeasBack, mondayLabel } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Banque de sujets' };
 export const dynamic = 'force-dynamic';
@@ -78,7 +78,7 @@ export default async function SubjectBankPage({
 
   return (
     <>
-      <PlanningBack workspaceId={workspaceId} />
+      <IdeasBack workspaceId={workspaceId} />
       <h1>Banque de sujets</h1>
       <Flash code={message} />
       <p className="hint">L’IA y puise quand le planning, les événements et les idées de l’équipe ne remplissent pas toutes les semaines.</p>

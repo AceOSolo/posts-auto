@@ -434,7 +434,7 @@ try {
   );
   const weekDoc = await get(`/planning/${workspaceId}/semaine`, claire);
   check('document de la semaine avec le suivi des 8 semaines (GEN-10)', weekDoc.status === 200 && (await weekDoc.text()).includes('Suivi des 8 dernières semaines'), `HTTP ${weekDoc.status}`);
-  const inventoryPage = await get(`/planning/${workspaceId}/inventaire`, claire);
+  const inventoryPage = await get(`/planning/${workspaceId}/semaine`, claire);
   check('inventaire de la semaine visible par une contributrice (PLA-08)', inventoryPage.status === 200 && (await inventoryPage.text()).includes(subject));
 
   // IDE-01, IDE-03 : idées et demandes de post.

@@ -92,7 +92,7 @@ test.describe('pages de gestion (administratrice)', () => {
   test('navigation : un seul menu, chaque page de chaque rubrique s’ouvre', async ({ page }) => {
     test.setTimeout(180_000);
     const rubriques: [RegExp, string[]][] = [
-      [/Créer/, ['Planning', 'Rédaction', 'Idées', 'Demandes', 'Visuels']],
+      [/Créer/, ['Planning', 'Idées', 'Visuels']],
       [/Équipe/, ['Membres', 'Comptes LinkedIn', 'Vue équipe', 'Tableau de bord']],
       [/Paramètres/, ['Ligne éditoriale', 'Intégrations et support', 'Abonnement', 'Démarrage']],
       [/Mon compte/, ['Données et sécurité', 'Notifications']],
@@ -117,10 +117,19 @@ test.describe('pages de gestion (administratrice)', () => {
     await page.goto(`/planning/${sessions().workspaceId}`);
     await expect(page.getByRole('navigation', { name: 'Planning', exact: true })).toHaveCount(0);
     const outils = page.locator('.page-menu');
-    await expect(outils.getByRole('link', { name: 'Banque de sujets' })).toBeHidden();
+    await expect(outils.getByRole('link', { name: 'Vue de la semaine' })).toBeHidden();
+    await outils.locator('summary').click();
+    await outils.getByRole('link', { name: 'Vue de la semaine' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: /semaine/ })).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.side-sub:visible, .mobile-tabs:visible').getByRole('link', { name: 'Planning' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('idées : événements et banque de sujets rangés sous Idées', async ({ page }) => {
+    await page.goto(`/idees/${sessions().workspaceId}`);
+    const outils = page.locator('.page-menu');
     await outils.locator('summary').click();
     await outils.getByRole('link', { name: 'Banque de sujets' }).click();
     await expect(page.getByRole('heading', { name: 'Banque de sujets' })).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('.side-sub:visible, .mobile-tabs:visible').getByRole('link', { name: 'Planning' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.side-sub:visible, .mobile-tabs:visible').getByRole('link', { name: 'Idées' })).toHaveAttribute('aria-current', 'page');
   });
 });

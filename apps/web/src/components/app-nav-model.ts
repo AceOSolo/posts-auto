@@ -45,6 +45,9 @@ const under =
 
 const isIntegrations = (segments: readonly string[]) => segments[0] === 'espace' && segments[2] === 'integrations';
 
+/** Événements et banque de sujets : des sources d'idées, même si leur adresse est sous le planning. */
+const isIdeaSource = (segments: readonly string[]) => segments[0] === 'planning' && (segments[2] === 'banque' || segments[2] === 'evenements');
+
 /** Les rubriques ; celles qui dépendent d'un espace disparaissent quand il n'y en a pas. */
 export function buildSections({ workspaceId, owned, platformAdmin }: NavContext): NavSection[] {
   const valider: NavSection = {
@@ -73,10 +76,8 @@ export function buildSections({ workspaceId, owned, platformAdmin }: NavContext)
       label: 'Créer',
       href: `/planning/${id}`,
       tabs: [
-        { label: 'Planning', href: `/planning/${id}`, matches: (s) => s[0] === 'planning' && s[2] !== 'redactions' },
-        { label: 'Rédaction', href: `/planning/${id}/redactions`, matches: (s) => s[0] === 'planning' && s[2] === 'redactions' },
-        { label: 'Idées', href: `/idees/${id}`, matches: under('idees') },
-        { label: 'Demandes', href: `/demandes/${id}`, matches: under('demandes') },
+        { label: 'Planning', href: `/planning/${id}`, matches: (s) => s[0] === 'planning' && !isIdeaSource(s) },
+        { label: 'Idées', href: `/idees/${id}`, matches: (s) => s[0] === 'idees' || s[0] === 'demandes' || isIdeaSource(s) },
         { label: 'Visuels', href: `/visuels/${id}`, matches: under('visuels') },
       ],
     },

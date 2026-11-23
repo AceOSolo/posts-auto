@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PageHeader } from '../../../../components/page-header.tsx';
 import { canvaApi, database, mediaStore, tokenCipher } from '../../../../server/context.ts';
 import { brandProposalKey } from '../../../../server/drafts.ts';
 import { requireUserId } from '../../../../server/session.ts';
@@ -67,13 +68,16 @@ export default async function VisualsPage({
 
   return (
     <>
-      <h1>Visuels</h1>
+      <PageHeader
+        title="Visuels"
+        description="Chaque post reçoit un visuel préparé à partir de ces modèles, avec une de vos photos quand l’une convient."
+        action={
+          <Link href={`/visuels/${workspaceId}/photos`} className="button">
+            Médiathèque
+          </Link>
+        }
+      />
       <Flash code={message} />
-      <p className="hint">
-        Chaque post rédigé par l’IA reçoit un visuel : l’IA remplit un de ces modèles avec le titre et les points clés du post. Selon le réglage de chaque compte (fiche du compte),
-        environ un visuel sur deux porte une photo : une photo de la <Link href={`/visuels/${workspaceId}/photos`}>médiathèque</Link> quand l’une convient, sinon une image générée par IA,
-        signalée comme telle.
-      </p>
 
       <section aria-labelledby="modeles">
         <h2 id="modeles">Modèles</h2>
@@ -125,16 +129,14 @@ export default async function VisualsPage({
         )}
       </section>
 
-      {canManage && (
-        <section aria-labelledby="canva-titre" id="canva">
-          <h2 id="canva-titre">Modèles Canva</h2>
+      {canManage && canvaConfigured && (
+        <details id="canva" open={typeof message === 'string' && message.toLowerCase().includes('canva')}>
+          <summary>Modèles Canva</summary>
           <p className="hint">
             Reliez le Canva de l’entreprise pour utiliser ses modèles de marque : pour chaque post, une copie du modèle est remplie dans votre Canva (titre, points, photo), puis
             exportée en PNG comme visuel. Vos designs restent dans votre Canva. Les modèles de marque demandent un abonnement Canva qui les propose.
           </p>
-          {!canvaConfigured ? (
-            <p className="muted">La connexion à Canva n’est pas configurée sur ce serveur.</p>
-          ) : canva?.connected ? (
+          {canva?.connected ? (
             <>
               {canvaError && <p className="flash error">Canva ne répond pas : réessayez plus tard, ou reconnectez Canva.</p>}
               {canvaTemplates !== null && canvaTemplates.length === 0 && <p className="muted">Aucun modèle de marque dans ce Canva.</p>}
@@ -161,11 +163,11 @@ export default async function VisualsPage({
               Connecter Canva
             </a>
           )}
-        </section>
+        </details>
       )}
 
-      <section aria-labelledby="charte">
-        <h2 id="charte">Charte visuelle</h2>
+      <details id="charte" open={proposal !== null}>
+        <summary>Charte visuelle</summary>
         {canManage && (
           <form action={proposeBrandAction.bind(null, workspaceId)} className="inline-fields" id="proposer-charte">
             <label>
@@ -259,7 +261,7 @@ export default async function VisualsPage({
             <button type="submit">Remettre les modèles de départ à la charte</button>
           </form>
         )}
-      </section>
+      </details>
     </>
   );
 }
