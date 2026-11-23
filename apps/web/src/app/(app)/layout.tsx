@@ -1,6 +1,9 @@
 import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, activeAnnouncements, isPlatformAdmin, listMyWorkspaces, listNotifications, mfaStatus, ownedOrganizations, trialBanners } from '@posts-auto/services';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import type { Reminder } from '../../components/app-nav-model.ts';
+import { AppNav } from '../../components/app-nav.tsx';
 import { Logo } from '../../components/logo.tsx';
 import { database } from '../../server/context.ts';
 import { currentSession, requireUserId } from '../../server/session.ts';
@@ -17,83 +20,84 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const platformAdmin = await isPlatformAdmin(database(), userId);
   const announcements = await activeAnnouncements(database(), new Date());
   const support = (await currentSession())?.supportAdminId ?? null;
+  const rememberedWorkspace = (await cookies()).get('rostra_espace')?.value;
+  const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? 's' : ''}`;
+
+  // Ce qui peut attendre va dans « À faire » : annonces, essai en cours (ONB-06), double authentification (SEC-04).
+  const reminders: Reminder[] = [
+    ...(mfa.deadline !== null && !mfa.overdue
+      ? [
+          {
+            key: 'mfa',
+            title: 'Double authentification',
+            detail: `Obligatoire pour votre rôle, à activer avant le ${new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'long' }).format(mfa.deadline)}.`,
+            href: '/securite',
+            cta: 'L’activer',
+          },
+        ]
+      : []),
+    ...trials
+      .filter((trial) => !trial.expired)
+      .map((trial) => ({
+        key: `essai-${trial.orgId}`,
+        title: `Essai gratuit : ${plural(trial.daysLeft, 'jour')} restant${trial.daysLeft > 1 ? 's' : ''}`,
+        detail: `${plural(trial.posts, 'post')} sur ${TRIAL_MAX_POSTS}, ${plural(trial.accounts, 'compte')} LinkedIn sur ${TRIAL_MAX_ACCOUNTS}.`,
+        href: `/abonnement/${trial.workspaceId}`,
+        cta: trial.canSubscribe ? 'Souscrire' : 'Voir les formules',
+      })),
+    ...announcements
+      .filter((a) => a.level !== 'maintenance')
+      .map((a) => ({ key: `annonce-${a.id}`, title: 'Nouveau', detail: a.message, href: null, cta: null })),
+  ];
+  const maintenance = announcements.filter((a) => a.level === 'maintenance');
+  const expiredTrials = trials.filter((trial) => trial.expired);
+  const hasNotices = support !== null || maintenance.length > 0 || expiredTrials.length > 0;
+
   return (
-    <>
-      <header className="topbar">
-        <nav aria-label="Navigation principale">
-          <Link href="/" className="brand" aria-label="Rostra, mes posts">
-            <Logo title="Rostra" />
-          </Link>
-          <Link href="/">Mes posts</Link>
-          <Link href="/notifications" aria-label={`Notifications${unread > 0 ? ` : ${unread} non lue${unread > 1 ? 's' : ''}` : ''}`}>
-            Notifications{unread > 0 && <span className="pill">{unread}</span>}
-          </Link>
-          {workspaces.map((workspace) => (
-            <span key={workspace.id} className="nav-group">
-              <Link href={`/tableau/${workspace.id}`}>Tableau de bord · {workspace.name}</Link>
-              <Link href={`/equipe/${workspace.id}`}>Équipe</Link>
-              <Link href={`/comptes/${workspace.id}`}>Comptes</Link>
-              <Link href={`/planning/${workspace.id}`}>Planning</Link>
-              <Link href={`/idees/${workspace.id}`}>Idées et demandes</Link>
-              <Link href={`/ligne/${workspace.id}`}>Ligne éditoriale</Link>
-              <Link href={`/visuels/${workspace.id}`}>Visuels</Link>
-              <Link href={`/espace/${workspace.id}`}>Réglages</Link>
-              <Link href={`/abonnement/${workspace.id}`}>Abonnement</Link>
-            </span>
-          ))}
-        </nav>
-        <span className="nav-group">
-          {owned.map((org) => (
-            <Link key={org.orgId} href={`/espaces/${org.workspaceId}`}>
-              {org.kind === 'agence' ? 'Clients' : 'Espaces'}
-            </Link>
-          ))}
-          {platformAdmin && <Link href="/admin">Back-office</Link>}
-          <Link href="/moi">Mon compte</Link>
-          <form action={logout}>
-            <button type="submit" className="link">
-              Déconnexion
-            </button>
-          </form>
-        </span>
-      </header>
-      {/* ADM-02 : session ouverte par le support, avec l'accord du client. */}
-      {support !== null && (
-        <p className="trial-banner expired" role="status">
-          <strong>Session du support</strong> : ouverte avec votre accord, inscrite au journal d’audit. Elle se termine à la déconnexion ou à la fin de l’accord.
-        </p>
-      )}
-      {/* ADM-06 : annonces de l'éditeur. */}
-      {announcements.map((a) => (
-        <p key={a.id} className={`trial-banner${a.level === 'maintenance' ? ' expired' : ''}`} role="status">
-          <strong>{a.level === 'maintenance' ? 'Maintenance' : 'Nouveau'}</strong> : {a.message}
-        </p>
-      ))}
-      {/* ONB-06 : état de l'essai gratuit, pour qui gère l'espace. */}
-      {trials.map((trial) => (
-        <p key={trial.orgId} className={`trial-banner${trial.expired ? ' expired' : ''}`} role="status">
-          {trial.expired ? (
-            <>
-              <strong>Essai gratuit terminé</strong> : la rédaction par l’IA est en pause ; les posts déjà validés partent toujours.{' '}
-              <Link href={`/abonnement/${trial.workspaceId}`}>{trial.canSubscribe ? 'Choisir une formule' : 'Voir l’abonnement'}</Link>
-            </>
-          ) : (
-            <>
-              <strong>Essai gratuit</strong> · {trial.daysLeft} jour{trial.daysLeft > 1 ? 's' : ''} restant{trial.daysLeft > 1 ? 's' : ''} · {trial.posts} post
-              {trial.posts > 1 ? 's' : ''} rédigé{trial.posts > 1 ? 's' : ''} sur {TRIAL_MAX_POSTS} · {trial.accounts} compte{trial.accounts > 1 ? 's' : ''} LinkedIn sur{' '}
-              {TRIAL_MAX_ACCOUNTS} · <Link href={`/abonnement/${trial.workspaceId}`}>{trial.canSubscribe ? 'Souscrire' : 'Voir les formules'}</Link>
-            </>
-          )}
-        </p>
-      ))}
-      {/* SEC-04 : délai de mise en place de la double authentification. */}
-      {mfa.deadline !== null && !mfa.overdue && (
-        <p className="trial-banner" role="status">
-          <strong>Double authentification</strong> : obligatoire pour votre rôle, à activer avant le{' '}
-          {new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'long' }).format(mfa.deadline)} · <Link href="/securite">L’activer</Link>
-        </p>
-      )}
-      <main>{children}</main>
-    </>
+    <div className="app-shell">
+      <AppNav
+        brand={<Logo title="Rostra" />}
+        workspaces={workspaces.map((workspace) => ({ id: workspace.id, name: workspace.name }))}
+        initialWorkspaceId={workspaces.find((workspace) => workspace.id === rememberedWorkspace)?.id ?? workspaces[0]?.id ?? null}
+        owned={owned.map((org) => ({ label: org.kind === 'agence' ? 'Clients' : 'Espaces', workspaceId: org.workspaceId }))}
+        platformAdmin={platformAdmin}
+        unread={unread}
+        reminders={reminders}
+        logoutAction={logout}
+      />
+      <div className="app-content">
+        {/* Seul ce qui change ce qui se passe maintenant reste affiché au-dessus de la page. */}
+        {hasNotices && (
+          <div className="app-notices">
+            {/* ADM-02 : session ouverte par le support, avec l'accord du client. */}
+            {support !== null && (
+              <p className="notice" role="status">
+                <span>
+                  <strong>Session du support</strong> : ouverte avec votre accord, inscrite au journal d’audit. Elle se termine à la déconnexion ou à la fin de l’accord.
+                </span>
+              </p>
+            )}
+            {/* ADM-06 : maintenance annoncée par l'éditeur. */}
+            {maintenance.map((a) => (
+              <p key={a.id} className="notice" role="status">
+                <span>
+                  <strong>Maintenance</strong> : {a.message}
+                </span>
+              </p>
+            ))}
+            {/* ONB-06 : essai terminé, la rédaction est arrêtée. */}
+            {expiredTrials.map((trial) => (
+              <p key={trial.orgId} className="notice" role="status">
+                <span>
+                  <strong>Essai gratuit terminé</strong> : la rédaction par l’IA est en pause ; les posts déjà validés partent toujours.
+                </span>
+                <Link href={`/abonnement/${trial.workspaceId}`}>{trial.canSubscribe ? 'Choisir une formule' : 'Voir l’abonnement'}</Link>
+              </p>
+            ))}
+          </div>
+        )}
+        <main>{children}</main>
+      </div>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { StatusBadge } from '../../../../../components/status-badge.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
-import { PlanningNav, STATE_LABELS, mondayLabel } from '../../planning-ui.tsx';
+import { PlanningBack, STATE_LABELS, mondayLabel } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Document de la semaine' };
 export const dynamic = 'force-dynamic';
@@ -50,13 +50,19 @@ export default async function WeekDocumentPage({
 
   return (
     <>
+      <PlanningBack workspaceId={workspaceId} />
       <h1>
         {doc.workspaceName} · semaine {doc.isoWeek} <small className="muted">du {mondayLabel(doc.weekStart)}</small>
       </h1>
-      <PlanningNav workspaceId={workspaceId} current="semaine" />
-      <div className="toolbar">
-        <Link href={`?du=${addDays(doc.weekStart, -7)}`}>← Semaine précédente</Link>
-        <Link href={`?du=${addDays(doc.weekStart, 7)}`}>Semaine suivante →</Link>
+      <div className="toolbar split">
+        <div className="segmented" role="group" aria-label="Semaine affichée">
+          <Link href={`?du=${addDays(doc.weekStart, -7)}`} aria-label="Semaine précédente">
+            ← Précédente
+          </Link>
+          <Link href={`?du=${addDays(doc.weekStart, 7)}`} aria-label="Semaine suivante">
+            Suivante →
+          </Link>
+        </div>
         <span className="hint no-print">Pour un PDF : imprimer la page, puis « Enregistrer au format PDF ».</span>
       </div>
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { database } from '../../../../../../server/context.ts';
 import { requireUserId } from '../../../../../../server/session.ts';
-import { PlanningNav, mondayLabel } from '../../../planning-ui.tsx';
+import { mondayLabel } from '../../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Rapport de rédaction' };
 export const dynamic = 'force-dynamic';
@@ -61,7 +61,6 @@ export default async function GenerationReportPage({ params }: { params: Promise
         <Link href={`/planning/${workspaceId}/redactions`}>← Rédaction</Link>
       </p>
       <h1>Rapport de rédaction</h1>
-      <PlanningNav workspaceId={workspaceId} current="redactions" />
       <p className="muted">
         {dateTime.format(run.startedAt)} · semaines du {run.weeks.map(mondayLabel).join(' et du ')} · modèle {run.model ?? 'inconnu'}, consignes{' '}
         {run.promptVersion ?? '?'}

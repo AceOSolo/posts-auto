@@ -54,7 +54,6 @@ export default async function RequestsPage({
         <Link href={`/demandes/${workspaceId}?toutes=1`} aria-current={all ? 'page' : undefined}>
           Toutes les demandes
         </Link>
-        <Link href={`/idees/${workspaceId}`}>Idées</Link>
       </nav>
       <Flash code={message} />
 

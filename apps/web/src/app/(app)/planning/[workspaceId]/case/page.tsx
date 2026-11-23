@@ -7,7 +7,7 @@ import { StatusBadge } from '../../../../../components/status-badge.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { addEntryAction, deleteEntryAction, setAsideAction, updateEntryAction } from '../../actions.ts';
-import { PlanningNav, STATE_LABELS, mondayLabel } from '../../planning-ui.tsx';
+import { STATE_LABELS, mondayLabel } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Case du planning' };
 export const dynamic = 'force-dynamic';
@@ -54,7 +54,6 @@ export default async function PlanningCellPage({
       <h1>
         {cell.label} <small className="muted">· semaine {cell.isoWeek}, du {mondayLabel(cell.weekStart)}</small>
       </h1>
-      <PlanningNav workspaceId={workspaceId} current="grille" />
       <Flash code={query['message']} />
 
       {cell.entries.length === 0 && <p className="muted">Aucun sujet prévu cette semaine.</p>}

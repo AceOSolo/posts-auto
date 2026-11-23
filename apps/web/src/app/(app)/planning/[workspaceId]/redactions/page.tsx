@@ -7,7 +7,6 @@ import { Flash } from '../../../../../components/flash.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { configureGenerationAction, requestGenerationAction } from '../../actions.ts';
-import { PlanningNav } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Rédaction' };
 export const dynamic = 'force-dynamic';
@@ -47,7 +46,6 @@ export default async function GenerationPage({
   return (
     <>
       <h1>Rédaction par l’IA</h1>
-      <PlanningNav workspaceId={workspaceId} current="redactions" />
       <Flash code={message} />
       <p className="hint">
         La rédaction prépare un post par créneau sur la semaine en cours et la suivante, à partir du planning, des événements, des idées et de

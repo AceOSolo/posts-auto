@@ -1,5 +1,5 @@
 import { DEFAULT_WORKSPACE_CALENDAR, addMinutes, isoWeekBounds, localDate } from '@posts-auto/core';
-import { teamWeek } from '@posts-auto/services';
+import { listMyWorkspaces, teamWeek } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -40,8 +40,8 @@ export default async function TeamPage({
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   const monday = mondayOf(typeof semaine === 'string' ? semaine : undefined, new Date());
-  const accounts = await teamWeek(database(), userId, workspaceId, monday, new Date());
-  if (accounts.length === 0) notFound();
+  const [accounts, workspaces] = await Promise.all([teamWeek(database(), userId, workspaceId, monday, new Date()), listMyWorkspaces(database(), userId)]);
+  if (!workspaces.some((workspace) => workspace.id === workspaceId)) notFound();
 
   const pendingOnly = filtre === 'en-attente';
   const pending = accounts.flatMap((account) => account.posts).filter((post) => post.status === 'a_valider').length;
@@ -58,6 +58,11 @@ export default async function TeamPage({
         {pending} post{pending > 1 ? 's' : ''} en attente de validation ·{' '}
         {pendingOnly ? <Link href={`?semaine=${monday}`}>Tout afficher</Link> : <Link href={`?semaine=${monday}&filtre=en-attente`}>Seulement en attente</Link>}
       </p>
+      {accounts.length === 0 && (
+        <p className="muted">
+          Aucun compte LinkedIn dans cet espace pour l’instant. <Link href={`/comptes/${workspaceId}`}>Connecter un compte</Link>
+        </p>
+      )}
       {accounts.map((account) => {
         const posts = pendingOnly ? account.posts.filter((post) => post.status === 'a_valider') : account.posts;
         if (pendingOnly && posts.length === 0) return null;

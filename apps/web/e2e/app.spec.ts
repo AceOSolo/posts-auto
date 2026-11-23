@@ -82,6 +82,45 @@ test.describe('pages de gestion (administratrice)', () => {
 
   test('navigation : liens principaux présents', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible();
+    const menu = page.getByRole('navigation', { name: 'Navigation principale' });
+    await expect(menu).toBeVisible();
+    await expect(page.locator('.side-link')).toHaveText([/Valider/, /Créer/, /Équipe/, /Paramètres/, /Mon compte/]);
+    await expectNoHorizontalScroll(page);
+    await expectAccessible(page);
+  });
+
+  test('navigation : un seul menu, chaque page de chaque rubrique s’ouvre', async ({ page }) => {
+    test.setTimeout(180_000);
+    const rubriques: [RegExp, string[]][] = [
+      [/Créer/, ['Planning', 'Rédaction', 'Idées', 'Demandes', 'Visuels']],
+      [/Équipe/, ['Membres', 'Comptes LinkedIn', 'Vue équipe', 'Tableau de bord']],
+      [/Paramètres/, ['Ligne éditoriale', 'Intégrations et support', 'Abonnement', 'Démarrage']],
+      [/Mon compte/, ['Données et sécurité', 'Notifications']],
+    ];
+    await page.goto('/');
+    // Pages de la rubrique : sous la rubrique sur ordinateur, en onglets sur téléphone.
+    const pages = page.locator('.side-sub:visible, .mobile-tabs:visible');
+    for (const [rubrique, onglets] of rubriques) {
+      await page.locator('.side-link').filter({ hasText: rubrique }).click();
+      await expect(pages).toBeVisible({ timeout: 20_000 });
+      for (const onglet of onglets) {
+        const lien = pages.getByRole('link', { name: new RegExp(`^${onglet}`) });
+        await lien.click();
+        await expect(lien).toHaveAttribute('aria-current', 'page', { timeout: 20_000 });
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+        await expectNoHorizontalScroll(page);
+      }
+    }
+  });
+
+  test('planning : un seul menu, les outils sont repliés', async ({ page }) => {
+    await page.goto(`/planning/${sessions().workspaceId}`);
+    await expect(page.getByRole('navigation', { name: 'Planning', exact: true })).toHaveCount(0);
+    const outils = page.locator('.page-menu');
+    await expect(outils.getByRole('link', { name: 'Banque de sujets' })).toBeHidden();
+    await outils.locator('summary').click();
+    await outils.getByRole('link', { name: 'Banque de sujets' }).click();
+    await expect(page.getByRole('heading', { name: 'Banque de sujets' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.side-sub:visible, .mobile-tabs:visible').getByRole('link', { name: 'Planning' })).toHaveAttribute('aria-current', 'page');
   });
 });

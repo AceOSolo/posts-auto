@@ -139,15 +139,125 @@ a:hover { color: var(--primary-hover); }
 
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-/* Barre du haut */
-.topbar {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 1;
+/* Coquille de l'application : une barre latérale, une seule colonne de contenu. */
+.app-shell { --content-width: 1280px; --text-width: 880px; display: grid; grid-template-columns: 256px minmax(0, 1fr); min-height: 100dvh; }
+.app-side {
+  position: sticky; top: 0; z-index: 20; display: flex; flex-direction: column; gap: 16px;
+  height: 100dvh; padding: 20px 12px 16px; overflow-y: auto;
+  background: var(--surface); border-right: 1px solid var(--border);
 }
-.topbar nav { display: flex; gap: 16px; overflow-x: auto; white-space: nowrap; }
-.topbar .brand { display: inline-flex; align-items: center; text-decoration: none; color: var(--text); min-height: 44px; }
-.topbar .brand .logo { display: block; height: 24px; width: auto; }
+.app-side .brand { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; padding: 0 12px; color: var(--text); text-decoration: none; }
+.app-side .brand .logo { display: block; height: 28px; width: auto; }
+.workspace-switch { min-width: 0; }
+.workspace-switch select { min-height: 44px; padding: 6px 12px; text-overflow: ellipsis; }
+
+.app-content { min-width: 0; padding: 32px clamp(20px, 4vw, 48px) 64px; }
+.app-content > main, .app-notices { width: 100%; max-width: var(--content-width); margin-inline: auto; padding: 0; }
+/* Même bord gauche sur toutes les pages ; seul le planning utilise toute la largeur. */
+.app-shell:not(:has(table.planning)) .app-content > main > *, .app-notices > * { max-width: var(--text-width); }
+.app-content > main > h1:first-child, .page-head h1 { margin-top: 0; }
+.app-content > main > details:not([class]) { margin: 10px 0; }
+.app-content > main > details:not([class]) > summary { padding: 6px 0; font-weight: 600; cursor: pointer; }
+.app-notices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.notice {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px;
+  margin: 0; padding: 10px 14px; border-radius: 12px;
+  background: var(--warning-bg); color: var(--warning-text); font-size: 0.92rem;
+}
+.notice a { color: inherit; font-weight: 700; }
+
+/* Le menu : cinq rubriques, les pages de la rubrique ouverte juste dessous. */
+.side-nav ul { list-style: none; margin: 0; padding: 0; }
+.side-nav > ul { display: flex; flex-direction: column; gap: 4px; }
+.side-link {
+  display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 12px;
+  color: var(--text); font-weight: 600; text-decoration: none; white-space: nowrap;
+}
+.side-link:hover { background: var(--bg); color: var(--text); }
+.side-link[aria-current], .side-link[aria-current]:hover { background: var(--text); color: var(--surface); }
+.side-link svg { width: 20px; height: 20px; flex: none; }
+.side-link .nav-dot { margin-left: auto; }
+.nav-dot {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 999px; background: var(--highlight); color: #1e1a45; font-size: 0.75rem; font-weight: 700; line-height: 1;
+}
+.side-nav .side-sub { margin: 6px 0 6px 21px; padding-left: 11px; border-left: 2px solid var(--border); }
+.side-sub a, .side-sub button.link {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 40px; padding: 0 10px;
+  border-radius: 8px; color: var(--muted); font-size: 0.94rem; font-weight: 500; text-align: left; text-decoration: none;
+}
+.side-sub a:hover, .side-sub button.link:hover { background: var(--bg); color: var(--text); }
+.side-sub a[aria-current='page'] { background: var(--bg); color: var(--text); font-weight: 700; }
+.mobile-tabs { display: none; }
+
+/* « À faire » : les rappels qui peuvent attendre, à la place des bandeaux. */
+.reminders { flex: none; margin-top: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.reminders summary { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; font-weight: 600; cursor: pointer; list-style: none; }
+.reminders summary::-webkit-details-marker { display: none; }
+.reminders summary svg { width: 18px; height: 18px; flex: none; }
+.reminders summary .nav-dot { margin-left: auto; }
+.reminders ul { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0 12px 12px; list-style: none; }
+.reminders li { display: flex; flex-direction: column; gap: 2px; font-size: 0.86rem; line-height: 1.35; }
+.reminders li span { color: var(--muted); }
+
+/* En-tête de page et menu d'outils */
+.page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.page-head h1 { margin-bottom: 0; }
+.page-menu { position: relative; }
+.page-menu summary {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; cursor: pointer; list-style: none;
+  border: 1.5px solid var(--border); border-radius: var(--radius-control); background: var(--surface); font-weight: 600;
+}
+.page-menu summary::-webkit-details-marker { display: none; }
+.page-menu summary::after { content: ''; width: 7px; height: 7px; margin: -3px 2px 0 10px; border-right: 2px solid; border-bottom: 2px solid; transform: rotate(45deg); }
+.page-menu-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 10; display: flex; flex-direction: column; min-width: 250px; padding: 6px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 28px rgb(30 26 69 / 0.16);
+}
+.page-menu-panel a { display: flex; align-items: center; min-height: 40px; padding: 0 10px; border-radius: 8px; color: var(--text); text-decoration: none; }
+.page-menu-panel a:hover { background: var(--bg); color: var(--text); }
+.back-link { margin: 0 0 8px; font-size: 0.92rem; }
+.back-link a { color: var(--muted); text-decoration: none; }
+.back-link a:hover { color: var(--text); }
+
+/* Sur tablette et téléphone : rubriques en barre fixe sous le pouce, pages en onglets sous le logo. */
+@media (max-width: 900px) {
+  .app-shell { display: block; }
+  .app-side {
+    flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; height: auto; padding: 6px 16px 0; overflow: visible;
+    border-right: 0; border-bottom: 1px solid var(--border);
+  }
+  .app-side .brand { order: 1; margin-right: auto; padding: 0; }
+  .app-side .brand .logo { height: 24px; }
+  .workspace-switch { order: 2; flex: 0 1 150px; }
+  .reminders { order: 3; position: relative; margin: 0; border: 0; background: none; }
+  .reminders summary { gap: 6px; padding: 0 4px; }
+  .reminders summary .nav-dot { margin-left: 0; }
+  .reminders ul {
+    position: absolute; top: 100%; right: 0; z-index: 30; width: min(300px, calc(100vw - 32px)); padding: 12px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 28px rgb(30 26 69 / 0.16);
+  }
+  .mobile-tabs {
+    order: 4; display: flex; flex: 0 0 calc(100% + 32px); align-items: center; gap: 2px; margin: 0 -16px; padding: 0 8px;
+    overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+  }
+  .mobile-tabs a, .mobile-tabs button.link {
+    display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 44px; padding: 0 10px;
+    border-bottom: 3px solid transparent; color: var(--muted); font-weight: 600; text-decoration: none;
+  }
+  .mobile-tabs a[aria-current='page'] { border-bottom-color: var(--primary); color: var(--text); }
+  .mobile-tabs form { flex: none; margin-left: auto; }
+  .side-nav {
+    position: fixed; inset: auto 0 0 0; z-index: 20; padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border);
+  }
+  .side-nav > ul { flex-direction: row; gap: 2px; }
+  .side-nav > ul > li { flex: 1 1 0; min-width: 0; }
+  .side-nav .side-sub { display: none; }
+  .side-link { position: relative; flex-direction: column; justify-content: center; gap: 2px; min-height: 54px; padding: 4px 2px; font-size: 0.72rem; }
+  .side-link .nav-dot { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 17px; height: 17px; margin: 0; padding: 0 4px; font-size: 0.68rem; }
+  .app-content { padding: 16px 16px calc(88px + env(safe-area-inset-bottom)); }
+}
 
 /* Formulaires et boutons (cibles d'au moins 44 px pour le pouce) */
 .stack { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
@@ -170,7 +280,6 @@ button.primary:hover, .button.primary:hover { background: var(--primary-hover); 
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.link { border: none; background: none; color: var(--link); padding: 0; min-height: auto; text-decoration: underline; }
 
-.topbar .nav-group { display: inline-flex; gap: 16px; }
 label.check { font-weight: normal; display: flex; gap: 10px; align-items: flex-start; }
 label.check input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
 
@@ -215,8 +324,6 @@ fieldset.zone { background: var(--surface); }
 .table-scroll th, .table-scroll td { border-bottom: 1px solid var(--border); padding: 6px 10px; text-align: left; }
 
 /* Essai gratuit (ONB-06). */
-.trial-banner { margin: 0; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-.trial-banner.expired { background: var(--warning-bg); color: var(--warning-text); }
 
 /* Démarrage (ONB-03, ONB-08). */
 .onboarding-indicator { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
@@ -323,9 +430,18 @@ details.photos summary { cursor: pointer; font-weight: 600; min-height: 32px; di
 .pre { white-space: pre-wrap; }
 
 /* Planning (PLA-01, PLA-02) : tableau qui défile horizontalement sur téléphone, première colonne fixe. */
-.subnav { display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 12px; }
-.subnav a[aria-current='page'] { font-weight: 700; text-decoration: none; color: var(--text); }
+/* Filtres d'une page : un sélecteur compact, jamais un second menu. */
+.subnav, .segmented {
+  display: inline-flex; flex-wrap: wrap; gap: 2px; max-width: 100%; margin: 0 0 16px; padding: 3px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+}
+.subnav a, .segmented a { display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border-radius: 9px; color: var(--muted); font-size: 0.92rem; font-weight: 600; text-decoration: none; }
+.subnav a:hover, .segmented a:hover { background: var(--bg); color: var(--text); }
+.subnav a[aria-current='page'], .subnav a[aria-current='page']:hover { background: var(--text); color: var(--surface); }
 .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 8px 0 12px; }
+.toolbar.split { justify-content: space-between; margin-top: 0; }
+.toolbar .segmented { margin: 0; flex-wrap: nowrap; }
+.segmented a { justify-content: center; white-space: nowrap; }
 .grid-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
 table.planning { border-collapse: collapse; min-width: 100%; font-size: 0.85rem; }
 table.planning th, table.planning td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 6px; vertical-align: top; min-width: 120px; }
@@ -363,7 +479,10 @@ ol.hooks form { display: contents; }
 /* PLA-09 : impression du planning (et enregistrement en PDF), paysage, sans navigation. */
 @media print {
   @page { size: landscape; margin: 10mm; }
-  .topbar, .subnav, .toolbar, .legend + details, .no-print, form, details { display: none !important; }
+  .app-side, .app-notices, .subnav, .toolbar, .legend + details, .no-print, form, details { display: none !important; }
+  .app-shell { display: block; }
+  .app-content { padding: 0; }
+  .app-content > main { max-width: none; }
   main { max-width: none; padding: 0; }
   .grid-scroll { overflow: visible; border: none; }
   table.planning { font-size: 7pt; }

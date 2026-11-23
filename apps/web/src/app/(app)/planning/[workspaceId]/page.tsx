@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { PlanningNav, STATE_LABELS, mondayLabel } from '../planning-ui.tsx';
+import { PlanningTools, STATE_LABELS, mondayLabel } from '../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Planning éditorial' };
 export const dynamic = 'force-dynamic';
@@ -46,18 +46,22 @@ export default async function PlanningPage({
 
   return (
     <>
-      <h1>Planning éditorial</h1>
-      <PlanningNav workspaceId={workspaceId} current="grille" />
+      <div className="page-head">
+        <h1>Planning éditorial</h1>
+        <PlanningTools workspaceId={workspaceId} exportHref={`/planning/${workspaceId}/export?depuis=${from}`} />
+      </div>
       <Flash code={message} />
 
-      <div className="toolbar">
-        <Link href={query(addDays(from, -7 * WEEKS))}>← Trimestre précédent</Link>
-        <Link href={query(grid.currentWeek)}>Cette semaine</Link>
-        <Link href={query(addDays(from, 7 * WEEKS))}>Trimestre suivant →</Link>
-        <a href={`/planning/${workspaceId}/export?depuis=${from}`} download>
-          Exporter en CSV
-        </a>
-        <span className="hint no-print">Pour un PDF : imprimer la page, puis « Enregistrer au format PDF ».</span>
+      <div className="toolbar split">
+        <div className="segmented" role="group" aria-label="Période affichée">
+          <Link href={query(addDays(from, -7 * WEEKS))} aria-label="Trimestre précédent">
+            ← Précédent
+          </Link>
+          <Link href={query(grid.currentWeek)}>Cette semaine</Link>
+          <Link href={query(addDays(from, 7 * WEEKS))} aria-label="Trimestre suivant">
+            Suivant →
+          </Link>
+        </div>
         <form method="get" className="inline">
           <input type="hidden" name="depuis" value={from} />
           <label htmlFor="compte">Compte</label>

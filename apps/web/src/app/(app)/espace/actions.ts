@@ -27,7 +27,10 @@ import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function run(workspaceId: string, action: (userId: string, now: Date) => Promise<string>): Promise<never> {
+/** Page des intégrations (messagerie, support), où reviennent les actions qui en partent. */
+const INTEGRATIONS = '/integrations';
+
+async function run(workspaceId: string, action: (userId: string, now: Date) => Promise<string>, page = ''): Promise<never> {
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   let message: string;
@@ -39,8 +42,8 @@ async function run(workspaceId: string, action: (userId: string, now: Date) => P
     else if (error instanceof RefusedError) message = error.code;
     else throw error;
   }
-  revalidatePath(`/espace/${workspaceId}`);
-  redirect(`/espace/${workspaceId}?message=${encodeURIComponent(message)}`);
+  revalidatePath(`/espace/${workspaceId}${page}`);
+  redirect(`/espace/${workspaceId}${page}?message=${encodeURIComponent(message)}`);
 }
 
 function role(value: FormDataEntryValue | null): MemberRole {
@@ -113,7 +116,7 @@ export async function grantSupportAction(workspaceId: string, formData: FormData
   await run(workspaceId, async (userId, now) => {
     await grantSupportAccess(database(), userId, workspaceId, { hours: Number.parseInt(String(formData.get('heures') ?? ''), 10), reason: String(formData.get('motif') ?? '') }, now);
     return 'support-accorde';
-  });
+  }, INTEGRATIONS);
 }
 
 export async function revokeSupportAction(workspaceId: string, grantId: string): Promise<void> {
@@ -121,7 +124,7 @@ export async function revokeSupportAction(workspaceId: string, grantId: string):
     if (!UUID.test(grantId)) throw new NotFoundError('Accès');
     await revokeSupportAccess(database(), userId, workspaceId, grantId, now);
     return 'support-retire';
-  });
+  }, INTEGRATIONS);
 }
 
 /** Messagerie d'équipe : relie un canal Slack ou Teams, ou change les événements annoncés. */
@@ -138,19 +141,19 @@ export async function saveTeamChatAction(workspaceId: string, formData: FormData
       now,
     );
     return 'messagerie-reliee';
-  });
+  }, INTEGRATIONS);
 }
 
 export async function testTeamChatAction(workspaceId: string): Promise<void> {
   await run(workspaceId, async (userId, now) => {
     await testTeamChat(database(), userId, workspaceId, now);
     return 'messagerie-essai';
-  });
+  }, INTEGRATIONS);
 }
 
 export async function removeTeamChatAction(workspaceId: string): Promise<void> {
   await run(workspaceId, async (userId, now) => {
     await removeTeamChat(database(), userId, workspaceId, now);
     return 'messagerie-retiree';
-  });
+  }, INTEGRATIONS);
 }

@@ -8,7 +8,7 @@ import { database, mediaStore } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { previewImportAction, runImportAction } from '../../actions.ts';
 import { draftKey } from '../../import-draft.ts';
-import { PlanningNav, mondayLabel } from '../../planning-ui.tsx';
+import { PlanningBack, mondayLabel } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Importer un planning' };
 export const dynamic = 'force-dynamic';
@@ -61,8 +61,8 @@ export default async function ImportPage({
 
   return (
     <>
+      <PlanningBack workspaceId={workspaceId} />
       <h1>Importer un planning</h1>
-      <PlanningNav workspaceId={workspaceId} current="import" />
       <Flash code={query['message']} />
       {!canEdit && <p>Seuls les administrateurs et les éditeurs peuvent importer un planning.</p>}
 

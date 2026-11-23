@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { StatusBadge } from '../../../../../components/status-badge.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
-import { PlanningNav, STATE_LABELS, mondayLabel } from '../../planning-ui.tsx';
+import { PlanningBack, STATE_LABELS, mondayLabel } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Inventaire de la semaine' };
 export const dynamic = 'force-dynamic';
@@ -27,8 +27,8 @@ export default async function InventoryPage({ params }: { params: Promise<{ work
 
   return (
     <>
+      <PlanningBack workspaceId={workspaceId} />
       <h1>Inventaire de la semaine</h1>
-      <PlanningNav workspaceId={workspaceId} current="inventaire" />
       {inventory.weeks.map((week, index) => {
         const items = inventory.items.filter((item) => item.weekStart === week);
         return (

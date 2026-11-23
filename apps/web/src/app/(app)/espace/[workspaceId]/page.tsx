@@ -1,24 +1,12 @@
-import { CHAT_EVENTS, CHAT_PROVIDERS, SUPPORT_MAX_HOURS, getTeamChat, listDelegates, listMembers, listSupportGrants, listWorkspaceAccounts } from '@posts-auto/services';
+import { listDelegates, listMembers, listWorkspaceAccounts } from '@posts-auto/services';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import {
-  changeRoleAction,
-  delegatesAction,
-  grantSupportAction,
-  inviteAction,
-  pauseAction,
-  removeMemberAction,
-  removeTeamChatAction,
-  revokeSupportAction,
-  saveTeamChatAction,
-  testTeamChatAction,
-} from '../actions.ts';
+import { changeRoleAction, delegatesAction, inviteAction, pauseAction, removeMemberAction } from '../actions.ts';
 
-export const metadata: Metadata = { title: 'Réglages de l’espace' };
+export const metadata: Metadata = { title: 'Membres' };
 export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -29,7 +17,7 @@ const ROLES: Record<string, string> = {
   viewer: 'Lecteur',
 };
 
-/** Membres (ONB-07), validateurs délégués (ROL-01) et pause des comptes (LNK-07). */
+/** Membres (ONB-07), validateurs délégués (ROL-01) et pause des comptes (LNK-07). Messagerie et support : ./integrations. */
 export default async function WorkspaceSettingsPage({
   params,
   searchParams,
@@ -45,21 +33,14 @@ export default async function WorkspaceSettingsPage({
   const { members, canManage } = await listMembers(db, userId, workspaceId);
   if (members.length === 0 && !canManage) notFound();
   const accounts = await listWorkspaceAccounts(db, userId, workspaceId);
-  const supportGrants = canManage ? await listSupportGrants(db, userId, workspaceId, new Date()) : [];
-  const teamChat = canManage ? await getTeamChat(db, userId, workspaceId).catch(() => null) : null;
-  const when = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const delegates = new Map(await Promise.all(accounts.map(async (account) => [account.id, new Set(await listDelegates(db, userId, account.id))] as const)));
 
   return (
     <>
-      <h1>Réglages de l’espace</h1>
+      <h1 id="membres">Membres</h1>
       <Flash code={message} />
-      <p>
-        <Link href={`/demarrage/${workspaceId}`}>Assistant de démarrage</Link> : entreprise, comptes, ligne éditoriale, charte, créneaux, première rédaction.
-      </p>
 
       <section aria-labelledby="membres">
-        <h2 id="membres">Membres</h2>
         <ul className="cards">
           {members.map((member) => (
             <li key={member.userId} className="card">
@@ -109,7 +90,7 @@ export default async function WorkspaceSettingsPage({
                   </option>
                 ))}
               </select>
-              <p className="hint">La personne reçoit un lien de connexion. Pour publier sur son profil, elle le connecte elle-même ensuite (page Comptes).</p>
+              <p className="hint">La personne reçoit un lien de connexion. Pour publier sur son profil, elle le connecte elle-même ensuite (Équipe, onglet Comptes LinkedIn).</p>
               <button type="submit" className="primary">
                 Envoyer l’invitation
               </button>
@@ -153,88 +134,6 @@ export default async function WorkspaceSettingsPage({
         </ul>
       </section>
 
-      {canManage && (
-        <section aria-labelledby="messagerie">
-          <h2 id="messagerie">Messagerie d’équipe (Slack ou Teams)</h2>
-          <p className="hint">
-            Annoncez dans un canal de l’équipe les posts prêts à valider, les échecs de publication et les posts publiés : quelques réactions et commentaires de l’équipe dans la
-            première heure aident un post à être vu. Dans Slack, créez un « webhook entrant » ; dans Teams, un flux Workflows « Publier dans un canal quand une requête webhook est
-            reçue ». Collez ici l’adresse obtenue : elle est chiffrée et ne sera plus affichée.
-          </p>
-          {teamChat !== null && (
-            <p>
-              {`Reliée à ${CHAT_PROVIDERS[teamChat.provider]} (${teamChat.urlHint})`}
-              {teamChat.lastSentAt !== null && ` · dernier message le ${when.format(teamChat.lastSentAt)}`}
-              {teamChat.lastError !== null && <strong>{` · dernier envoi en échec : ${teamChat.lastError}`}</strong>}
-            </p>
-          )}
-          <form action={saveTeamChatAction.bind(null, workspaceId)} className="stack">
-            <label htmlFor="messagerie-service">Messagerie</label>
-            <select id="messagerie-service" name="messagerie" defaultValue={teamChat?.provider ?? 'slack'}>
-              {Object.entries(CHAT_PROVIDERS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <label htmlFor="messagerie-adresse">{teamChat === null ? 'Adresse du webhook' : 'Nouvelle adresse du webhook (laisser vide pour garder la même)'}</label>
-            <input id="messagerie-adresse" name="adresse" type="url" inputMode="url" autoComplete="off" maxLength={1000} required={teamChat === null} placeholder="https://hooks.slack.com/services/…" />
-            <fieldset>
-              <legend>Annoncer</legend>
-              {Object.entries(CHAT_EVENTS).map(([value, label]) => (
-                <label key={value} className="check">
-                  <input type="checkbox" name="evenements" value={value} defaultChecked={teamChat === null || teamChat.events.includes(value as keyof typeof CHAT_EVENTS)} /> {label}
-                </label>
-              ))}
-            </fieldset>
-            <button type="submit">{teamChat === null ? 'Relier la messagerie' : 'Enregistrer'}</button>
-          </form>
-          {teamChat !== null && (
-            <div className="inline-fields">
-              <form action={testTeamChatAction.bind(null, workspaceId)}>
-                <button type="submit">Envoyer un message d’essai</button>
-              </form>
-              <form action={removeTeamChatAction.bind(null, workspaceId)}>
-                <button type="submit">Retirer la messagerie</button>
-              </form>
-            </div>
-          )}
-        </section>
-      )}
-
-      {canManage && (
-        <section aria-labelledby="support">
-          <h2 id="support">Accès du support</h2>
-          <p className="hint">
-            Pour qu’une personne du support puisse voir l’espace comme vous le voyez et vous aider, accordez-lui un accès limité dans le temps. Ses interventions sont inscrites au journal
-            d’audit ; vous pouvez retirer l’accès à tout moment.
-          </p>
-          {supportGrants.length > 0 && (
-            <ul>
-              {supportGrants.map((g) => (
-                <li key={g.id}>
-                  Accordé par {g.grantedBy} jusqu’au {when.format(g.expiresAt)}
-                  {g.reason && <> · « {g.reason} »</>}
-                  <form action={revokeSupportAction.bind(null, workspaceId, g.id)} className="inline-fields">
-                    <button type="submit">Retirer l’accès</button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          )}
-          <form action={grantSupportAction.bind(null, workspaceId)} className="stack">
-            <label>
-              Durée (heures, {SUPPORT_MAX_HOURS} au plus)
-              <input name="heures" type="number" min={1} max={SUPPORT_MAX_HOURS} defaultValue={24} required />
-            </label>
-            <label>
-              Motif (facultatif)
-              <input name="motif" maxLength={500} />
-            </label>
-            <button type="submit">Accorder l’accès au support</button>
-          </form>
-        </section>
-      )}
     </>
   );
 }

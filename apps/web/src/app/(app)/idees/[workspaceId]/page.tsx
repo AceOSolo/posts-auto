@@ -92,7 +92,6 @@ export default async function IdeasPage({
             {v.label}
           </Link>
         ))}
-        <Link href={`/demandes/${workspaceId}`}>Demandes de post</Link>
       </nav>
       <Flash code={message} />
       <p className="hint">

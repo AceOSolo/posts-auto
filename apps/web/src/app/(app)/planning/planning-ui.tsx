@@ -16,24 +16,30 @@ export function mondayLabel(weekStart: string): string {
   return shortDate.format(new Date(`${weekStart}T00:00:00Z`));
 }
 
-/** Sous-navigation du planning, commune à ses pages. */
-export function PlanningNav({ workspaceId, current }: { workspaceId: string; current: 'grille' | 'banque' | 'evenements' | 'inventaire' | 'import' | 'redactions' | 'semaine' }) {
-  const links = [
-    ['grille', `/planning/${workspaceId}`, 'Planning'],
-    ['redactions', `/planning/${workspaceId}/redactions`, 'Rédaction'],
-    ['inventaire', `/planning/${workspaceId}/inventaire`, 'Inventaire de la semaine'],
-    ['semaine', `/planning/${workspaceId}/semaine`, 'Document de la semaine'],
-    ['banque', `/planning/${workspaceId}/banque`, 'Banque de sujets'],
-    ['evenements', `/planning/${workspaceId}/evenements`, 'Événements'],
-    ['import', `/planning/${workspaceId}/import`, 'Importer'],
-  ] as const;
+/** Retour à la grille, pour les pages d'outils du planning. */
+export function PlanningBack({ workspaceId }: { workspaceId: string }) {
   return (
-    <nav aria-label="Planning" className="subnav">
-      {links.map(([key, href, label]) => (
-        <Link key={key} href={href} aria-current={key === current ? 'page' : undefined}>
-          {label}
-        </Link>
-      ))}
-    </nav>
+    <p className="back-link no-print">
+      <Link href={`/planning/${workspaceId}`}>← Planning</Link>
+    </p>
+  );
+}
+
+/** Les outils du planning, repliés dans un seul bouton à côté du titre. */
+export function PlanningTools({ workspaceId, exportHref }: { workspaceId: string; exportHref: string }) {
+  return (
+    <details className="page-menu no-print">
+      <summary>Outils</summary>
+      <div className="page-menu-panel">
+        <Link href={`/planning/${workspaceId}/banque`}>Banque de sujets</Link>
+        <Link href={`/planning/${workspaceId}/evenements`}>Événements</Link>
+        <Link href={`/planning/${workspaceId}/inventaire`}>Inventaire de la semaine</Link>
+        <Link href={`/planning/${workspaceId}/semaine`}>Document de la semaine</Link>
+        <Link href={`/planning/${workspaceId}/import`}>Importer</Link>
+        <a href={exportHref} download>
+          Exporter en CSV
+        </a>
+      </div>
+    </details>
   );
 }

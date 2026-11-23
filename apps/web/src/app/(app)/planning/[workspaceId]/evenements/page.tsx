@@ -7,7 +7,7 @@ import { StatusBadge } from '../../../../../components/status-badge.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { addWorldDayAction, deleteEventAction, saveEventAction } from '../../actions.ts';
-import { PlanningNav } from '../../planning-ui.tsx';
+import { PlanningBack } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Événements à relayer' };
 export const dynamic = 'force-dynamic';
@@ -86,8 +86,8 @@ export default async function EventsPage({
 
   return (
     <>
+      <PlanningBack workspaceId={workspaceId} />
       <h1>Événements à relayer</h1>
-      <PlanningNav workspaceId={workspaceId} current="evenements" />
       <Flash code={message} />
       <p className="hint">
         Chaque compte choisi publie un post sur l’événement dans les 3 semaines qui le précèdent, jamais après sa date. Un rendez-vous qui se répète
