@@ -1,4 +1,4 @@
-import { type Idea, type IdeaStatus, NotFoundError, listIdeas, listWorkspaceAccounts } from '@posts-auto/services';
+import { type Idea, type IdeaStatus, NotFoundError, inboundConfigFromEnv, inboundEmailSettings, listIdeas, listWorkspaceAccounts } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -6,7 +6,7 @@ import { Flash } from '../../../../components/flash.tsx';
 import { StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { ideaStatusAction, repurposeAction, saveIdeaAction } from '../actions.ts';
+import { disableInboundAddressAction, ideaStatusAction, renewInboundAddressAction, repurposeAction, saveIdeaAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Idées' };
 export const dynamic = 'force-dynamic';
@@ -70,12 +70,16 @@ export default async function IdeasPage({
   const view = typeof vue === 'string' && vue in VIEWS ? vue : 'ouvertes';
   let data;
   try {
-    data = await Promise.all([listIdeas(database(), userId, workspaceId, VIEWS[view]?.statuses), listWorkspaceAccounts(database(), userId, workspaceId)]);
+    data = await Promise.all([
+      listIdeas(database(), userId, workspaceId, VIEWS[view]?.statuses),
+      listWorkspaceAccounts(database(), userId, workspaceId),
+      inboundEmailSettings(database(), userId, workspaceId, inboundConfigFromEnv(process.env)),
+    ]);
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const [{ ideas, canPropose, canManage }, accountList] = data;
+  const [{ ideas, canPropose, canManage }, accountList, inbound] = data;
   const accounts = accountList.map((a) => ({ id: a.id, name: a.name }));
   const nameOf = new Map(accounts.map((a) => [a.id, a.name]));
 
@@ -120,6 +124,39 @@ export default async function IdeasPage({
             </p>
             <button type="submit">Tirer trois idées de l’article</button>
           </form>
+        </details>
+      )}
+
+      {inbound.available && view === 'ouvertes' && (inbound.address !== null || inbound.canManage) && (
+        <details>
+          <summary>Proposer par e-mail</summary>
+          <div className="stack">
+            {inbound.address !== null ? (
+              <>
+                <p>
+                  Adresse de cet espace : <code>{inbound.address}</code>
+                </p>
+                <p className="hint">
+                  Écrivez depuis l’adresse de votre compte Rostra. L’objet devient le titre et le message les détails. Un objet qui commence par « Demande : » crée une demande de post sur les
+                  comptes dont vous êtes titulaire. Gardez cette adresse pour votre équipe : rien n’est publié sans validation.
+                </p>
+              </>
+            ) : (
+              <p className="hint">Créez une adresse pour que votre équipe envoie ses idées et ses demandes par e-mail.</p>
+            )}
+            {inbound.canManage && (
+              <div className="actions">
+                <form action={renewInboundAddressAction.bind(null, workspaceId)}>
+                  <button type="submit">{inbound.address === null ? 'Créer l’adresse' : 'Changer l’adresse'}</button>
+                </form>
+                {inbound.address !== null && (
+                  <form action={disableInboundAddressAction.bind(null, workspaceId)}>
+                    <button type="submit">Désactiver</button>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
         </details>
       )}
 

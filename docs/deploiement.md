@@ -86,6 +86,7 @@ Les migrations passent avant le redémarrage du web et des tâches de fond. Reve
 | LinkedIn | Application développeur (Community Management API) | `https://app.<domaine>/comptes/connecter/retour` |
 | Stripe | Clés live, produits et prix, Stripe Tax, portail client | Webhook `https://app.<domaine>/api/stripe/webhook` (décision 0007) |
 | Brevo | Domaine d'envoi authentifié (SPF, DKIM, DMARC) | — |
+| Brevo, réception (facultatif, IDE-07) | Sous-domaine de réception distinct de l'envoi, par exemple `idees.<domaine>`, avec deux enregistrements MX : priorité 10 `inbound1.sendinblue.com.`, priorité 20 `inbound2.sendinblue.com.`. Définir `INBOUND_EMAIL_DOMAIN`, `INBOUND_EMAIL_SECRET` et `INBOUND_EMAIL_WEBHOOK_SECRET`. | Webhook de type `inbound`, événement `inboundEmailProcessed` : `https://app.<domaine>/api/email-entrant/<INBOUND_EMAIL_WEBHOOK_SECRET>` |
 | Anthropic | Clé d'API, plafond de dépenses | — |
 | Google (facultatif) | Client OAuth « Application Web » | `https://app.<domaine>/connexion/sso/google/retour` |
 | Microsoft (facultatif) | Application Entra ID, revendications `email` et `xms_edov` | `https://app.<domaine>/connexion/sso/microsoft/retour` |
