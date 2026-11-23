@@ -93,7 +93,7 @@ test.describe('pages de gestion (administratrice)', () => {
     test.setTimeout(180_000);
     const rubriques: [RegExp, string[]][] = [
       [/Créer/, ['Planning', 'Idées', 'Visuels']],
-      [/Équipe/, ['Membres', 'Comptes LinkedIn', 'Vue équipe', 'Tableau de bord']],
+      [/Équipe/, ['Tableau de bord', 'Comptes LinkedIn', 'Membres']],
       [/Paramètres/, ['Ligne éditoriale', 'Rédaction', 'Abonnement', 'Intégrations et support', 'Démarrage']],
       [/Mon compte/, ['Données et sécurité', 'Notifications']],
     ];

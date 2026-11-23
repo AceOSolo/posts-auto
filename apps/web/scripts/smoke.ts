@@ -140,7 +140,7 @@ try {
 
   const alexis = await sessionFor('alexis@demo.example.test');
   const team = await get(`/equipe/${withMarker.workspace_id}`, alexis);
-  check('vue équipe (VAL-07)', team.status === 200 && (await team.text()).includes('Vue équipe'));
+  check('posts de la semaine de toute l’équipe (VAL-07)', team.status === 200 && (await team.text()).includes('Posts de la semaine'));
   const dashboardHtml = (await (await get(`/tableau/${withMarker.workspace_id}`, alexis)).text()).replace(/<!-- -->/g, '');
   check('tableau de bord : semaine, attentes, départs, indicateurs (SUI-01, SUI-02)', dashboardHtml.includes('Cette semaine') && dashboardHtml.includes('En attente de validation') && dashboardHtml.includes('Indicateurs des 8 dernières semaines'));
   const postsCsv = await get(`/tableau/${withMarker.workspace_id}/export`, alexis);

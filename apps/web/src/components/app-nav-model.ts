@@ -87,12 +87,11 @@ export function buildSections({ workspaceId, owned, platformAdmin }: NavContext)
     {
       id: 'equipe',
       label: 'Équipe',
-      href: `/espace/${id}`,
+      href: `/tableau/${id}`,
       tabs: [
-        { label: 'Membres', href: `/espace/${id}`, matches: (s) => s[0] === 'espace' && !isIntegrations(s) },
+        { label: 'Tableau de bord', href: `/tableau/${id}`, matches: under('tableau', 'equipe') },
         { label: 'Comptes LinkedIn', href: `/comptes/${id}`, matches: under('comptes') },
-        { label: 'Vue équipe', href: `/equipe/${id}`, matches: under('equipe') },
-        { label: 'Tableau de bord', href: `/tableau/${id}`, matches: under('tableau') },
+        { label: 'Membres', href: `/espace/${id}`, matches: (s) => s[0] === 'espace' && !isIntegrations(s) },
       ],
     },
     {

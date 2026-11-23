@@ -1,10 +1,13 @@
-import { listDelegates, listMembers, listWorkspaceAccounts } from '@posts-auto/services';
+import { listMembers } from '@posts-auto/services';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PageHeader } from '../../../../components/page-header.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { changeRoleAction, delegatesAction, inviteAction, pauseAction, removeMemberAction } from '../actions.ts';
+import { changeRoleAction, inviteAction, removeMemberAction } from '../actions.ts';
+import styles from './membres.module.css';
 
 export const metadata: Metadata = { title: 'Membres' };
 export const dynamic = 'force-dynamic';
@@ -17,7 +20,7 @@ const ROLES: Record<string, string> = {
   viewer: 'Lecteur',
 };
 
-/** Membres (ONB-07), validateurs délégués (ROL-01) et pause des comptes (LNK-07). Messagerie et support : ./integrations. */
+/** Membres de l'espace (ONB-07). Validateurs et pause d'un compte : Comptes LinkedIn. Messagerie et support : ./integrations. */
 export default async function WorkspaceSettingsPage({
   params,
   searchParams,
@@ -26,32 +29,75 @@ export default async function WorkspaceSettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceId } = await params;
-  const { message } = await searchParams;
+  const { message, inviter, membre } = await searchParams;
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
-  const db = database();
-  const { members, canManage } = await listMembers(db, userId, workspaceId);
+  const { members, canManage } = await listMembers(database(), userId, workspaceId);
   if (members.length === 0 && !canManage) notFound();
-  const accounts = await listWorkspaceAccounts(db, userId, workspaceId);
-  const delegates = new Map(await Promise.all(accounts.map(async (account) => [account.id, new Set(await listDelegates(db, userId, account.id))] as const)));
+  const inviteOpen = members.length <= 1 || inviter === '1';
 
   return (
     <>
-      <h1 id="membres">Membres</h1>
+      <PageHeader
+        title="Membres"
+        description="Les personnes qui ont accès à cet espace."
+        action={
+          canManage ? (
+            <Link href={`/espace/${workspaceId}?inviter=1#inviter`} className="button primary">
+              Inviter une personne
+            </Link>
+          ) : undefined
+        }
+      />
       <Flash code={message} />
 
-      <section aria-labelledby="membres">
-        <ul className="cards">
-          {members.map((member) => (
-            <li key={member.userId} className="card">
-              <strong>{member.fullName ?? member.email}</strong> <span className="muted">· {member.email}</span>
-              <p className="muted">{member.lastLoginAt ? 'S’est déjà connecté' : 'Jamais connecté'}</p>
-              {canManage ? (
-                <div className="actions">
-                  <form action={changeRoleAction.bind(null, workspaceId, member.userId)} className="inline">
-                    <label htmlFor={`role-${member.userId}`} className="visually-hidden">
-                      Rôle de {member.fullName ?? member.email}
-                    </label>
+      {canManage && (
+        <section id="inviter" aria-labelledby="inviter-titre" className={`card ${styles.invite}`} hidden={!inviteOpen}>
+          <h2 id="inviter-titre">Inviter une personne</h2>
+          <form action={inviteAction.bind(null, workspaceId)} className="stack">
+            <label htmlFor="invite-email">Adresse e-mail</label>
+            <input id="invite-email" name="email" type="email" required autoComplete="off" />
+            <label htmlFor="invite-nom">Nom (facultatif)</label>
+            <input id="invite-nom" name="nom" type="text" autoComplete="off" />
+            <label htmlFor="invite-role">Rôle</label>
+            <select id="invite-role" name="role" defaultValue="contributor">
+              {Object.entries(ROLES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <p className="hint">La personne reçoit un lien de connexion. Pour publier sur son profil, elle le connecte elle-même ensuite.</p>
+            <button type="submit" className="primary">
+              Envoyer l’invitation
+            </button>
+          </form>
+          {members.length > 1 && (
+            <p>
+              <Link href={`/espace/${workspaceId}`}>Annuler</Link>
+            </p>
+          )}
+        </section>
+      )}
+
+      <ul className={styles.list} aria-label="Membres de l’espace">
+        {members.map((member) => {
+          const name = member.fullName ?? member.email;
+          const editing = canManage && membre === member.userId;
+          return (
+            <li key={member.userId} id={`membre-${member.userId}`} className={`${styles.row} ${editing ? styles.rowEditing : ''}`}>
+              <div className={styles.who}>
+                <strong>{name}</strong>
+                <p className="muted">
+                  {member.fullName !== null && `${member.email} · `}
+                  {!editing && `${ROLES[member.role]} · `}
+                  {member.lastLoginAt ? 'S’est déjà connecté' : 'Jamais connecté'}
+                </p>
+              </div>
+              {editing ? (
+                <>
+                  <form action={changeRoleAction.bind(null, workspaceId, member.userId)} className="stack">
+                    <label htmlFor={`role-${member.userId}`}>Rôle de {name}</label>
                     <select id={`role-${member.userId}`} name="role" defaultValue={member.role}>
                       {Object.entries(ROLES).map(([value, label]) => (
                         <option key={value} value={value}>
@@ -61,79 +107,26 @@ export default async function WorkspaceSettingsPage({
                     </select>
                     <button type="submit">Changer le rôle</button>
                   </form>
-                  {member.userId !== userId && (
-                    <form action={removeMemberAction.bind(null, workspaceId, member.userId)}>
-                      <button type="submit">Retirer de l’espace</button>
-                    </form>
-                  )}
-                </div>
-              ) : (
-                <p>{ROLES[member.role]}</p>
-              )}
-            </li>
-          ))}
-        </ul>
-
-        {canManage && (
-          <details open={members.length <= 1}>
-            <summary>Inviter une personne</summary>
-            <form action={inviteAction.bind(null, workspaceId)} className="stack">
-              <label htmlFor="invite-email">Adresse e-mail</label>
-              <input id="invite-email" name="email" type="email" required autoComplete="off" />
-              <label htmlFor="invite-nom">Nom (facultatif)</label>
-              <input id="invite-nom" name="nom" type="text" autoComplete="off" />
-              <label htmlFor="invite-role">Rôle</label>
-              <select id="invite-role" name="role" defaultValue="contributor">
-                {Object.entries(ROLES).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <p className="hint">La personne reçoit un lien de connexion. Pour publier sur son profil, elle le connecte elle-même ensuite (Équipe, onglet Comptes LinkedIn).</p>
-              <button type="submit" className="primary">
-                Envoyer l’invitation
-              </button>
-            </form>
-          </details>
-        )}
-      </section>
-
-      <section aria-labelledby="comptes">
-        <h2 id="comptes">Comptes LinkedIn : qui peut valider</h2>
-        {accounts.length === 0 && <p className="muted">Aucun compte connecté.</p>}
-        <ul className="cards">
-          {accounts.map((account) => (
-            <li key={account.id} className="card">
-              <strong>{account.name}</strong> <span className="muted">· titulaire : {account.holderName ?? 'aucun'}</span>
-              {account.status === 'paused' && <p className="badge status-erreur">En pause : rien ne part</p>}
-              {canManage && (
-                <>
-                  <form action={delegatesAction.bind(null, workspaceId, account.id)} className="stack">
-                    <fieldset>
-                      <legend>Peuvent valider à la place du titulaire</legend>
-                      {members
-                        .filter((member) => member.userId !== account.holderUserId)
-                        .map((member) => (
-                          <label key={member.userId} className="check">
-                            <input type="checkbox" name="delegue" value={member.userId} defaultChecked={delegates.get(account.id)?.has(member.userId) ?? false} />{' '}
-                            {member.fullName ?? member.email}
-                          </label>
-                        ))}
-                    </fieldset>
-                    <button type="submit">Enregistrer les délégués</button>
-                  </form>
-                  <form action={pauseAction.bind(null, workspaceId, account.id)}>
-                    <input type="hidden" name="pause" value={account.status === 'paused' ? 'non' : 'oui'} />
-                    <button type="submit">{account.status === 'paused' ? 'Reprendre les publications' : 'Mettre en pause (rien ne part)'}</button>
-                  </form>
+                  <div className={styles.editBar}>
+                    {member.userId !== userId && (
+                      <form action={removeMemberAction.bind(null, workspaceId, member.userId)}>
+                        <button type="submit">Retirer de l’espace</button>
+                      </form>
+                    )}
+                    <Link href={`/espace/${workspaceId}`}>Annuler</Link>
+                  </div>
                 </>
+              ) : (
+                canManage && (
+                  <Link href={`/espace/${workspaceId}?membre=${member.userId}#membre-${member.userId}`} className={styles.edit} aria-label={`Modifier : ${name}`}>
+                    Modifier
+                  </Link>
+                )
               )}
             </li>
-          ))}
-        </ul>
-      </section>
-
+          );
+        })}
+      </ul>
     </>
   );
 }

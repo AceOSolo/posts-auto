@@ -7,7 +7,7 @@ import { StatusBadge } from '../../../../components/status-badge.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
 
-export const metadata: Metadata = { title: 'Vue équipe' };
+export const metadata: Metadata = { title: 'Posts de la semaine' };
 export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,7 +48,10 @@ export default async function TeamPage({
 
   return (
     <>
-      <h1>Vue équipe</h1>
+      <p className="back-link">
+        <Link href={`/tableau/${workspaceId}`}>← Tableau de bord</Link>
+      </p>
+      <h1>Posts de la semaine</h1>
       <nav className="week-nav" aria-label="Semaines">
         <Link href={`?semaine=${shiftWeek(monday, -1)}`}>← Semaine précédente</Link>
         <strong>Semaine du {new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${monday}T12:00:00Z`))}</strong>

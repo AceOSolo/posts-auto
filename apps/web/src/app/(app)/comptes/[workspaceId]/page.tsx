@@ -1,10 +1,12 @@
-import { type AccountSummary, listWorkspaceAccounts } from '@posts-auto/services';
+import { type AccountSummary, listDelegates, listMembers, listWorkspaceAccounts } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PageHeader } from '../../../../components/page-header.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
+import { delegatesAction, pauseAction } from '../../espace/actions.ts';
 import { autoValidateAction, disconnectAction, publishModeAction, startPagesConnection } from '../actions.ts';
 import { AccountAvatar } from './account-avatar.tsx';
 import styles from './comptes.module.css';
@@ -17,7 +19,7 @@ const STATUS: Record<string, string> = {
   connected: 'Connecté',
   expiring: 'Expire bientôt',
   expired: 'À reconnecter',
-  paused: 'En pause',
+  paused: 'Suspendu',
 };
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'Europe/Paris' });
 
@@ -26,7 +28,7 @@ function accountState(account: AccountSummary): { text: string; tone: 'stateOk' 
   if (account.connectionExpiresAt === null || account.status === 'expired') {
     return { text: 'Connexion à renouveler : les posts de ce compte ne partiront pas.', tone: 'stateError' };
   }
-  if (account.status === 'paused') return { text: 'Compte en pause : ses posts ne partent pas.', tone: 'stateWarning' };
+  if (account.status === 'paused') return { text: 'Compte suspendu : rien n’est rédigé ni publié.', tone: 'stateWarning' };
   if (account.status === 'expiring') {
     return { text: `La connexion expire le ${dateFormat.format(account.connectionExpiresAt)} : reconnectez ce compte pour que ses posts continuent de partir.`, tone: 'stateWarning' };
   }
@@ -55,23 +57,31 @@ export default async function AccountsPage({
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   const accounts = await listWorkspaceAccounts(database(), userId, workspaceId);
+  const { members, canManage } = await listMembers(database(), userId, workspaceId);
+  const delegates = new Map(canManage ? await Promise.all(accounts.map(async (account) => [account.id, new Set(await listDelegates(database(), userId, account.id))] as const)) : []);
   const hasMine = accounts.some((account) => account.isMine && account.kind === 'profile');
 
   return (
     <>
-      <h1>Comptes LinkedIn</h1>
+      <PageHeader
+        title="Comptes LinkedIn"
+        action={
+          <div className={styles.headerActions}>
+            {/* LNK-02 : une personne qui administre les pages sur LinkedIn les ajoute en une fois. */}
+            <form action={startPagesConnection.bind(null, workspaceId)}>
+              <button type="submit" {...(hasMine ? { className: 'primary' } : {})}>
+                Connecter des pages d’entreprise
+              </button>
+            </form>
+            {!hasMine && (
+              <Link href={`/comptes/${workspaceId}/connecter`} className="button primary">
+                Connecter mon profil LinkedIn
+              </Link>
+            )}
+          </div>
+        }
+      />
       <Flash code={message} />
-      <div className="actions">
-        {!hasMine && (
-          <Link href={`/comptes/${workspaceId}/connecter`} className="button primary">
-            Connecter mon profil LinkedIn
-          </Link>
-        )}
-        {/* LNK-02 : une personne qui administre les pages sur LinkedIn les ajoute en une fois. */}
-        <form action={startPagesConnection.bind(null, workspaceId)}>
-          <button type="submit">Connecter des pages d’entreprise</button>
-        </form>
-      </div>
       {accounts.length === 0 ? (
         <p className="muted">Aucun compte connecté dans cet espace.</p>
       ) : (
@@ -92,6 +102,8 @@ export default async function AccountsPage({
                     </p>
                     {account.publishMode === 'manual' ? (
                       <span className="badge status-a_valider">En pause</span>
+                    ) : account.connectionExpiresAt === null ? (
+                      <span className="badge status-erreur">À reconnecter</span>
                     ) : (
                       <span className={`badge ${account.status === 'connected' ? 'status-publie' : 'status-erreur'}`}>{STATUS[account.status] ?? account.status}</span>
                     )}
@@ -146,6 +158,31 @@ export default async function AccountsPage({
                       <form action={publishModeAction.bind(null, workspaceId, account.id)}>
                         <input type="hidden" name="mode" value={account.publishMode === 'auto' ? 'manual' : 'auto'} />
                         <button type="submit">{account.publishMode === 'auto' ? 'Mettre en pause' : 'Reprendre la publication'}</button>
+                      </form>
+                    )}
+                    {/* ROL-01 : qui peut valider à la place du titulaire. */}
+                    {canManage && (
+                      <form action={delegatesAction.bind(null, workspaceId, account.id)} className="stack">
+                        <fieldset>
+                          <legend>Peuvent valider à la place du titulaire</legend>
+                          {members
+                            .filter((member) => member.userId !== account.holderUserId)
+                            .map((member) => (
+                              <label key={member.userId} className="check">
+                                <input type="checkbox" name="delegue" value={member.userId} defaultChecked={delegates.get(account.id)?.has(member.userId) ?? false} />{' '}
+                                {member.fullName ?? member.email}
+                              </label>
+                            ))}
+                        </fieldset>
+                        <button type="submit">Enregistrer les délégués</button>
+                      </form>
+                    )}
+                    {/* LNK-07 : ni rédaction ni publication, plus facturé à partir du mois suivant. */}
+                    {canManage && (
+                      <form action={pauseAction.bind(null, workspaceId, account.id)}>
+                        <input type="hidden" name="pause" value={account.status === 'paused' ? 'non' : 'oui'} />
+                        <button type="submit">{account.status === 'paused' ? 'Reprendre ce compte' : 'Suspendre ce compte'}</button>
+                        {account.status !== 'paused' && <p className="hint">Rien n’est plus rédigé ni publié, et le compte n’est plus facturé à partir du mois suivant.</p>}
                       </form>
                     )}
                     {account.canDisconnect && (

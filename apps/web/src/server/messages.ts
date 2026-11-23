@@ -30,7 +30,7 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   'role-change': { tone: 'success', text: 'Rôle modifié.' },
   'membre-retire': { tone: 'success', text: 'Personne retirée de l’espace.' },
   'delegues-enregistres': { tone: 'success', text: 'Délégués enregistrés.' },
-  'compte-en-pause': { tone: 'success', text: 'Compte en pause : aucun post ne partira tant qu’il ne sera pas repris.' },
+  'compte-en-pause': { tone: 'success', text: 'Compte suspendu : rien n’est rédigé ni publié tant qu’il n’est pas repris.' },
   'compte-repris': { tone: 'success', text: 'Publications reprises sur ce compte.' },
   'compte-repris-expire': { tone: 'error', text: 'Publications reprises, mais la connexion LinkedIn de ce compte a expiré : il faut la reconnecter.' },
   email_invalide: { tone: 'error', text: 'Adresse e-mail invalide.' },

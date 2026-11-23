@@ -30,7 +30,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Page des intégrations (messagerie, support), où reviennent les actions qui en partent. */
 const INTEGRATIONS = '/integrations';
 
-async function run(workspaceId: string, action: (userId: string, now: Date) => Promise<string>, page = ''): Promise<never> {
+async function run(workspaceId: string, action: (userId: string, now: Date) => Promise<string>, page = '', root = '/espace'): Promise<never> {
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   let message: string;
@@ -42,8 +42,8 @@ async function run(workspaceId: string, action: (userId: string, now: Date) => P
     else if (error instanceof RefusedError) message = error.code;
     else throw error;
   }
-  revalidatePath(`/espace/${workspaceId}${page}`);
-  redirect(`/espace/${workspaceId}${page}?message=${encodeURIComponent(message)}`);
+  revalidatePath(`${root}/${workspaceId}${page}`);
+  redirect(`${root}/${workspaceId}${page}?message=${encodeURIComponent(message)}`);
 }
 
 function role(value: FormDataEntryValue | null): MemberRole {
@@ -100,7 +100,7 @@ export async function delegatesAction(workspaceId: string, accountId: string, fo
     const ids = formData.getAll('delegue').map(String).filter((id) => UUID.test(id));
     await setDelegates(database(), userId, accountId, ids, now);
     return 'delegues-enregistres';
-  });
+  }, '', '/comptes');
 }
 
 export async function pauseAction(workspaceId: string, accountId: string, formData: FormData): Promise<void> {
@@ -108,7 +108,7 @@ export async function pauseAction(workspaceId: string, accountId: string, formDa
     if (!UUID.test(accountId)) throw new NotFoundError('Compte');
     const status = await setAccountPaused(database(), userId, accountId, formData.get('pause') === 'oui', now);
     return status === 'paused' ? 'compte-en-pause' : status === 'connected' ? 'compte-repris' : 'compte-repris-expire';
-  });
+  }, '', '/comptes');
 }
 
 /** ADM-02 : accord pour une intervention du support, limité dans le temps. */

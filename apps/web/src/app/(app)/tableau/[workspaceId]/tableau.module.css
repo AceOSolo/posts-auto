@@ -1,0 +1,48 @@
+/* Tableau de bord : ce qui demande une action d'abord, le reste ensuite. */
+.alert {
+  margin-bottom: 20px;
+  border-color: var(--error-text);
+}
+
+.alert h2 {
+  margin-top: 0;
+}
+
+.alert ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.alert li + li {
+  margin-top: 6px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.grid h2 {
+  margin-top: 0;
+}
+
+.grid ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.grid li + li {
+  margin-top: 6px;
+}
+
+.foot {
+  margin-top: 20px;
+}
+
+@media (max-width: 700px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

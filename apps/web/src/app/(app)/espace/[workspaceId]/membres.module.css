@@ -1,0 +1,59 @@
+/* Membres : une ligne par personne, un seul membre ouvert à la fois. */
+.list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  scroll-margin-top: 16px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+
+.rowEditing {
+  display: block;
+  background: var(--bg);
+}
+
+.who {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.who p {
+  margin: 2px 0 0;
+}
+
+.edit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.editBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+
+.invite {
+  margin-bottom: 16px;
+}

@@ -14,6 +14,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../../../components/flash.tsx';
+import { PageHeader } from '../../../../../../components/page-header.tsx';
 import { database } from '../../../../../../server/context.ts';
 import { requireUserId } from '../../../../../../server/session.ts';
 import { addExampleAction, addSuggestedSlotAction, declareAvatarAction, deleteExampleAction, revokeAvatarAction, savePreferencesAction, saveProfileAction } from '../../../fiche-actions.ts';
@@ -40,6 +41,7 @@ export default async function AccountProfilePage({
 }) {
   const { workspaceId, accountId } = await params;
   const { message } = await searchParams;
+  const messageCode = typeof message === 'string' ? message : '';
   if (!UUID.test(workspaceId) || !UUID.test(accountId)) notFound();
   const userId = await requireUserId();
   const db = database();
@@ -60,12 +62,16 @@ export default async function AccountProfilePage({
 
   return (
     <>
-      <p>
-        <Link href={`/comptes/${workspaceId}`}>← Comptes</Link>
+      <p className="back-link">
+        <Link href={`/comptes/${workspaceId}`}>← Comptes LinkedIn</Link>
       </p>
-      <h1>
-        {profile.displayName ?? 'Compte'} <small className="muted">· {profile.kind === 'page' ? 'Page' : 'Profil'}</small>
-      </h1>
+      <PageHeader
+        title={
+          <>
+            {profile.displayName ?? 'Compte'} <small className="muted">· {profile.kind === 'page' ? 'Page' : 'Profil'}</small>
+          </>
+        }
+      />
       <Flash code={message} />
 
       <section aria-labelledby="fiche-titre" id="fiche">
@@ -172,36 +178,39 @@ export default async function AccountProfilePage({
                 <button type="submit">{`Ajouter le créneau du ${WEEKDAY_NAMES[moments.best.weekday]} à ${moments.best.suggestedTime.replace(':', ' h ')}`}</button>
               </form>
             )}
-            <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">
-              <table>
-                <caption className="visually-hidden">Engagement par moment de publication</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Moment</th>
-                    <th scope="col">Posts mesurés</th>
-                    <th scope="col">Engagement ({unit})</th>
-                    <th scope="col">Impressions moyennes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {moments.groups.map((g) => (
-                    <tr key={`${g.weekday}-${g.band}`}>
-                      <th scope="row">{`${WEEKDAY_NAMES[g.weekday]} ${TIME_BANDS[g.band].label}`}</th>
-                      <td>{g.posts}</td>
-                      <td>{g.score.toLocaleString('fr-FR')}</td>
-                      <td>{g.averageImpressions === null ? '—' : g.averageImpressions.toLocaleString('fr-FR')}</td>
+            <details>
+              <summary>Voir le détail</summary>
+              <div className="table-scroll" tabIndex={0} role="region" aria-label="Engagement par moment, tableau défilable horizontalement">
+                <table>
+                  <caption className="visually-hidden">Engagement par moment de publication</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Moment</th>
+                      <th scope="col">Posts mesurés</th>
+                      <th scope="col">Engagement ({unit})</th>
+                      <th scope="col">Impressions moyennes</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="hint">Interactions : réactions, commentaires comptés double, partages comptés triple. Seuls les moments d’au moins deux posts sont classés.</p>
+                  </thead>
+                  <tbody>
+                    {moments.groups.map((g) => (
+                      <tr key={`${g.weekday}-${g.band}`}>
+                        <th scope="row">{`${WEEKDAY_NAMES[g.weekday]} ${TIME_BANDS[g.band].label}`}</th>
+                        <td>{g.posts}</td>
+                        <td>{g.score.toLocaleString('fr-FR')}</td>
+                        <td>{g.averageImpressions === null ? '—' : g.averageImpressions.toLocaleString('fr-FR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="hint">Interactions : réactions, commentaires comptés double, partages comptés triple. Seuls les moments d’au moins deux posts sont classés.</p>
+            </details>
           </>
         )}
       </section>
 
-      <section aria-labelledby="exemples-titre" id="exemples">
-        <h2 id="exemples-titre">Exemples de référence</h2>
+      <details id="exemples" open={messageCode.startsWith('exemple')}>
+        <summary>Exemples de référence ({examples.length})</summary>
         <p className="hint">Des posts dont l’IA doit s’inspirer, ou qu’elle doit éviter. Ils servent de modèle de style, jamais de consigne.</p>
         {examples.length === 0 && <p className="muted">Aucun exemple pour l’instant.</p>}
         <ul className="cards">
@@ -241,10 +250,10 @@ export default async function AccountProfilePage({
             </form>
           </details>
         )}
-      </section>
+      </details>
 
-      <section aria-labelledby="preferences-titre" id="preferences">
-        <h2 id="preferences-titre">Préférences apprises</h2>
+      <details id="preferences" open={messageCode.startsWith('preferences')}>
+        <summary>Préférences apprises</summary>
         <p className="hint">Résumé de ce que le titulaire corrige ou refuse le plus souvent, mis à jour chaque jour à partir de ses corrections, de ses demandes de modification et de ses refus. Il est utilisé à chaque rédaction ; vous pouvez le modifier, ce que vous écrivez est gardé.</p>
         <form action={savePreferencesAction.bind(null, workspaceId, accountId)} className="stack">
           <label htmlFor="resume" className="visually-hidden">
@@ -253,12 +262,12 @@ export default async function AccountProfilePage({
           <textarea id="resume" name="resume" rows={5} maxLength={4000} defaultValue={preferences.summary} disabled={!canEditExamples} />
           {canEditExamples && <button type="submit">Enregistrer les préférences</button>}
         </form>
-      </section>
+      </details>
 
       {/* VIS-06 : personnage de marque, sur les posts de ce compte seulement. */}
       {profile.kind === 'profile' && (isHolder || rights.canEditAll) && (
-        <section aria-labelledby="avatar-titre" id="avatar">
-          <h2 id="avatar-titre">Avatar de marque</h2>
+        <details id="avatar" open={messageCode.startsWith('avatar')}>
+          <summary>Avatar de marque</summary>
           <p className="hint">
             Une image générée qui représente le titulaire peut illustrer les visuels de ses propres posts, à la place d’une image générée anonyme. Elle n’est jamais utilisée sur un autre
             compte et porte la mention « image générée par IA ».
@@ -284,7 +293,7 @@ export default async function AccountProfilePage({
           ) : (
             <p className="muted">Seul le titulaire peut déclarer son avatar.</p>
           )}
-        </section>
+        </details>
       )}
     </>
   );
