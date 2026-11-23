@@ -94,7 +94,7 @@ test.describe('pages de gestion (administratrice)', () => {
     const rubriques: [RegExp, string[]][] = [
       [/Créer/, ['Planning', 'Idées', 'Visuels']],
       [/Équipe/, ['Membres', 'Comptes LinkedIn', 'Vue équipe', 'Tableau de bord']],
-      [/Paramètres/, ['Ligne éditoriale', 'Intégrations et support', 'Abonnement', 'Démarrage']],
+      [/Paramètres/, ['Ligne éditoriale', 'Rédaction', 'Abonnement', 'Intégrations et support', 'Démarrage']],
       [/Mon compte/, ['Données et sécurité', 'Notifications']],
     ];
     await page.goto('/');

@@ -3,10 +3,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../../components/flash.tsx';
+import { PageHeader } from '../../../../../components/page-header.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { configureGenerationAction, requestGenerationAction } from '../../actions.ts';
-import { PlanningBack, WEEKDAYS, generationSchedule } from '../../planning-ui.tsx';
+import { WEEKDAYS, generationSchedule } from '../../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Rédaction' };
 export const dynamic = 'force-dynamic';
@@ -40,13 +41,15 @@ export default async function GenerationPage({
 
   return (
     <>
-      <PlanningBack workspaceId={workspaceId} />
-      <h1>Rédaction par l’IA</h1>
+      <PageHeader
+        title="Rédaction"
+        description={
+          <>
+            Un post par créneau, sur cette semaine et la suivante. Les posts déjà validés ne sont jamais modifiés. <Link href="/comment-fonctionne-la-redaction">En savoir plus</Link>
+          </>
+        }
+      />
       <Flash code={message} />
-      <p className="hint">
-        La rédaction prépare un post par créneau sur la semaine en cours et la suivante, à partir du planning, des événements, des idées et de
-        la banque de sujets. Les posts déjà validés ne sont jamais modifiés. <Link href="/comment-fonctionne-la-redaction">En savoir plus</Link>
-      </p>
 
       <section aria-labelledby="lancer">
         <h2 id="lancer">Lancer</h2>

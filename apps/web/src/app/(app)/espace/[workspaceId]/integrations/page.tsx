@@ -2,6 +2,7 @@ import { CHAT_EVENTS, CHAT_PROVIDERS, SUPPORT_MAX_HOURS, getTeamChat, listMember
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../../components/flash.tsx';
+import { PageHeader } from '../../../../../components/page-header.tsx';
 import { database } from '../../../../../server/context.ts';
 import { requireUserId } from '../../../../../server/session.ts';
 import { grantSupportAction, removeTeamChatAction, revokeSupportAction, saveTeamChatAction, testTeamChatAction } from '../../actions.ts';
@@ -40,11 +41,11 @@ export default async function IntegrationsPage({
 
   return (
     <>
-      <h1>Intégrations et support</h1>
+      <PageHeader title="Intégrations et support" description="Facultatif : Rostra fonctionne sans aucun de ces réglages." />
       <Flash code={message} />
 
-      <section aria-labelledby="messagerie">
-        <h2 id="messagerie">Messagerie d’équipe (Slack ou Teams)</h2>
+      <details id="messagerie" open={teamChat !== null || (typeof message === 'string' && /messagerie|chat|webhook/i.test(message))}>
+        <summary>Messagerie d’équipe (Slack ou Teams)</summary>
         <p className="hint">
           Annoncez dans un canal de l’équipe les posts prêts à valider, les échecs de publication et les posts publiés : quelques réactions et commentaires de l’équipe dans la
           première heure aident un post à être vu. Dans Slack, créez un « webhook entrant » ; dans Teams, un flux Workflows « Publier dans un canal quand une requête webhook est
@@ -88,10 +89,10 @@ export default async function IntegrationsPage({
             </form>
           </div>
         )}
-      </section>
+      </details>
 
-      <section aria-labelledby="support">
-        <h2 id="support">Accès du support</h2>
+      <details id="support" open={supportGrants.length > 0}>
+        <summary>Accès du support</summary>
         <p className="hint">
           Pour qu’une personne du support puisse voir l’espace comme vous le voyez et vous aider, accordez-lui un accès limité dans le temps. Ses interventions sont inscrites au journal
           d’audit ; vous pouvez retirer l’accès à tout moment.
@@ -120,7 +121,7 @@ export default async function IntegrationsPage({
           </label>
           <button type="submit">Accorder l’accès au support</button>
         </form>
-      </section>
+      </details>
     </>
   );
 }

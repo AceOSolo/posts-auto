@@ -48,6 +48,9 @@ const isIntegrations = (segments: readonly string[]) => segments[0] === 'espace'
 /** Événements et banque de sujets : des sources d'idées, même si leur adresse est sous le planning. */
 const isIdeaSource = (segments: readonly string[]) => segments[0] === 'planning' && (segments[2] === 'banque' || segments[2] === 'evenements');
 
+/** La rédaction automatique se règle dans Paramètres, même si son adresse est sous le planning. */
+const isDrafting = (segments: readonly string[]) => segments[0] === 'planning' && segments[2] === 'redactions';
+
 /** Les rubriques ; celles qui dépendent d'un espace disparaissent quand il n'y en a pas. */
 export function buildSections({ workspaceId, owned, platformAdmin }: NavContext): NavSection[] {
   const valider: NavSection = {
@@ -76,7 +79,7 @@ export function buildSections({ workspaceId, owned, platformAdmin }: NavContext)
       label: 'Créer',
       href: `/planning/${id}`,
       tabs: [
-        { label: 'Planning', href: `/planning/${id}`, matches: (s) => s[0] === 'planning' && !isIdeaSource(s) },
+        { label: 'Planning', href: `/planning/${id}`, matches: (s) => s[0] === 'planning' && !isIdeaSource(s) && !isDrafting(s) },
         { label: 'Idées', href: `/idees/${id}`, matches: (s) => s[0] === 'idees' || s[0] === 'demandes' || isIdeaSource(s) },
         { label: 'Visuels', href: `/visuels/${id}`, matches: under('visuels') },
       ],
@@ -98,8 +101,9 @@ export function buildSections({ workspaceId, owned, platformAdmin }: NavContext)
       href: `/ligne/${id}`,
       tabs: [
         { label: 'Ligne éditoriale', href: `/ligne/${id}`, matches: under('ligne') },
-        { label: 'Intégrations et support', href: `/espace/${id}/integrations`, matches: isIntegrations },
+        { label: 'Rédaction', href: `/planning/${id}/redactions`, matches: isDrafting },
         { label: 'Abonnement', href: `/abonnement/${id}`, matches: under('abonnement') },
+        { label: 'Intégrations et support', href: `/espace/${id}/integrations`, matches: isIntegrations },
         { label: 'Démarrage', href: `/demarrage/${id}`, matches: under('demarrage') },
         ...owned.map((org) => ({ label: org.label, href: `/espaces/${org.workspaceId}`, matches: (s: readonly string[]) => s[0] === 'espaces' && s[1] === org.workspaceId })),
       ],

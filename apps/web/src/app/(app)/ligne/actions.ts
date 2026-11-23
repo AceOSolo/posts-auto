@@ -72,7 +72,7 @@ export async function proposeLineAction(workspaceId: string, form: FormData): Pr
     if (error instanceof NotFoundError) notFound();
     const code = error instanceof ForbiddenError ? 'interdit' : error instanceof RefusedError ? error.code : error instanceof ModelError ? 'ia-indisponible' : null;
     if (code === null) throw error;
-    destination = `/ligne/${workspaceId}?message=${encodeURIComponent(code)}#proposer`;
+    destination = `/ligne/${workspaceId}?proposer=1&message=${encodeURIComponent(code)}#proposer`;
   }
   redirect(destination);
 }

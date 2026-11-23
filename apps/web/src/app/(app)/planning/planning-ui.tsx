@@ -60,7 +60,6 @@ export function IdeasBack({ workspaceId }: { workspaceId: string }) {
 export function planningMenu(workspaceId: string, exportHref: string, canEdit: boolean): PageMenuItem[] {
   return [
     { label: 'Vue de la semaine', href: `/planning/${workspaceId}/semaine` },
-    { label: 'Rédaction', href: `/planning/${workspaceId}/redactions` },
     ...(canEdit ? [{ label: 'Ajouter une ligne', href: `/planning/${workspaceId}?ajouter=ligne#ajouter-ligne` }] : []),
     { label: 'Importer', href: `/planning/${workspaceId}/import` },
     { label: 'Exporter en CSV', href: exportHref, download: true },

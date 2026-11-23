@@ -2,6 +2,7 @@ import { type BillingMode, NotFoundError, type Quota, billingOverview } from '@p
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PageHeader } from '../../../../components/page-header.tsx';
 import { billing, database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
 import { overageAction, packAction, portalAction, subscribeAction } from '../actions.ts';
@@ -69,9 +70,8 @@ export default async function SubscriptionPage({
 
   return (
     <>
-      <h1>Abonnement · {overview.orgName}</h1>
+      <PageHeader title="Abonnement" description={MODE_LABELS[mode]} />
       <Flash code={message} />
-      <p>{MODE_LABELS[mode]}</p>
       {mode === 'trial' && overview.trialEndsAt !== null && <p>L’essai se termine le {day.format(overview.trialEndsAt)}. Souscrivez quand vous voulez : l’abonnement prend le relais aussitôt.</p>}
       {here?.allowance.reason && <p className="hint">{here.allowance.reason}</p>}
 
@@ -188,7 +188,7 @@ export default async function SubscriptionPage({
           <h2 id="formules">Choisir une formule</h2>
           <p className="hint">Prix par compte LinkedIn actif. Paiement par carte ou prélèvement SEPA ; TVA calculée au paiement, numéro de TVA intracommunautaire accepté. Codes promo saisis à l’étape de paiement.</p>
           {!overview.canManage && <p>Seul le propriétaire de l’organisation peut souscrire.</p>}
-          {overview.canManage && !paymentReady && <p className="muted">Le paiement n’est pas encore configuré sur ce serveur.</p>}
+          {overview.canManage && !paymentReady && <p className="muted">Le paiement en ligne sera bientôt disponible.</p>}
           <ul className="cards">
             {overview.plans.map((plan) => (
               <li key={plan.key} className="card">

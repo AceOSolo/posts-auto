@@ -307,13 +307,14 @@ try {
   check('réglages refusés à un simple contributeur', !(await (await get(`/espace/${workspaceId}`, claire)).text()).includes('Envoyer l’invitation'));
 
   // Messagerie d'équipe (Slack, Teams) : adresses officielles seulement, adresse jamais réaffichée.
-  const settingsHtml = (await (await get(`/espace/${workspaceId}`, alexis)).text()).replace(/<!-- -->/g, '');
+  const integrationsPath = `/espace/${workspaceId}/integrations`;
+  const settingsHtml = (await (await get(integrationsPath, alexis)).text()).replace(/<!-- -->/g, '');
   check('réglages : messagerie d’équipe proposée (Slack ou Teams)', settingsHtml.includes('Messagerie d’équipe (Slack ou Teams)') && settingsHtml.includes('Relier la messagerie'));
-  const badHook = await submitForm(`/espace/${workspaceId}`, alexis, 'Relier la messagerie', { messagerie: 'slack', adresse: 'https://exemple.fr/hook', evenements: 'a_valider' });
+  const badHook = await submitForm(integrationsPath, alexis, 'Relier la messagerie', { messagerie: 'slack', adresse: 'https://exemple.fr/hook', evenements: 'a_valider' });
   check('messagerie : adresse qui n’est pas un webhook Slack refusée', (badHook.headers.get('location') ?? '').includes('messagerie_adresse'), `HTTP ${badHook.status}`);
   const hookSecret = `smoke${Date.now()}`;
-  const goodHook = await submitForm(`/espace/${workspaceId}`, alexis, 'Relier la messagerie', { messagerie: 'slack', adresse: `https://hooks.slack.com/services/T0/B0/${hookSecret}`, evenements: 'publies' });
-  const linkedHtml = (await (await get(`/espace/${workspaceId}`, alexis)).text()).replace(/<!-- -->/g, '');
+  const goodHook = await submitForm(integrationsPath, alexis, 'Relier la messagerie', { messagerie: 'slack', adresse: `https://hooks.slack.com/services/T0/B0/${hookSecret}`, evenements: 'publies' });
+  const linkedHtml = (await (await get(integrationsPath, alexis)).text()).replace(/<!-- -->/g, '');
   check(
     'messagerie reliée : adresse chiffrée, jamais réaffichée',
     (goodHook.headers.get('location') ?? '').includes('messagerie-reliee') && linkedHtml.includes('Reliée à Slack') && !linkedHtml.includes(hookSecret),
@@ -328,7 +329,7 @@ try {
     (await asSystem(db, (trx) => trx.selectFrom('editorial_lines').select('version').where('workspace_id', '=', workspaceId).where('is_current', '=', true).executeTakeFirst()))?.version ?? 0;
   const versionBefore = await versionOf();
   const tone = `Direct et concret (essai du ${new Date().toISOString()})`;
-  const savedLine = await submitForm(linePath, alexis, 'Enregistrer une nouvelle version', {
+  const savedLine = await submitForm(`${linePath}?modifier=tout`, alexis, 'Enregistrer une nouvelle version', {
     positionnement: 'Prévention et sécurité au travail pour les PME',
     ton: tone,
     interdits: 'leader du marché\nn°1',
@@ -867,7 +868,7 @@ try {
   await submitForm('/admin/annonces', editor, '>Retirer<', {});
 
   // ADM-02 : accès du support accordé par le client, session « en tant que », trace.
-  const granted = await submitForm(`/espace/${workspaceId}`, alexis, 'Accorder l’accès au support', { heures: '2', motif: 'Test de fumée' });
+  const granted = await submitForm(integrationsPath, alexis, 'Accorder l’accès au support', { heures: '2', motif: 'Test de fumée' });
   check('ADM-02 : accès accordé par l’administratrice de l’espace', (granted.headers.get('location') ?? '').includes('support-accorde'), `HTTP ${granted.status}`);
   const opened = await submitForm('/admin', editor, 'Ouvrir une session support', {});
   const supportSession = /(?:__Host-)?session=([^;]+)/.exec(opened.headers.get('set-cookie') ?? '')?.[1] ?? '';

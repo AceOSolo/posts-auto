@@ -203,7 +203,7 @@ a:hover { color: var(--primary-hover); }
 /* En-tête de page et menu d'outils */
 .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .page-head h1 { margin-bottom: 0; }
-.page-head-text { min-width: 0; }
+.page-head-text { flex: 1 1 320px; min-width: 0; }
 .page-head-text p { margin: 4px 0 0; color: var(--muted); }
 .page-head-actions { display: flex; align-items: center; gap: 8px; }
 .page-menu { position: relative; }
