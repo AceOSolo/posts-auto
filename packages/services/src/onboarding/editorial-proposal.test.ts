@@ -4,7 +4,7 @@ import { addMember, closeTestDatabase, createOrganization, createUser, openTestD
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ForbiddenError } from '../errors.ts';
 import { SafeFetchError } from '../net/safe-fetch.ts';
-import { EDITORIAL_PROPOSALS_PER_HOUR, pageText, proposeEditorialLineFor } from './editorial-proposal.ts';
+import { EDITORIAL_PROPOSALS_PER_HOUR, linkedinPostLink, pageText, proposeEditorialLineFor } from './editorial-proposal.ts';
 
 let db: Database;
 let workspaceId: string;
@@ -51,14 +51,30 @@ describe('ligne éditoriale proposée par l’IA (ONB-04)', () => {
     expect(text).not.toContain('tracking');
   });
 
-  it('propose à partir du site et des posts collés, traités comme des données', async () => {
+  it('ne garde d’un lien que l’adresse d’un post LinkedIn', () => {
+    expect(linkedinPostLink(' https://www.linkedin.com/posts/atelier_chantier-activity-123-abcd?utm_source=share ')).toBe('https://www.linkedin.com/posts/atelier_chantier-activity-123-abcd');
+    expect(linkedinPostLink('https://fr.linkedin.com/posts/atelier_chantier-activity-123-abcd')).toBe('https://fr.linkedin.com/posts/atelier_chantier-activity-123-abcd');
+    expect(linkedinPostLink('https://www.linkedin.com/feed/update/urn:li:activity:123/')).toBe('https://www.linkedin.com/feed/update/urn:li:activity:123/');
+    expect(linkedinPostLink('https://www.linkedin.com/in/quelquun')).toBeNull();
+    expect(linkedinPostLink('https://linkedin.com.exemple.fr/posts/faux')).toBeNull();
+    expect(linkedinPostLink('')).toBeNull();
+  });
+
+  it('propose à partir du site et des posts ajoutés un par un, traités comme des données', async () => {
     const calls: ModelCall<unknown>[] = [];
     const proposal = await proposeEditorialLineFor(
       db,
       model(calls),
       editor,
       workspaceId,
-      { website: 'atelier-sur.fr', posts: 'Premier post publié la semaine dernière sur le chantier.\n---\nDeuxième post, sur la formation SST de nos équipes.\n---\ncourt' },
+      {
+        website: 'atelier-sur.fr',
+        posts: [
+          { text: 'Premier post publié la semaine dernière sur le chantier.', url: 'https://www.linkedin.com/posts/atelier_chantier-activity-123-abcd?utm_source=share' },
+          { text: 'Deuxième post, sur la formation SST de nos équipes.', url: 'https://exemple.fr/pas-linkedin' },
+          { text: 'court' },
+        ],
+      },
       NOW,
       { fetcher: site },
     );
@@ -67,35 +83,37 @@ describe('ligne éditoriale proposée par l’IA (ONB-04)', () => {
     const task = calls[0]?.task ?? '';
     expect(task).toContain('<document type="page_du_site" id="page-1" adresse="https://atelier-sur.fr">');
     expect(task.match(/<document type="post_publie"/g)).toHaveLength(2);
+    expect(task).toContain('<document type="post_publie" id="post-1" adresse="https://www.linkedin.com/posts/atelier_chantier-activity-123-abcd">');
+    expect(task).toContain('<document type="post_publie" id="post-2">');
     const usage = await asSystem(db, (trx) => trx.selectFrom('ai_usage').select(['purpose', 'counted_in_quota']).where('workspace_id', '=', workspaceId).execute());
     expect(usage).toEqual([{ purpose: 'interpret', counted_in_quota: false }]);
   });
 
   it('site illisible : la proposition repose sur les posts, et le dit', async () => {
     const broken = async () => Promise.reject(new SafeFetchError('injoignable', 'Adresse injoignable.'));
-    const proposal = await proposeEditorialLineFor(db, model(), editor, workspaceId, { website: 'https://hors-ligne.fr', posts: 'Un post publié par l’entreprise sur ses chantiers.' }, NOW, {
+    const proposal = await proposeEditorialLineFor(db, model(), editor, workspaceId, { website: 'https://hors-ligne.fr', posts: [{ text: 'Un post publié par l’entreprise sur ses chantiers.' }] }, NOW, {
       fetcher: broken,
     });
     expect(proposal).toMatchObject({ sourceUrl: null, websiteError: 'Le site n’a pas pu être lu : Adresse injoignable.' });
   });
 
   it('refuse d’aller lire le réseau interne (protection réelle)', async () => {
-    const proposal = await proposeEditorialLineFor(db, model(), editor, workspaceId, { website: 'http://127.0.0.1/admin', posts: 'Un post publié par l’entreprise sur ses chantiers.' }, NOW);
+    const proposal = await proposeEditorialLineFor(db, model(), editor, workspaceId, { website: 'http://127.0.0.1/admin', posts: [{ text: 'Un post publié par l’entreprise sur ses chantiers.' }] }, NOW);
     expect(proposal.websiteError).toBe('Le site n’a pas pu être lu : Adresse interdite.');
   });
 
   it('sans site ni post : rien à proposer', async () => {
-    await expect(proposeEditorialLineFor(db, model(), editor, workspaceId, { website: '', posts: '' }, NOW)).rejects.toMatchObject({ code: 'proposition_vide' });
+    await expect(proposeEditorialLineFor(db, model(), editor, workspaceId, { website: '', posts: [] }, NOW)).rejects.toMatchObject({ code: 'proposition_vide' });
   });
 
   it('réservé à la gestion du contenu, et limité par heure', async () => {
-    await expect(proposeEditorialLineFor(db, model(), viewer, workspaceId, { posts: 'Un post publié par l’entreprise.' }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(proposeEditorialLineFor(db, model(), viewer, workspaceId, { posts: [{ text: 'Un post publié par l’entreprise.' }] }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
     const busy = await createUser(db, 'pressee');
     await addMember(db, workspaceId, busy, 'admin');
     for (let i = 0; i < EDITORIAL_PROPOSALS_PER_HOUR; i += 1) {
-      await proposeEditorialLineFor(db, model(), busy, workspaceId, { posts: 'Un post publié par l’entreprise sur ses chantiers.' }, NOW);
+      await proposeEditorialLineFor(db, model(), busy, workspaceId, { posts: [{ text: 'Un post publié par l’entreprise sur ses chantiers.' }] }, NOW);
     }
-    await expect(proposeEditorialLineFor(db, model(), busy, workspaceId, { posts: 'Un post publié par l’entreprise sur ses chantiers.' }, NOW)).rejects.toMatchObject({
+    await expect(proposeEditorialLineFor(db, model(), busy, workspaceId, { posts: [{ text: 'Un post publié par l’entreprise sur ses chantiers.' }] }, NOW)).rejects.toMatchObject({
       code: 'trop_de_propositions',
     });
   });

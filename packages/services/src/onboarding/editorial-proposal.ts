@@ -26,8 +26,25 @@ export const fetchPage: PageFetcher = (url) => safeFetchText(url, { accept: 'tex
 export interface ProposalRequest {
   /** Site à lire ; à défaut, celui de l'espace. */
   readonly website?: string | null;
-  /** Posts collés, séparés par une ligne « --- ». */
-  readonly posts?: string | null;
+  /** Posts ajoutés un par un : le texte est lu, le lien indique seulement leur origine. */
+  readonly posts?: readonly PublishedPostInput[] | null;
+}
+
+export interface PublishedPostInput {
+  readonly text: string;
+  readonly url?: string | null;
+}
+
+const LINKEDIN_POST_LINK = /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/(feed\/update|posts)\/[\w:%.\-/]+$/;
+
+/**
+ * Lien d'un post LinkedIn, sans ses paramètres de suivi ; null s'il n'en est pas un.
+ * Le lien n'est jamais ouvert par le serveur : les conditions de LinkedIn interdisent d'en
+ * extraire le contenu, et la lecture des posts d'un profil par l'API est fermée.
+ */
+export function linkedinPostLink(raw: string | null | undefined): string | null {
+  const url = (raw ?? '').trim().split(/[?#]/)[0] ?? '';
+  return LINKEDIN_POST_LINK.test(url) ? url : null;
 }
 
 export interface EditorialProposal extends EditorialDraft {
@@ -69,10 +86,9 @@ export async function proposeEditorialLineFor(
     return trx.selectFrom('workspaces').select(['name', 'sector', 'website']).where('id', '=', workspaceId).executeTakeFirstOrThrow();
   });
 
-  const posts = (request.posts ?? '')
-    .split(/^\s*-{3,}\s*$/m)
-    .map((p) => p.trim().slice(0, MAX_POST_CHARS))
-    .filter((p) => p.length >= 20)
+  const posts = (request.posts ?? [])
+    .map((p) => ({ text: p.text.trim().slice(0, MAX_POST_CHARS), url: linkedinPostLink(p.url) }))
+    .filter((p) => p.text.length >= 20)
     .slice(0, MAX_POSTS);
   const website = cleanText(request.website, 300) ?? workspace.website;
   const pages: { url: string; text: string }[] = [];

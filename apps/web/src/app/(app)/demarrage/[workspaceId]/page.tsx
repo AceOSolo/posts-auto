@@ -6,7 +6,8 @@ import { Flash } from '../../../../components/flash.tsx';
 import { PostPreview } from '../../../../components/post-preview.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { closeOnboardingAction, samplePostAction, saveCompanyAction } from '../actions.ts';
+import { closeOnboardingAction, quickStartAction, samplePostAction, saveCompanyAction } from '../actions.ts';
+import styles from './demarrage.module.css';
 
 export const metadata: Metadata = { title: 'Démarrage' };
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,31 @@ export const dynamic = 'force-dynamic';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SIZE_LABELS: Record<string, string> = { '1-9': '1 à 9 personnes', '10-49': '10 à 49 personnes', '50-249': '50 à 249 personnes', '250+': '250 personnes ou plus' };
 
-/** ONB-03 : assistant de démarrage en six étapes, repris à tout moment. */
+function CompanyFields({ company }: { company: { name: string; website: string | null; sector: string | null; size: string | null } }) {
+  return (
+    <>
+      <label htmlFor="nom">Nom (de l’entreprise, ou du client pour une agence)</label>
+      <input id="nom" name="nom" defaultValue={company.name} maxLength={120} required />
+      <label htmlFor="site">Site web</label>
+      <input id="site" name="site" type="text" inputMode="url" defaultValue={company.website ?? ''} placeholder="www.exemple.fr" maxLength={300} />
+      <label htmlFor="secteur">Secteur d’activité</label>
+      <input id="secteur" name="secteur" defaultValue={company.sector ?? ''} placeholder="Ex. : prévention des risques professionnels" maxLength={120} required />
+      <label htmlFor="taille">Taille</label>
+      <select id="taille" name="taille" defaultValue={company.size ?? ''} required>
+        <option value="" disabled>
+          Choisir
+        </option>
+        {COMPANY_SIZES.map((size) => (
+          <option key={size} value={size}>
+            {SIZE_LABELS[size]}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+}
+
+/** ONB-03 : choix du parcours, puis assistant de démarrage en six étapes, repris à tout moment. */
 export default async function OnboardingPage({
   params,
   searchParams,
@@ -23,7 +48,7 @@ export default async function OnboardingPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceId } = await params;
-  const { message } = await searchParams;
+  const { message, mode } = await searchParams;
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   let onboarding;
@@ -35,11 +60,78 @@ export default async function OnboardingPage({
   }
   const { steps, company, canManage, samplePost } = onboarding;
   const next = steps.find((s) => !s.done);
+  const notStarted = canManage && onboarding.doneCount === 0;
+
+  if (notStarted && mode !== 'rapide' && mode !== 'complet') {
+    return (
+      <>
+        <h1>Démarrage · {onboarding.workspaceName}</h1>
+        <Flash code={message} />
+        <p>Comment voulez-vous configurer Rostra ? Vous pourrez toujours compléter ou corriger ensuite.</p>
+        <div className={styles.choices}>
+          <section aria-labelledby="choix-complet" className={`card ${styles.choice} ${styles.recommended}`}>
+            <span className={styles.badge}>Recommandée · meilleurs résultats</span>
+            <h2 id="choix-complet">Configuration complète</h2>
+            <p>
+              Vous décrivez vous-même votre positionnement, vos offres, vos preuves, votre ton et vos meilleurs posts. <strong>C’est ce qui donne de loin les posts les plus justes</strong> : précis,
+              crédibles, et qui vous ressemblent dès le premier jour.
+            </p>
+            <ul>
+              <li>Six étapes, dans l’ordre que vous voulez</li>
+              <li>Reprise possible à tout moment</li>
+            </ul>
+            <Link href={`/demarrage/${workspaceId}?mode=complet`} className="button primary">
+              Faire la configuration complète
+            </Link>
+          </section>
+          <section aria-labelledby="choix-rapide" className={`card ${styles.choice}`}>
+            <h2 id="choix-rapide">Configuration rapide avec l’IA</h2>
+            <p>Quatre champs : l’IA déduit votre ligne éditoriale de votre site, vous la relisez et vous l’enregistrez.</p>
+            <p className={styles.tradeoff}>
+              Les posts seront plus génériques, car l’IA ne connaît que la page d’accueil de votre site. Il restera à connecter LinkedIn et à choisir vos créneaux.
+            </p>
+            <Link href={`/demarrage/${workspaceId}?mode=rapide`} className="button">
+              Aller au plus vite
+            </Link>
+          </section>
+        </div>
+      </>
+    );
+  }
+
+  if (notStarted && mode === 'rapide') {
+    return (
+      <>
+        <h1>Configuration rapide · {onboarding.workspaceName}</h1>
+        <Flash code={message} />
+        <p className={styles.back}>
+          <Link href={`/demarrage/${workspaceId}`}>← Changer de mode</Link>
+        </p>
+        <p className="hint">L’IA lit la page d’accueil de votre site et prépare votre ligne éditoriale en quelques secondes. Vous la relisez avant de l’enregistrer.</p>
+        <form action={quickStartAction.bind(null, workspaceId)} className="stack">
+          <CompanyFields company={company} />
+          <button type="submit" className="primary">
+            Préparer ma ligne éditoriale
+          </button>
+        </form>
+      </>
+    );
+  }
 
   return (
     <>
       <h1>Démarrage · {onboarding.workspaceName}</h1>
       <Flash code={message} />
+      {notStarted && (
+        <p className={styles.back}>
+          <Link href={`/demarrage/${workspaceId}`}>← Changer de mode</Link>
+        </p>
+      )}
+      {mode === 'rapide' && (
+        <p className="flash success" role="status">
+          <strong>Votre base est prête.</strong> Pour des posts nettement plus justes, complétez vos offres, vos preuves et votre ton dans la <Link href={`/ligne/${workspaceId}`}>ligne éditoriale</Link>.
+        </p>
+      )}
       <p>
         <progress value={onboarding.doneCount} max={steps.length} aria-label={`${onboarding.doneCount} étapes sur ${steps.length}`} /> Prêt à publier à {onboarding.doneCount} sur{' '}
         {steps.length}.{' '}
@@ -93,23 +185,7 @@ export default async function OnboardingPage({
               <details open={!step.done}>
                 <summary>{step.done ? 'Modifier' : 'Renseigner'}</summary>
                 <form action={saveCompanyAction.bind(null, workspaceId)} className="stack">
-                  <label htmlFor="nom">Nom (de l’entreprise, ou du client pour une agence)</label>
-                  <input id="nom" name="nom" defaultValue={company.name} maxLength={120} required />
-                  <label htmlFor="site">Site web</label>
-                  <input id="site" name="site" type="text" inputMode="url" defaultValue={company.website ?? ''} placeholder="www.exemple.fr" maxLength={300} />
-                  <label htmlFor="secteur">Secteur d’activité</label>
-                  <input id="secteur" name="secteur" defaultValue={company.sector ?? ''} placeholder="Ex. : prévention des risques professionnels" maxLength={120} required />
-                  <label htmlFor="taille">Taille</label>
-                  <select id="taille" name="taille" defaultValue={company.size ?? ''} required>
-                    <option value="" disabled>
-                      Choisir
-                    </option>
-                    {COMPANY_SIZES.map((size) => (
-                      <option key={size} value={size}>
-                        {SIZE_LABELS[size]}
-                      </option>
-                    ))}
-                  </select>
+                  <CompanyFields company={company} />
                   <button type="submit" className="primary">
                     Enregistrer
                   </button>

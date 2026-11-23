@@ -25,12 +25,14 @@ import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function run(workspaceId: string, anchor: string, action: (userId: string, now: Date) => Promise<string>): Promise<never> {
+async function run(workspaceId: string, anchor: string, action: (userId: string, now: Date) => Promise<string>, afterSuccess?: string): Promise<never> {
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   let message: string;
+  let succeeded = false;
   try {
     message = await action(userId, new Date());
+    succeeded = true;
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     if (error instanceof ForbiddenError) message = 'interdit';
@@ -38,6 +40,10 @@ async function run(workspaceId: string, anchor: string, action: (userId: string,
     else throw error;
   }
   revalidatePath(`/ligne/${workspaceId}`);
+  if (succeeded && afterSuccess !== undefined) {
+    revalidatePath(`/demarrage/${workspaceId}`);
+    redirect(`${afterSuccess}&message=${encodeURIComponent(message)}`);
+  }
   redirect(`/ligne/${workspaceId}?message=${encodeURIComponent(message)}#${anchor}`);
 }
 
@@ -56,7 +62,9 @@ export async function proposeLineAction(workspaceId: string, form: FormData): Pr
   const userId = await requireUserId();
   let destination: string;
   try {
-    const proposal = await proposeEditorialLineFor(database(), model(), userId, workspaceId, { website: text(form, 'site'), posts: text(form, 'posts') }, new Date(), { usdToEur: usdToEur() });
+    const links = form.getAll('post-lien');
+    const posts = form.getAll('post-texte').map((value, index) => ({ text: String(value), url: String(links[index] ?? '') }));
+    const proposal = await proposeEditorialLineFor(database(), model(), userId, workspaceId, { website: text(form, 'site'), posts }, new Date(), { usdToEur: usdToEur() });
     const id = randomUUID();
     await mediaStore().write(editorialProposalKey(workspaceId, id), new TextEncoder().encode(JSON.stringify(proposal)));
     destination = `/ligne/${workspaceId}?proposition=${id}#ligne`;
@@ -96,7 +104,7 @@ export async function saveLineAction(workspaceId: string, form: FormData): Promi
       now,
     );
     return result.changed.length === 0 ? 'ligne-inchangee' : 'ligne-enregistree';
-  });
+  }, text(form, 'depuis') === 'demarrage' ? `/demarrage/${workspaceId}?mode=rapide` : undefined);
 }
 
 /** EDI-03 : ajoute (itemId null) ou modifie une offre. */

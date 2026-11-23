@@ -1,10 +1,12 @@
 'use server';
 
 import { ModelError } from '@posts-auto/ai';
-import { ForbiddenError, NotFoundError, RefusedError, saveCompanyInfo, setOnboardingClosed, writeSamplePostFor } from '@posts-auto/services';
+import { randomUUID } from 'node:crypto';
+import { ForbiddenError, NotFoundError, RefusedError, proposeEditorialLineFor, saveCompanyInfo, setOnboardingClosed, writeSamplePostFor } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
-import { database, model, usdToEur } from '../../../server/context.ts';
+import { database, mediaStore, model, usdToEur } from '../../../server/context.ts';
+import { editorialProposalKey } from '../../../server/drafts.ts';
 import { requireUserId } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,6 +34,35 @@ export async function saveCompanyAction(workspaceId: string, form: FormData): Pr
     await saveCompanyInfo(database(), userId, workspaceId, { name: text('nom'), website: text('site'), sector: text('secteur'), size: text('taille') }, now);
     return 'entreprise-enregistree';
   });
+}
+
+/**
+ * Configuration rapide : enregistre l'entreprise, puis l'IA propose la ligne éditoriale à partir
+ * du site. La proposition reste à relire et à valider (ONB-04) : rien d'autre n'est enregistré.
+ */
+export async function quickStartAction(workspaceId: string, form: FormData): Promise<void> {
+  if (!UUID.test(workspaceId)) notFound();
+  const userId = await requireUserId();
+  const text = (name: string) => String(form.get(name) ?? '');
+  const now = new Date();
+  let destination: string;
+  let companySaved = false;
+  try {
+    await saveCompanyInfo(database(), userId, workspaceId, { name: text('nom'), website: text('site'), sector: text('secteur'), size: text('taille') }, now);
+    companySaved = true;
+    const proposal = await proposeEditorialLineFor(database(), model(), userId, workspaceId, {}, now, { usdToEur: usdToEur() });
+    const id = randomUUID();
+    await mediaStore().write(editorialProposalKey(workspaceId, id), new TextEncoder().encode(JSON.stringify(proposal)));
+    destination = `/ligne/${workspaceId}?proposition=${id}&depuis=demarrage#ligne`;
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    const code = error instanceof ForbiddenError ? 'interdit' : error instanceof RefusedError ? error.code : error instanceof ModelError ? 'ia-indisponible' : null;
+    if (code === null) throw error;
+    // Entreprise enregistrée mais site illisible ou IA absente : on poursuit sur la ligne éditoriale.
+    destination = companySaved ? `/ligne/${workspaceId}?message=${encodeURIComponent(code)}#proposer` : `/demarrage/${workspaceId}?mode=rapide&message=${encodeURIComponent(code)}`;
+  }
+  revalidatePath(`/demarrage/${workspaceId}`);
+  redirect(destination);
 }
 
 /** Termine ou ferme l'assistant ; il reste accessible à son adresse. */

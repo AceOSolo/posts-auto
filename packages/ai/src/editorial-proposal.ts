@@ -25,8 +25,8 @@ export interface EditorialProposalInput {
   readonly sector: string | null;
   /** Texte des pages du site (adresse et contenu). */
   readonly pages: readonly { readonly url: string; readonly text: string }[];
-  /** Posts collés par la personne. */
-  readonly posts: readonly string[];
+  /** Posts ajoutés un par un par la personne ; le lien, facultatif, indique leur origine. */
+  readonly posts: readonly { readonly text: string; readonly url: string | null }[];
 }
 
 export interface EditorialDraft {
@@ -44,7 +44,7 @@ export function renderProposalTask(input: EditorialProposalInput): string {
   return [
     `Propose la ligne éditoriale LinkedIn de ${input.companyName}${input.sector ? ` (secteur : ${input.sector})` : ''}.`,
     ...input.pages.map((page, i) => asDocument('page_du_site', { id: `page-${i + 1}`, adresse: page.url }, page.text)),
-    ...input.posts.map((post, i) => asDocument('post_publie', { id: `post-${i + 1}` }, post)),
+    ...input.posts.map((post, i) => asDocument('post_publie', { id: `post-${i + 1}`, ...(post.url === null ? {} : { adresse: post.url }) }, post.text)),
   ].join('\n\n');
 }
 
@@ -60,7 +60,7 @@ export async function proposeEditorialLine(model: TextModel, input: EditorialPro
     maxTokens: 4000,
   });
   const v = result.value;
-  const external = [...input.pages.map((p) => p.text), ...input.posts].join('\n');
+  const external = [...input.pages.map((p) => p.text), ...input.posts.map((p) => p.text)].join('\n');
   return {
     call: { purpose: 'interpret', provider: result.provider, model: result.model, usage: result.usage },
     draft: {

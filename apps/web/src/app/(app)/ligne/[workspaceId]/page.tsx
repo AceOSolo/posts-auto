@@ -6,6 +6,7 @@ import { database, mediaStore } from '../../../../server/context.ts';
 import { editorialProposalKey } from '../../../../server/drafts.ts';
 import { requireUserId } from '../../../../server/session.ts';
 import { addSourceAction, deleteOfferAction, deleteSourceAction, proposeLineAction, saveLineAction, saveOfferAction, toggleSourceAction } from '../actions.ts';
+import { PublishedPostsField } from './published-posts-field.tsx';
 
 export const metadata: Metadata = { title: 'Ligne éditoriale' };
 export const dynamic = 'force-dynamic';
@@ -55,7 +56,7 @@ export default async function EditorialLinePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceId } = await params;
-  const { message, proposition } = await searchParams;
+  const { message, proposition, depuis } = await searchParams;
   if (!UUID.test(workspaceId)) notFound();
   const userId = await requireUserId();
   const db = database();
@@ -101,12 +102,13 @@ export default async function EditorialLinePage({
         <details className="assist" id="proposer" open={line.version === 0 && proposal === null}>
           <summary>Proposer avec l’IA, à partir du site et de posts publiés</summary>
           <form action={proposeLineAction.bind(null, workspaceId)} className="stack">
-            <p className="hint">L’IA lit la page d’accueil du site et les posts collés, puis pré-remplit le formulaire ci-dessous. Vous relisez, corrigez, puis enregistrez : rien n’est enregistré avant.</p>
+            <p className="hint">L’IA lit la page d’accueil du site et les posts ajoutés, puis pré-remplit le formulaire ci-dessous. Vous relisez, corrigez, puis enregistrez : rien n’est enregistré avant.</p>
             <label htmlFor="site">Site de l’entreprise</label>
             <input id="site" name="site" type="text" inputMode="url" defaultValue={website ?? ''} placeholder="www.exemple.fr" maxLength={300} />
-            <label htmlFor="posts">Quelques posts déjà publiés (facultatif), séparés par une ligne « --- »</label>
-            <textarea id="posts" name="posts" rows={6} maxLength={16000} />
-            <button type="submit">Proposer la ligne éditoriale</button>
+            <PublishedPostsField />
+            <button type="submit" className="primary">
+              Proposer la ligne éditoriale
+            </button>
           </form>
         </details>
       )}
@@ -118,7 +120,7 @@ export default async function EditorialLinePage({
         {proposal !== null && (
           <div className="flash success" role="status">
             <p>
-              <strong>Proposition de l’IA, à relire.</strong> Le formulaire est pré-rempli{proposal.sourceUrl ? ` à partir de ${proposal.sourceUrl}` : ' à partir des posts collés'} : corrigez-le, puis
+              <strong>Proposition de l’IA, à relire.</strong> Le formulaire est pré-rempli{proposal.sourceUrl ? ` à partir de ${proposal.sourceUrl}` : ' à partir de vos posts'} : corrigez-le, puis
               enregistrez. Rien n’est enregistré avant.
             </p>
             {proposal.websiteError && <p>{proposal.websiteError}</p>}
@@ -138,6 +140,7 @@ export default async function EditorialLinePage({
           </div>
         )}
         <form key={proposal === null ? 'ligne' : `proposition-${String(proposition)}`} action={saveLineAction.bind(null, workspaceId)} className="stack">
+          {depuis === 'demarrage' && <input type="hidden" name="depuis" value="demarrage" />}
           <fieldset disabled={readOnly}>
             <legend>Ce que l’entreprise dit d’elle</legend>
             <div className="stack">

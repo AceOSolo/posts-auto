@@ -1,0 +1,57 @@
+/* Choix du parcours de démarrage : complet (mis en avant) ou rapide avec l'IA. */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 16px;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.choice h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.choice p,
+.choice ul {
+  margin: 0;
+}
+
+.choice ul {
+  padding-left: 18px;
+}
+
+.choice > :last-child {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.recommended {
+  border: 2px solid var(--primary);
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tradeoff {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.back {
+  margin: 8px 0 16px;
+}

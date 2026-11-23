@@ -612,9 +612,13 @@ try {
     const newSession = /(?:__Host-)?session=([^;]+)/.exec(created.headers.get('set-cookie') ?? '')?.[1] ?? '';
     check('« Créer mon espace » : organisation créée, session ouverte, assistant de démarrage (ONB-02)', /\/demarrage\/[0-9a-f-]{36}/.test(location) && newSession !== '', `HTTP ${created.status} → ${location}`);
     const newWorkspace = /\/demarrage\/([0-9a-f-]{36})/.exec(location)?.[1] ?? '';
-    const wizard = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
+    const modeChoice = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('démarrage : choix entre configuration complète (recommandée) et rapide', modeChoice.includes('Configuration complète') && modeChoice.includes('meilleurs résultats') && modeChoice.includes('Configuration rapide avec l’IA'));
+    const quickForm = (await (await get(`/demarrage/${newWorkspace}?mode=rapide`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('configuration rapide : formulaire court', quickForm.includes('Préparer ma ligne éditoriale') && !quickForm.includes('Première rédaction'));
+    const wizard = (await (await get(`/demarrage/${newWorkspace}?mode=complet`, newSession)).text()).replace(/<!-- -->/g, '');
     check('assistant de démarrage : six étapes, aucune faite (ONB-03)', wizard.includes('Prêt à publier à 0 sur 6') && wizard.includes('Première rédaction'));
-    const company = await submitForm(`/demarrage/${newWorkspace}`, newSession, '>Enregistrer<', { nom: 'Atelier Démo', site: 'atelier-demo.fr', secteur: 'Menuiserie', taille: '1-9' });
+    const company = await submitForm(`/demarrage/${newWorkspace}?mode=complet`, newSession, '>Enregistrer<', { nom: 'Atelier Démo', site: 'atelier-demo.fr', secteur: 'Menuiserie', taille: '1-9' });
     const afterCompany = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
     check('étape 1 « Votre entreprise » enregistrée', (company.headers.get('location') ?? '').includes('entreprise-enregistree') && afterCompany.includes('Prêt à publier à 1 sur 6'), `HTTP ${company.status}`);
     // Post d'exemple tiré du site, avant la connexion de LinkedIn ; ici le site est une adresse
@@ -636,7 +640,8 @@ try {
     // ONB-04 : ligne éditoriale proposée par l'IA, à relire avant d'enregistrer.
     const proposed = await submitForm(`/ligne/${newWorkspace}`, newSession, 'Proposer la ligne éditoriale', {
       site: 'http://127.0.0.1/admin',
-      posts: 'Nous formons nos équipes au travail en hauteur chaque trimestre.\n---\nRetour sur notre chantier de rénovation à Lyon.',
+      'post-texte': 'Nous formons nos équipes au travail en hauteur chaque trimestre.',
+      'post-lien': 'https://www.linkedin.com/posts/atelier-demo_chantier-activity-123-abcd',
     });
     const proposedAt = proposed.headers.get('location') ?? '';
     const reviewPage = proposedAt.includes('proposition=') ? (await (await get(proposedAt.replace(/#.*$/, ''), newSession)).text()).replace(/<!-- -->/g, '') : '';
