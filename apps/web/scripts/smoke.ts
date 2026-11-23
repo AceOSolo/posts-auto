@@ -614,15 +614,13 @@ try {
     const newSession = /(?:__Host-)?session=([^;]+)/.exec(created.headers.get('set-cookie') ?? '')?.[1] ?? '';
     check('« Créer mon espace » : organisation créée, session ouverte, assistant de démarrage (ONB-02)', /\/demarrage\/[0-9a-f-]{36}/.test(location) && newSession !== '', `HTTP ${created.status} → ${location}`);
     const newWorkspace = /\/demarrage\/([0-9a-f-]{36})/.exec(location)?.[1] ?? '';
-    const modeChoice = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
-    check('démarrage : choix entre configuration complète (recommandée) et rapide', modeChoice.includes('Configuration complète') && modeChoice.includes('meilleurs résultats') && modeChoice.includes('Configuration rapide avec l’IA'));
-    const quickForm = (await (await get(`/demarrage/${newWorkspace}?mode=rapide`, newSession)).text()).replace(/<!-- -->/g, '');
-    check('configuration rapide : formulaire court', quickForm.includes('Préparer ma ligne éditoriale') && !quickForm.includes('Première rédaction'));
-    const wizard = (await (await get(`/demarrage/${newWorkspace}?mode=complet`, newSession)).text()).replace(/<!-- -->/g, '');
-    check('assistant de démarrage : six étapes, aucune faite (ONB-03)', wizard.includes('Prêt à publier à 0 sur 6') && wizard.includes('Première rédaction'));
-    const company = await submitForm(`/demarrage/${newWorkspace}?mode=complet`, newSession, '>Enregistrer<', { nom: 'Atelier Démo', site: 'atelier-demo.fr', secteur: 'Menuiserie', taille: '1-9' });
+    const wizard = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('assistant de démarrage : parcours unique, étape 1 sur 5 (ONB-03)', wizard.includes('Étape 1 sur 5') && wizard.includes('Première rédaction') && !wizard.includes('Configuration rapide'));
+    const ahead = (await (await get(`/demarrage/${newWorkspace}?etape=redaction`, newSession)).text()).replace(/<!-- -->/g, '');
+    check('assistant de démarrage : une étape à venir ne s’ouvre pas avant son tour', ahead.includes('Étape 1 sur 5'));
+    const company = await submitForm(`/demarrage/${newWorkspace}`, newSession, 'Enregistrer et continuer', { nom: 'Atelier Démo', site: 'atelier-demo.fr', secteur: 'Menuiserie', taille: '1-9' });
     const afterCompany = (await (await get(`/demarrage/${newWorkspace}`, newSession)).text()).replace(/<!-- -->/g, '');
-    check('étape 1 « Votre entreprise » enregistrée', (company.headers.get('location') ?? '').includes('entreprise-enregistree') && afterCompany.includes('Prêt à publier à 1 sur 6'), `HTTP ${company.status}`);
+    check('étape 1 « Votre entreprise » enregistrée, passage à l’étape 2', (company.headers.get('location') ?? '').includes('entreprise-enregistree') && afterCompany.includes('Étape 2 sur 5'), `HTTP ${company.status}`);
     // Post d'exemple tiré du site, avant la connexion de LinkedIn ; ici le site est une adresse
     // interne, refusée sans appel au réseau ni à l'IA.
     check('démarrage : post d’exemple proposé à partir du site', afterCompany.includes('Un exemple tout de suite') && afterCompany.includes('Rédiger un post d’exemple à partir de mon site'));
@@ -634,7 +632,7 @@ try {
       `HTTP ${sample.status} → ${sample.headers.get('location') ?? ''}`,
     );
     const newHome = (await (await get('/', newSession)).text()).replace(/<!-- -->/g, '');
-    check('indicateur « prêt à publier » sur « Mes posts » (ONB-08)', newHome.includes('prêt à publier à 1 sur 6') && newHome.includes('Continuer le démarrage'));
+    check('indicateur « prêt à publier » sur « Mes posts » (ONB-08)', newHome.includes('prêt à publier à 1 sur 5') && newHome.includes('Continuer le démarrage'));
     check('pas d’indicateur pour l’espace déjà en place', !(await (await get('/', alexis)).text()).includes('Continuer le démarrage'));
     check('bandeau d’essai gratuit : 14 jours, 0 post sur 10, 0 compte sur 3 (ONB-06)', /Essai gratuit<\/strong> · 14 jours restants · 0 post rédigé sur 10 · 0 compte LinkedIn sur 3/.test(newHome));
     check('pas de bandeau d’essai pour Secutop', !(await (await get('/', alexis)).text()).includes('Essai gratuit'));
