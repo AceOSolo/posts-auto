@@ -86,13 +86,13 @@ export default async function IdeasPage({
   return (
     <>
       <h1>Idées</h1>
-      <nav aria-label="Idées" className="subnav">
+      <div role="group" aria-label="Idées affichées" className="segmented">
         {Object.entries(VIEWS).map(([key, v]) => (
-          <Link key={key} href={`/idees/${workspaceId}?vue=${key}`} aria-current={key === view ? 'page' : undefined}>
+          <Link key={key} href={`/idees/${workspaceId}?vue=${key}`} aria-current={key === view ? 'true' : undefined}>
             {v.label}
           </Link>
         ))}
-      </nav>
+      </div>
       <Flash code={message} />
       <p className="hint">
         Une idée est un sujet à placer quand c’est pertinent : l’IA la reprend lors d’une prochaine rédaction. Pour un post précis à une date

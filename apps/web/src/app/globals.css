@@ -203,13 +203,15 @@ a:hover { color: var(--primary-hover); }
 /* En-tête de page et menu d'outils */
 .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .page-head h1 { margin-bottom: 0; }
+.page-head-text { min-width: 0; }
+.page-head-text p { margin: 4px 0 0; color: var(--muted); }
+.page-head-actions { display: flex; align-items: center; gap: 8px; }
 .page-menu { position: relative; }
 .page-menu summary {
-  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; cursor: pointer; list-style: none;
-  border: 1.5px solid var(--border); border-radius: var(--radius-control); background: var(--surface); font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; cursor: pointer; list-style: none;
+  border: 1.5px solid var(--border); border-radius: 50%; background: var(--surface); font-weight: 700;
 }
 .page-menu summary::-webkit-details-marker { display: none; }
-.page-menu summary::after { content: ''; width: 7px; height: 7px; margin: -3px 2px 0 10px; border-right: 2px solid; border-bottom: 2px solid; transform: rotate(45deg); }
 .page-menu-panel {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 10; display: flex; flex-direction: column; min-width: 250px; padding: 6px;
   border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 28px rgb(30 26 69 / 0.16);
@@ -437,7 +439,7 @@ details.photos summary { cursor: pointer; font-weight: 600; min-height: 32px; di
 }
 .subnav a, .segmented a { display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border-radius: 9px; color: var(--muted); font-size: 0.92rem; font-weight: 600; text-decoration: none; }
 .subnav a:hover, .segmented a:hover { background: var(--bg); color: var(--text); }
-.subnav a[aria-current='page'], .subnav a[aria-current='page']:hover { background: var(--text); color: var(--surface); }
+.subnav a[aria-current='page'], .subnav a[aria-current='page']:hover, .segmented a[aria-current], .segmented a[aria-current]:hover { background: var(--text); color: var(--surface); }
 .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 8px 0 12px; }
 .toolbar.split { justify-content: space-between; margin-top: 0; }
 .toolbar .segmented { margin: 0; flex-wrap: nowrap; }

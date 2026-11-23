@@ -4,9 +4,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Flash } from '../../../../components/flash.tsx';
+import { PageHeader } from '../../../../components/page-header.tsx';
 import { database } from '../../../../server/context.ts';
 import { requireUserId } from '../../../../server/session.ts';
-import { PlanningTools, STATE_LABELS, mondayLabel } from '../planning-ui.tsx';
+import { STATE_LABELS, mondayLabel, planningMenu } from '../planning-ui.tsx';
 
 export const metadata: Metadata = { title: 'Planning éditorial' };
 export const dynamic = 'force-dynamic';
@@ -46,10 +47,7 @@ export default async function PlanningPage({
 
   return (
     <>
-      <div className="page-head">
-        <h1>Planning éditorial</h1>
-        <PlanningTools workspaceId={workspaceId} exportHref={`/planning/${workspaceId}/export?depuis=${from}`} />
-      </div>
+      <PageHeader title="Planning" menu={planningMenu(workspaceId, `/planning/${workspaceId}/export?depuis=${from}`)} />
       <Flash code={message} />
 
       <div className="toolbar split">

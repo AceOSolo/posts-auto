@@ -23,6 +23,8 @@ interface AppNavProps {
   readonly owned: NavContext['owned'];
   readonly platformAdmin: boolean;
   readonly unread: number;
+  /** Posts qui attendent la décision de la personne. */
+  readonly toValidate: number;
   readonly reminders: readonly Reminder[];
   readonly logoutAction: () => Promise<void>;
 }
@@ -31,7 +33,7 @@ interface AppNavProps {
  * Le seul menu de l'application : cinq rubriques, les pages de la rubrique ouverte juste dessous.
  * Sur téléphone, les rubriques passent en barre fixe et leurs pages en onglets sous le logo.
  */
-export function AppNav({ brand, workspaces, initialWorkspaceId, owned, platformAdmin, unread, reminders, logoutAction }: AppNavProps) {
+export function AppNav({ brand, workspaces, initialWorkspaceId, owned, platformAdmin, unread, toValidate, reminders, logoutAction }: AppNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const workspaceIds = useMemo(() => workspaces.map((w) => w.id), [workspaces]);
@@ -54,7 +56,10 @@ export function AppNav({ brand, workspaces, initialWorkspaceId, owned, platformA
 
   const sections = buildSections({ workspaceId, owned, platformAdmin });
   const { section: current, tab: currentTab } = locate(sections, pathname);
-  const unreadLabel = unread > 0 ? ` : ${unread} notification${unread > 1 ? 's' : ''} non lue${unread > 1 ? 's' : ''}` : '';
+  const badges: Partial<Record<SectionId, { readonly count: number; readonly label: string }>> = {
+    valider: { count: toValidate, label: `${toValidate} post${toValidate > 1 ? 's' : ''} à valider` },
+    compte: { count: unread, label: `${unread} notification${unread > 1 ? 's' : ''} non lue${unread > 1 ? 's' : ''}` },
+  };
 
   function switchWorkspace(nextId: string) {
     setRemembered(nextId);
@@ -109,19 +114,21 @@ export function AppNav({ brand, workspaces, initialWorkspaceId, owned, platformA
           {sections.map((section) => {
             const active = current?.id === section.id;
             const hasPages = section.tabs.length > 1;
+            const badge = badges[section.id];
+            const showBadge = badge !== undefined && badge.count > 0;
             return (
               <li key={section.id}>
                 <Link
                   href={section.href}
                   className="side-link"
                   aria-current={active ? (hasPages ? 'true' : 'page') : undefined}
-                  aria-label={section.id === 'compte' ? `${section.label}${unreadLabel}` : undefined}
+                  aria-label={showBadge ? `${section.label} : ${badge.label}` : undefined}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     {ICONS[section.id]}
                   </svg>
                   <span>{section.label}</span>
-                  {section.id === 'compte' && unread > 0 && <span className="nav-dot">{unread}</span>}
+                  {showBadge && <span className="nav-dot">{badge.count}</span>}
                 </Link>
                 {active && hasPages && (
                   <ul className="side-sub">

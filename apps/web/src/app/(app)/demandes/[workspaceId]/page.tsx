@@ -47,14 +47,14 @@ export default async function RequestsPage({
   return (
     <>
       <h1>Demandes de post</h1>
-      <nav aria-label="Demandes" className="subnav">
-        <Link href={`/demandes/${workspaceId}`} aria-current={all ? undefined : 'page'}>
+      <div role="group" aria-label="Demandes affichées" className="segmented">
+        <Link href={`/demandes/${workspaceId}`} aria-current={all ? undefined : 'true'}>
           Mes demandes
         </Link>
-        <Link href={`/demandes/${workspaceId}?toutes=1`} aria-current={all ? 'page' : undefined}>
+        <Link href={`/demandes/${workspaceId}?toutes=1`} aria-current={all ? 'true' : undefined}>
           Toutes les demandes
         </Link>
-      </nav>
+      </div>
       <Flash code={message} />
 
       {canPropose && (

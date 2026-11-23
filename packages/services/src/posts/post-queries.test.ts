@@ -10,7 +10,7 @@ import {
 } from '@posts-auto/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { NotFoundError } from '../errors.ts';
-import { getPostDetail, listMyPosts, listMyWorkspaces, teamWeek } from './post-queries.ts';
+import { countPostsToValidate, getPostDetail, listMyPosts, listMyWorkspaces, teamWeek } from './post-queries.ts';
 
 let db: Database;
 let workspaceId: string;
@@ -57,6 +57,15 @@ describe('« Mes posts » (VAL-01)', () => {
 
   it('ne montre rien à un lecteur, qui n’est titulaire de rien', async () => {
     expect(await listMyPosts(db, people.viewer, NOW)).toEqual([]);
+  });
+
+  it('compte dans le menu les mêmes posts à valider que la liste', async () => {
+    for (const person of [people.jp, people.alice]) {
+      const expected = (await listMyPosts(db, person, NOW)).filter((p) => p.status === 'a_valider').length;
+      expect(expected).toBeGreaterThan(0);
+      expect(await countPostsToValidate(db, person, NOW)).toBe(expected);
+    }
+    expect(await countPostsToValidate(db, people.viewer, NOW)).toBe(0);
   });
 });
 

@@ -1,4 +1,4 @@
-import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, activeAnnouncements, isPlatformAdmin, listMyWorkspaces, listNotifications, mfaStatus, ownedOrganizations, trialBanners } from '@posts-auto/services';
+import { TRIAL_MAX_ACCOUNTS, TRIAL_MAX_POSTS, activeAnnouncements, countPostsToValidate, isPlatformAdmin, listMyWorkspaces, listNotifications, mfaStatus, ownedOrganizations, trialBanners } from '@posts-auto/services';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const userId = await requireUserId();
   const workspaces = await listMyWorkspaces(database(), userId);
   const { unread } = await listNotifications(database(), userId, 1);
+  const toValidate = await countPostsToValidate(database(), userId, new Date());
   const trials = await trialBanners(database(), userId, new Date());
   const owned = await ownedOrganizations(database(), userId);
   const mfa = await mfaStatus(database(), userId, new Date());
@@ -62,6 +63,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         owned={owned.map((org) => ({ label: org.kind === 'agence' ? 'Clients' : 'Espaces', workspaceId: org.workspaceId }))}
         platformAdmin={platformAdmin}
         unread={unread}
+        toValidate={toValidate}
         reminders={reminders}
         logoutAction={logout}
       />

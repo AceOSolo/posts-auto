@@ -1,5 +1,6 @@
 import type { CellState } from '@posts-auto/core';
 import Link from 'next/link';
+import type { PageMenuItem } from '../../../components/page-header.tsx';
 
 export const STATE_LABELS: Record<CellState, string> = {
   planned: 'Prévu',
@@ -25,21 +26,14 @@ export function PlanningBack({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-/** Les outils du planning, repliés dans un seul bouton à côté du titre. */
-export function PlanningTools({ workspaceId, exportHref }: { workspaceId: string; exportHref: string }) {
-  return (
-    <details className="page-menu no-print">
-      <summary>Outils</summary>
-      <div className="page-menu-panel">
-        <Link href={`/planning/${workspaceId}/banque`}>Banque de sujets</Link>
-        <Link href={`/planning/${workspaceId}/evenements`}>Événements</Link>
-        <Link href={`/planning/${workspaceId}/inventaire`}>Inventaire de la semaine</Link>
-        <Link href={`/planning/${workspaceId}/semaine`}>Document de la semaine</Link>
-        <Link href={`/planning/${workspaceId}/import`}>Importer</Link>
-        <a href={exportHref} download>
-          Exporter en CSV
-        </a>
-      </div>
-    </details>
-  );
+/** Les outils du planning, repliés dans l'en-tête de la page. */
+export function planningMenu(workspaceId: string, exportHref: string): PageMenuItem[] {
+  return [
+    { label: 'Banque de sujets', href: `/planning/${workspaceId}/banque` },
+    { label: 'Événements', href: `/planning/${workspaceId}/evenements` },
+    { label: 'Inventaire de la semaine', href: `/planning/${workspaceId}/inventaire` },
+    { label: 'Document de la semaine', href: `/planning/${workspaceId}/semaine` },
+    { label: 'Importer', href: `/planning/${workspaceId}/import` },
+    { label: 'Exporter en CSV', href: exportHref, download: true },
+  ];
 }

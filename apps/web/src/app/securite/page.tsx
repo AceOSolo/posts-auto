@@ -38,7 +38,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
         Authenticator, 1Password…) vous est demandé. Quelqu’un qui accède à votre messagerie ne peut donc pas entrer dans votre compte.
       </p>
       {status.required && !status.enabled && status.deadline !== null && (
-        <p className={status.overdue ? 'flash error' : 'trial-banner'} role="status">
+        <p className={status.overdue ? 'flash error' : 'notice'} role="status">
           Obligatoire pour les propriétaires et les administrateurs
           {status.overdue ? ' : activez-la pour continuer.' : `, à activer avant le ${day.format(status.deadline)} (${MFA_GRACE_DAYS} jours pour la mettre en place).`}
         </p>

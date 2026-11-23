@@ -164,24 +164,37 @@ function toCard(row: BaseRow, media: PostMedia[], isMine: boolean, now: Date): P
   };
 }
 
+/** Les posts récents ou à venir des comptes dont la personne est titulaire ou déléguée. */
+function myPostsQuery(trx: Tx, userId: string, now: Date) {
+  return baseQuery(trx)
+    .where('p.scheduled_at', '>=', addMinutes(now, -7 * 24 * 60))
+    .where((eb) =>
+      eb.or([
+        eb('a.holder_user_id', '=', userId),
+        eb.exists(
+          eb.selectFrom('account_delegates as d').select('d.user_id').whereRef('d.account_id', '=', 'p.account_id').where('d.user_id', '=', userId),
+        ),
+      ]),
+    );
+}
+
 /** VAL-01 : les posts des comptes dont la personne est titulaire ou déléguée, par heure de départ. */
 export async function listMyPosts(db: Database, userId: string, now: Date): Promise<PostCard[]> {
   return asUser(db, userId, async (trx) => {
-    const rows = await baseQuery(trx)
-      .where('p.status', 'in', ACTIVE_STATUSES)
-      .where('p.scheduled_at', '>=', addMinutes(now, -7 * 24 * 60))
-      .where((eb) =>
-        eb.or([
-          eb('a.holder_user_id', '=', userId),
-          eb.exists(
-            eb.selectFrom('account_delegates as d').select('d.user_id').whereRef('d.account_id', '=', 'p.account_id').where('d.user_id', '=', userId),
-          ),
-        ]),
-      )
-      .orderBy('p.scheduled_at')
-      .execute();
+    const rows = await myPostsQuery(trx, userId, now).where('p.status', 'in', ACTIVE_STATUSES).orderBy('p.scheduled_at').execute();
     const media = await mediaOf(trx, rows.map((row) => row.id));
     return rows.map((row) => toCard(row, media.get(row.id) ?? [], true, now));
+  });
+}
+
+/** Le nombre de posts qui attendent la décision de la personne, affiché sur « Valider » dans le menu. */
+export async function countPostsToValidate(db: Database, userId: string, now: Date): Promise<number> {
+  return asUser(db, userId, async (trx) => {
+    const { total } = await trx
+      .selectFrom(myPostsQuery(trx, userId, now).where('p.status', '=', 'a_valider').as('mine'))
+      .select((eb) => eb.fn.countAll<string>().as('total'))
+      .executeTakeFirstOrThrow();
+    return Number(total);
   });
 }
 
