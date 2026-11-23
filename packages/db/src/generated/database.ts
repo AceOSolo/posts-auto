@@ -319,6 +319,15 @@ export interface Ideas {
   workspace_id: string;
 }
 
+export interface InboundEmails {
+  id: Generated<Int8>;
+  message_hash: string;
+  outcome: Generated<string>;
+  reason: string | null;
+  received_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
 export interface LearnedPreferences {
   account_id: string;
   edited_by: string | null;
@@ -855,6 +864,15 @@ export interface WorkspaceChatHooks {
   workspace_id: string;
 }
 
+export interface WorkspaceInboundEmail {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  rotation: Generated<number>;
+  token_hash: string;
+  updated_at: Generated<Timestamp>;
+  workspace_id: string;
+}
+
 export interface WorkspaceMembers {
   created_at: Generated<Timestamp>;
   role: string;
@@ -914,6 +932,7 @@ export interface DB {
   generation_runs: GenerationRuns;
   idea_accounts: IdeaAccounts;
   ideas: Ideas;
+  inbound_emails: InboundEmails;
   learned_preferences: LearnedPreferences;
   login_tokens: LoginTokens;
   media_assets: MediaAssets;
@@ -956,6 +975,7 @@ export interface DB {
   users: Users;
   visual_tasks: VisualTasks;
   workspace_chat_hooks: WorkspaceChatHooks;
+  workspace_inbound_email: WorkspaceInboundEmail;
   workspace_members: WorkspaceMembers;
   workspaces: Workspaces;
 }

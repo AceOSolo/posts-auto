@@ -33,6 +33,7 @@ export * from './planning/planning.ts';
 export * from './planning/subjects-events.ts';
 export * from './planning/world-days.ts';
 export * from './requests/ideas-requests.ts';
+export * from './requests/inbound-email.ts';
 export * from './posts/content-reports.ts';
 export * from './planning/generation.ts';
 export * from './exchange/inputs.ts';
