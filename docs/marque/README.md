@@ -2,7 +2,7 @@
 
 Charte graphique v1.0 (novembre 2026). Décision : [0009 – Nom et identité visuelle](../decisions/0009-marque-rostra.md).
 
-La charte en PDF et les logos vont sur le Drive de Secutop, dans le dossier « Rostra ». Ce dossier-ci contient de quoi les régénérer.
+La charte en PDF, les logos et les illustrations sont sur le Drive de Secutop, dans le [dossier « Rostra »](https://drive.google.com/drive/folders/1q7huABlY5LQYfOsefd8VF1aI-jUifFiz). Ce dossier-ci contient de quoi les régénérer.
 
 ## Contenu
 

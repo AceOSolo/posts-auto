@@ -26,6 +26,6 @@ SimplX a demandé un nom plus singulier, inventé comme Pharow ou Lemlist, qui �
 
 ## Conséquences
 
-- La charte (PDF de 32 pages), les logos (72 fichiers) et les illustrations sont destinés au Drive de Secutop, dossier « Rostra », à côté de « Les Employeurs ». Le dossier est créé ; l'envoi des fichiers a échoué le 20/11/2026, faute d'espace de stockage sur le compte Google. Ils ne sont pas dans le dépôt : `docs/marque/sortie/` est ignoré par Git et se régénère.
+- La charte (PDF de 32 pages), les logos (72 fichiers) et les illustrations sont sur le Drive de Secutop, dossier « Rostra », à côté de « Les Employeurs » (déposés le 23/11/2026). Ils ne sont pas dans le dépôt : `docs/marque/sortie/` est ignoré par Git et se régénère.
 - L'application, les e-mails, le second facteur d'authentification (nom affiché dans l'application d'authentification), les métadonnées et le fichier llms.txt s'appellent désormais « Rostra ». Les codes de double authentification déjà enregistrés restent valides ; seul leur libellé change pour les nouvelles inscriptions.
 - **Reste à faire par SimplX** : vérifier la disponibilité de la marque (INPI, EUIPO, classes 9, 35 et 42) et du nom de domaine, puis déposer la marque. Ces deux vérifications n'ont pas été faites ; elles conditionnent l'usage public du nom.
