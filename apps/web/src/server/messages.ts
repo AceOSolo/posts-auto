@@ -8,6 +8,8 @@ const MESSAGES: Record<string, { tone: 'success' | 'error'; text: string }> = {
   modif: { tone: 'success', text: 'Demande de modification envoyée : une nouvelle version va être préparée.' },
   refuse: { tone: 'success', text: 'Post refusé : un autre sujet va être proposé.' },
   corrige: { tone: 'success', text: 'Texte enregistré.' },
+  'passage-complete': { tone: 'success', text: 'C’est complété : relisez le post, puis validez-le.' },
+  texte_change: { tone: 'error', text: 'Le texte a changé entre-temps. Vérifiez-le, puis complétez de nouveau.' },
   'corrige-a-valider': { tone: 'success', text: 'Texte enregistré. Le post doit de nouveau être validé par son titulaire.' },
   replanifie: { tone: 'success', text: 'Créneau modifié.' },
   'replanifie-hors-plage': { tone: 'success', text: 'Créneau modifié. Attention : il est en dehors des horaires habituels de publication.' },

@@ -1,6 +1,6 @@
 'use server';
 
-import { DEFAULT_WORKSPACE_CALENDAR, REFUSAL_REASONS, type RefusalReason, atLocal } from '@posts-auto/core';
+import { DEFAULT_WORKSPACE_CALENDAR, REFUSAL_REASONS, type RefusalReason, atLocal, fillMarkers, hasBlockingMarkers } from '@posts-auto/core';
 import { type AssistKind, ModelError } from '@posts-auto/ai';
 import {
   addPostPhotos,
@@ -97,6 +97,20 @@ export async function editTextAction(postId: string, formData: FormData): Promis
   await run(postId, formData, async (userId, now) => {
     const outcome = await editPostText(database(), userId, postId, body, now);
     return outcome.status === 'a_valider' && formData.get('statut') === 'valide' ? 'corrige-a-valider' : 'corrige';
+  });
+}
+
+/** VAL-03 : compléter les passages demandés sans ouvrir tout le texte. */
+export async function completeMarkersAction(postId: string, formData: FormData): Promise<void> {
+  const shown = String(formData.get('texte') ?? '').replace(/\r\n/g, '\n');
+  const answers = formData.getAll('complement').map(String);
+  await run(postId, formData, async (userId, now) => {
+    const { body } = await getPostDetail(database(), userId, postId, now);
+    // Le texte a pu changer depuis l'affichage : les réponses ne correspondraient plus aux passages.
+    if (body !== shown) return 'texte_change';
+    const filled = fillMarkers(body, answers);
+    await editPostText(database(), userId, postId, filled, now);
+    return hasBlockingMarkers(filled) ? 'corrige' : 'passage-complete';
   });
 }
 

@@ -32,3 +32,33 @@ export function findBlockingMarkers(text: string): MarkerSpan[] {
     text: match[0],
   }));
 }
+
+/** « [À COMPLÉTER : date] » : l'information demandée se lit après les deux-points. */
+const TO_COMPLETE = /^\[\s*[ÀàAa]\s+compl[ÉéEe]ter\s*:\s*([^\]]*?)\s*\]?$/i;
+
+export interface MarkerQuestion extends MarkerSpan {
+  /** L'information à fournir, par exemple « date ». */
+  readonly label: string;
+}
+
+/**
+ * Les informations à demander pour compléter le texte sans l'ouvrir. Vide si un seul marqueur
+ * ne se résume pas à une question (« [À VÉRIFIER] ») : il faut alors relire le passage.
+ */
+export function markerQuestions(text: string): MarkerQuestion[] {
+  const questions: MarkerQuestion[] = [];
+  for (const marker of findBlockingMarkers(text)) {
+    const label = TO_COMPLETE.exec(marker.text)?.[1];
+    if (label === undefined || label === '') return [];
+    questions.push({ ...marker, label });
+  }
+  return questions;
+}
+
+/** Remplace chaque marqueur par la réponse de même rang ; sans réponse, le marqueur reste. */
+export function fillMarkers(text: string, answers: readonly string[]): string {
+  return findBlockingMarkers(text).reduceRight((filled, marker, index) => {
+    const answer = answers[index]?.trim() ?? '';
+    return answer === '' ? filled : filled.slice(0, marker.start) + answer + filled.slice(marker.end);
+  }, text);
+}

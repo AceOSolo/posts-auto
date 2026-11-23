@@ -10,6 +10,18 @@
   display: contents;
 }
 
+/* Sur la page d'un post : « Valider » en grand, les deux autres décisions dessous. */
+.stacked {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.stacked .validate {
+  grid-column: 1 / -1;
+  min-height: 52px;
+  font-size: 1.05rem;
+}
+
 .action {
   width: 100%;
   gap: 7px;

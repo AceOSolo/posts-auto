@@ -8,6 +8,7 @@ import { Logo } from '../../components/logo.tsx';
 import { database } from '../../server/context.ts';
 import { currentSession, requireUserId } from '../../server/session.ts';
 import { logout } from '../connexion/actions.ts';
+import { OnboardingReturnBar } from './demarrage/return-bar.tsx';
 
 /** Pages réservées aux personnes connectées. */
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -98,7 +99,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             ))}
           </div>
         )}
-        <main>{children}</main>
+        <main>
+          <OnboardingReturnBar />
+          {children}
+        </main>
       </div>
     </div>
   );
