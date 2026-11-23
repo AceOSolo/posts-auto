@@ -1,7 +1,10 @@
-import { supervision } from '@posts-auto/services';
+import { listFailedGenerations, listPublicationsInError, supervision } from '@posts-auto/services';
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Flash } from '../../../../components/flash.tsx';
 import { requireAdmin } from '../../../../server/admin.ts';
 import { database } from '../../../../server/context.ts';
+import { relaunchGenerationAction, retryPublicationAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Supervision' };
 export const dynamic = 'force-dynamic';
@@ -10,12 +13,97 @@ const date = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: '
 const eur = (n: number) => `${n.toFixed(2).replace('.', ',')} €`;
 
 /** ADM-03 : files de travail, erreurs LinkedIn, connexions, coûts de l'IA. */
-export default async function SupervisionPage() {
+export default async function SupervisionPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const adminId = await requireAdmin();
-  const s = await supervision(database(), adminId, new Date());
+  const { message } = await searchParams;
+  const now = new Date();
+  const s = await supervision(database(), adminId, now);
+  const publications = await listPublicationsInError(database(), adminId, now);
+  const generations = await listFailedGenerations(database(), adminId, now);
   return (
     <>
       <h1>Supervision</h1>
+      <Flash code={message} />
+
+      <section aria-labelledby="a-relancer">
+        <h2 id="a-relancer">À relancer</h2>
+        <h3>Publications en erreur</h3>
+        {publications.length === 0 ? (
+          <p className="muted">Aucune publication en erreur.</p>
+        ) : (
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Publications en erreur, tableau défilable horizontalement">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Organisation</th>
+                  <th scope="col">Espace</th>
+                  <th scope="col">Compte</th>
+                  <th scope="col">Créneau</th>
+                  <th scope="col">Erreur</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {publications.map((p) => (
+                  <tr key={p.postId}>
+                    <th scope="row">
+                      <Link href={`/admin/organisations/${p.orgId}`}>{p.orgName}</Link>
+                    </th>
+                    <td>{p.workspaceName}</td>
+                    <td>{p.accountName}</td>
+                    <td>{date.format(p.scheduledAt)}</td>
+                    <td>{p.error?.slice(0, 200) ?? '—'}</td>
+                    <td>
+                      {p.blockedBy ?? (
+                        <form action={retryPublicationAction.bind(null, p.postId)} className="inline-fields">
+                          <button type="submit">Relancer</button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <h3>Rédactions en échec</h3>
+        {generations.length === 0 ? (
+          <p className="muted">Aucune rédaction en échec.</p>
+        ) : (
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Rédactions en échec, tableau défilable horizontalement">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Organisation</th>
+                  <th scope="col">Espace</th>
+                  <th scope="col">Échec</th>
+                  <th scope="col">Erreur</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {generations.map((g) => (
+                  <tr key={g.workspaceId}>
+                    <th scope="row">
+                      <Link href={`/admin/organisations/${g.orgId}`}>{g.orgName}</Link>
+                    </th>
+                    <td>{g.workspaceName}</td>
+                    <td>{date.format(g.failedAt)}</td>
+                    <td>{g.error?.slice(0, 200) ?? '—'}</td>
+                    <td>
+                      {g.blockedBy ?? (
+                        <form action={relaunchGenerationAction.bind(null, g.workspaceId)} className="inline-fields">
+                          <button type="submit">Relancer</button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section aria-labelledby="files">
         <h2 id="files">Files de travail</h2>

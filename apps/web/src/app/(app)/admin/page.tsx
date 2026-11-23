@@ -99,7 +99,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   <Link href={`/admin/organisations/${r.id}`}>{r.name}</Link> <span className="muted">({r.kind})</span>
                 </th>
                 <td>{r.planName === null ? '—' : `${r.planName}${r.interval === 'year' ? ' (annuel)' : ''}`}</td>
-                <td>{PAYMENT_LABELS[r.paymentState]}</td>
+                <td>
+                  {PAYMENT_LABELS[r.paymentState]}
+                  {r.editorSuspended && <strong> · suspendue par l’éditeur</strong>}
+                </td>
                 <td>{r.workspaces}</td>
                 <td>{r.activeAccounts}</td>
                 <td>{r.postsThisMonth}</td>

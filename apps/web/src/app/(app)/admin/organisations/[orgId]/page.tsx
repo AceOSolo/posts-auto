@@ -1,10 +1,11 @@
-import { NotFoundError, organizationDetail } from '@posts-auto/services';
+import { NotFoundError, TRIAL_EXTENSION_MAX_DAYS, organizationDetail } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Flash } from '../../../../../components/flash.tsx';
 import { requireAdmin } from '../../../../../server/admin.ts';
 import { database } from '../../../../../server/context.ts';
-import { openSupportSessionAction } from '../../actions.ts';
+import { extendTrialAction, openSupportSessionAction, reactivateOrganizationAction, suspendOrganizationAction } from '../../actions.ts';
 
 export const metadata: Metadata = { title: 'Organisation' };
 export const dynamic = 'force-dynamic';
@@ -13,9 +14,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const date = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /** ADM-01 : fiche d'une organisation. Pas de contenu des posts : seulement des compteurs. */
-export default async function OrganizationPage({ params }: { params: Promise<{ orgId: string }> }) {
+export default async function OrganizationPage({ params, searchParams }: { params: Promise<{ orgId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const adminId = await requireAdmin();
   const { orgId } = await params;
+  const { message } = await searchParams;
   if (!UUID.test(orgId)) notFound();
   let org;
   try {
@@ -30,6 +32,13 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
         <Link href="/admin">← Organisations</Link>
       </p>
       <h1>{org.name}</h1>
+      <Flash code={message} />
+      {org.suspension && (
+        <p role="status">
+          <strong>Suspendue par l’éditeur</strong> depuis le {date.format(org.suspension.suspendedAt)}
+          {org.suspension.suspendedBy && <> par {org.suspension.suspendedBy}</>} · motif interne : « {org.suspension.reason} »
+        </p>
+      )}
       <ul>
         <li>
           {org.kind === 'agence' ? 'Agence' : 'Entreprise'}, créée le {date.format(org.createdAt)} · statut {org.status}
@@ -42,6 +51,33 @@ export default async function OrganizationPage({ params }: { params: Promise<{ o
         </li>
         {org.stripeCustomerId && <li>Client Stripe : {org.stripeCustomerId}</li>}
       </ul>
+
+      <section aria-labelledby="interventions">
+        <h2 id="interventions">Interventions</h2>
+        {org.canExtendTrial && (
+          <form action={extendTrialAction.bind(null, org.id)} className="inline-fields">
+            <label>
+              Prolonger l’essai de (jours)
+              <input name="jours" type="number" min={1} max={TRIAL_EXTENSION_MAX_DAYS} defaultValue={7} required />
+            </label>
+            <button type="submit">Prolonger l’essai</button>
+          </form>
+        )}
+        {org.suspension ? (
+          <form action={reactivateOrganizationAction.bind(null, org.id)} className="inline-fields">
+            <button type="submit">Lever la suspension</button>
+          </form>
+        ) : (
+          <form action={suspendOrganizationAction.bind(null, org.id)} className="stack">
+            <label>
+              Motif de la suspension (interne à l’éditeur)
+              <textarea name="motif" rows={2} minLength={3} maxLength={500} required />
+            </label>
+            <p className="hint">Arrête la rédaction et la publication. L’abonnement continue dans Stripe : suspendez-le ou remboursez-le là-bas si nécessaire. Les données sont conservées.</p>
+            <button type="submit">Suspendre l’organisation</button>
+          </form>
+        )}
+      </section>
 
       <h2>Espaces</h2>
       <div className="table-scroll" tabIndex={0} role="region" aria-label="Tableau, défilable horizontalement">

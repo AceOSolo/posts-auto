@@ -13,12 +13,14 @@
  */
 import type { Tx } from '@posts-auto/db';
 import { sql } from 'kysely';
+import { isOrgSuspended } from '../admin/suspension.ts';
 import { TRIAL_MAX_POSTS, trialStateForOrg } from './trial.ts';
 
 /** FAC-06 : suspension à J+14 d'un impayé. */
 export const UNPAID_SUSPENSION_DAYS = 14;
 
-export type BillingMode = 'pilot' | 'trial' | 'trial_over' | 'subscribed' | 'suspended';
+/** `editor_suspended` : suspension décidée par l'éditeur, indépendante du paiement. */
+export type BillingMode = 'pilot' | 'trial' | 'trial_over' | 'subscribed' | 'suspended' | 'editor_suspended';
 
 export interface Quota {
   readonly used: number;
@@ -45,6 +47,7 @@ export interface Allowance {
 
 const quota = (used: number, limit: number | null): Quota => ({ used, limit, remaining: limit === null ? null : Math.max(0, limit - used) });
 const UNLIMITED: Quota = { used: 0, limit: null, remaining: null };
+const EDITOR_SUSPENDED = 'Service suspendu par l’éditeur : la rédaction et la publication sont arrêtées, vos données sont conservées. Contactez le support.';
 const SUSPENDED = 'Abonnement impayé : la rédaction et la publication sont suspendues jusqu’au règlement. Les données sont conservées 90 jours.';
 const CANCELED_UNPAID = 'Abonnement résilié pour impayé : la rédaction et la publication sont suspendues. Les données sont conservées 90 jours.';
 const CANCELED = 'Abonnement résilié : la rédaction est arrêtée ; les posts déjà validés partent toujours.';
@@ -94,6 +97,20 @@ export async function allowanceForWorkspace(trx: Tx, workspaceId: string, now: D
   const orgId = workspace.org_id;
   const sub = await trx.selectFrom('subscriptions').selectAll().where('org_id', '=', orgId).executeTakeFirst();
   const base = { orgId, planKey: sub?.plan_key ?? null, overagePolicy: (sub?.overage_policy ?? 'suspend') as 'suspend' | 'packs' };
+
+  if (await isOrgSuspended(trx, orgId)) {
+    return {
+      ...base,
+      mode: 'editor_suspended',
+      periodStart: null,
+      periodEnd: null,
+      posts: quota(0, 0),
+      images: quota(0, 0),
+      canPublish: false,
+      reason: EDITOR_SUSPENDED,
+      limitReason: EDITOR_SUSPENDED,
+    };
+  }
 
   if (sub !== undefined && sub.status !== 'canceled' && sub.status !== 'incomplete') {
     const unpaidFor = sub.past_due_since === null ? 0 : (now.getTime() - sub.past_due_since.getTime()) / 86_400_000;

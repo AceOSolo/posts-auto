@@ -31,7 +31,7 @@ import {
 } from '@posts-auto/linkedin';
 import { createHmac } from 'node:crypto';
 import type { MediaStore } from '../media/media-store.ts';
-import { enqueueTeamChat } from '@posts-auto/services';
+import { enqueueTeamChat, workspaceNotSuspended } from '@posts-auto/services';
 import { alertRecipients, notify } from '../notifications/recipients.ts';
 import type { TokenCipher } from '../secrets/token-cipher.ts';
 
@@ -226,6 +226,7 @@ async function startDuePosts(deps: PublicationDeps, now: Date, report: Publicati
       ])
       .where('p.status', '=', 'valide')
       .where('p.scheduled_at', '<=', now)
+      .where(workspaceNotSuspended('p.workspace_id'))
       .orderBy('p.scheduled_at')
       .limit(START_BATCH)
       .forUpdate('p')
@@ -360,6 +361,8 @@ async function claimNextAttempt(deps: PublicationDeps, now: Date): Promise<Claim
       .where('status', '=', 'en_publication')
       .where('next_publish_attempt_at', '<=', now)
       .where((eb) => eb.or([eb('publish_lease_until', 'is', null), eb('publish_lease_until', '<', now)]))
+      // Suspension de l'éditeur : les nouvelles tentatives attendent la réactivation.
+      .where(workspaceNotSuspended('posts.workspace_id'))
       .orderBy('next_publish_attempt_at')
       .limit(1)
       .forUpdate()

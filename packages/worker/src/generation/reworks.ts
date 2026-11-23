@@ -24,7 +24,7 @@ import {
   subjectOrigin,
 } from '@posts-auto/core';
 import { type Tx, asSystem, weekStartOf } from '@posts-auto/db';
-import { currentEditorialLine, offerItems } from '@posts-auto/services';
+import { currentEditorialLine, offerItems, workspaceNotSuspended } from '@posts-auto/services';
 import { notify } from '../notifications/recipients.ts';
 import { storeVisual } from '../visuals/prepare.ts';
 import { loadPreviousVisual, openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
@@ -78,6 +78,7 @@ export async function runReworkTick(deps: GenerationDeps): Promise<ReworkTickRep
       .where('p.rework_attempts', '<', REWORK_MAX_ATTEMPTS)
       .where((eb) => eb.or([eb('p.rework_lease_until', 'is', null), eb('p.rework_lease_until', '<', now)]))
       .where((eb) => eb.not(eb.exists(eb.selectFrom('posts as s').select('s.id').whereRef('s.replaces_post_id', '=', 'p.id'))))
+      .where(workspaceNotSuspended('p.workspace_id'))
       .orderBy('p.updated_at')
       .limit(BATCH)
       .forUpdate()

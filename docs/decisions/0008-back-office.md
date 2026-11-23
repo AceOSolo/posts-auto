@@ -45,6 +45,13 @@ SimplX doit suivre ses clients et intervenir chez eux sans jamais affaiblir le c
    - Seuls les espaces qui n'ont pas encore reçu leurs modèles sont concernés.
 6. **ADM-06 : annonces.** Une annonce est un message d'information ou de maintenance, avec une date de début et une date de fin. Elle s'affiche en bandeau pour tous les utilisateurs, trois annonces au plus à la fois.
 
+7. **Interventions de l'éditeur** (complément du 23 novembre 2026). Chacune est inscrite au journal d'audit du client (acteur « support »), sauf le suivi des démos, qui n'est lié à aucun client : la personne et la date sont gardées sur la demande.
+   - **Prolonger un essai** : de 1 à 60 jours, sans dépasser 90 jours à partir d'aujourd'hui. Les limites de l'essai (10 posts, 3 comptes) ne changent pas. Impossible dès qu'un abonnement a existé, même résilié.
+   - **Suspendre ou réactiver une organisation** : table `org_suspensions`, séparée de `organizations.status`, qui suit les impayés. Un paiement Stripe ne lève donc pas la suspension, la réactivation ne lève pas un impayé, et la suspension ne déclenche jamais la purge à 90 jours. Elle arrête la rédaction, la publication et les rappels, y compris les nouvelles tentatives en attente. Elle ne touche pas à l'abonnement Stripe. Le motif reste interne : le client ne peut le lire ni en base ni dans son journal.
+   - **Relancer une publication** : seulement si l'échec est certain (`not_created`). Une issue incertaine n'est jamais relancée d'ici, car le post existe peut-être déjà sur LinkedIn. Sont aussi refusés : un créneau passé depuis plus de 48 heures, un événement passé, un marqueur présent, un compte à reconnecter ou en publication manuelle.
+   - **Relancer une rédaction** : seulement si la dernière rédaction hebdomadaire a échoué, sans autre rédaction en cours ou demandée, et avec un droit à rédiger.
+   - **Suivre les démos** : statut, note, personne qui suit, et nouvel envoi d'une transmission en échec.
+
 ## Conséquences
 
 - **Mise en service** : ajouter les personnes de SimplX avec `admin:add`. À leur première visite, elles activent la double authentification.

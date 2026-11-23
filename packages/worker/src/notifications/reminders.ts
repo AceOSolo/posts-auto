@@ -10,6 +10,7 @@
  */
 import { DEFAULT_WORKSPACE_CALENDAR, isoWeekBounds, localDate, toLocal } from '@posts-auto/core';
 import { type Database, type Tx, asSystem } from '@posts-auto/db';
+import { workspaceNotSuspended } from '@posts-auto/services';
 import { sql } from 'kysely';
 import { notify } from './recipients.ts';
 
@@ -50,6 +51,7 @@ export async function runValidationReminders(deps: RemindersDeps): Promise<Remin
       .where('p.scheduled_at', '<=', new Date(now.getTime() + 24 * HOUR))
       .where('w.status', '=', 'active')
       .where('o.status', 'in', ['active', 'past_due'])
+      .where(workspaceNotSuspended('p.workspace_id'))
       .forUpdate('p')
       .skipLocked()
       .execute();
@@ -79,7 +81,7 @@ export async function runValidationReminders(deps: RemindersDeps): Promise<Remin
     }
 
     // Récapitulatif du lundi matin, dans le fuseau de chaque espace.
-    const workspaces = await trx.selectFrom('workspaces').select(['id', 'timezone']).where('status', '=', 'active').execute();
+    const workspaces = await trx.selectFrom('workspaces').select(['id', 'timezone']).where('status', '=', 'active').where(workspaceNotSuspended('workspaces.id')).execute();
     for (const workspace of workspaces) {
       const calendar = { ...DEFAULT_WORKSPACE_CALENDAR, timeZone: workspace.timezone };
       const local = toLocal(now, calendar);

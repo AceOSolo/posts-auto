@@ -11,7 +11,7 @@
 import { ModelError, PROMPT_VERSION, renderBrief, writePost } from '@posts-auto/ai';
 import { addMinutes, firstFreeSlot, isSlotFree } from '@posts-auto/core';
 import { asSystem, weekStartOf } from '@posts-auto/db';
-import { allowanceForWorkspace, currentEditorialLine, offerItems } from '@posts-auto/services';
+import { allowanceForWorkspace, currentEditorialLine, offerItems, workspaceNotSuspended } from '@posts-auto/services';
 import { notify } from '../notifications/recipients.ts';
 import { storeVisual } from '../visuals/prepare.ts';
 import { openVisualSession, photoPlan, tryPrepareVisual } from '../visuals/session.ts';
@@ -44,6 +44,8 @@ export async function runRequestTick(deps: GenerationDeps): Promise<RequestTickR
       .selectFrom('post_requests')
       .select(['id'])
       .where((eb) => eb.or([eb('status', '=', 'new'), eb.and([eb('status', '=', 'in_progress'), eb('lease_until', '<', now)])]))
+      // Suspension de l'éditeur : les demandes attendent la réactivation, sans être perdues.
+      .where(workspaceNotSuspended('post_requests.workspace_id'))
       .orderBy('created_at')
       .limit(BATCH)
       .forUpdate()

@@ -23,6 +23,7 @@ import {
 import { type DB, type Database, type Tx, asUser, calendarOf, slotRulesOf, weekStartOf } from '@posts-auto/db';
 import type { Updateable } from 'kysely';
 import { type Access, canEditPost, canReschedulePost, loadAccess } from '../access.ts';
+import { isOrgSuspended } from '../admin/suspension.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 
 const MAX_BODY_LENGTH = 3000;
@@ -327,6 +328,8 @@ export async function retryPublication(db: Database, userId: string, postId: str
   return asUser(db, userId, async (trx) => {
     const post = await loadPost(trx, postId);
     const access = await loadAccess(trx, userId, post.workspace_id, post.account_id);
+    const workspace = await trx.selectFrom('workspaces').select('org_id').where('id', '=', post.workspace_id).executeTakeFirstOrThrow();
+    if (await isOrgSuspended(trx, workspace.org_id)) throw new RefusedError('organisation_suspendue', 'Le service est suspendu : la publication est arrêtée.');
     const status = await applyAndRecord(trx, post, access, { type: 'retry' }, now, {
       publish_retries_left: 3,
       next_publish_attempt_at: now,

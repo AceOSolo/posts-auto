@@ -6,6 +6,7 @@ import { DEFAULT_WORKSPACE_CALENDAR, startOfLocalMonth } from '@posts-auto/core'
 import { type Database, asSystem } from '@posts-auto/db';
 import { sql } from 'kysely';
 import { NotFoundError } from '../errors.ts';
+import { type OrgSuspension, activeSuspension } from './interventions.ts';
 import { requirePlatformAdmin } from './platform.ts';
 
 export type PaymentState = 'pilote' | 'essai' | 'essai_termine' | 'a_jour' | 'impaye' | 'suspendu' | 'resilie' | 'paiement_non_abouti';
@@ -18,6 +19,8 @@ export interface OrganizationRow {
   readonly planName: string | null;
   readonly interval: 'month' | 'year' | null;
   readonly paymentState: PaymentState;
+  /** Suspension décidée par l'éditeur, indépendante du paiement. */
+  readonly editorSuspended: boolean;
   readonly pastDueSince: Date | null;
   readonly workspaces: number;
   readonly activeAccounts: number;
@@ -71,6 +74,7 @@ export async function listOrganizations(db: Database, adminId: string, now: Date
         'p.name as plan_name',
         'p.price_monthly_cents',
         'p.price_yearly_cents',
+        sql<boolean>`exists (select 1 from org_suspensions os where os.org_id = o.id and os.lifted_at is null)`.as('editor_suspended'),
         sql<number>`(select count(*)::int from workspaces w where w.org_id = o.id)`.as('workspaces'),
         sql<number>`(select count(*)::int from social_accounts a join workspaces w on w.id = a.workspace_id where w.org_id = o.id and a.status in ('connected', 'expiring', 'expired'))`.as('accounts'),
         sql<number>`(select count(*)::int from ai_usage u join workspaces w on w.id = u.workspace_id where w.org_id = o.id and u.kind = 'text' and u.counted_in_quota and u.at >= ${monthStart})`.as('posts'),
@@ -97,6 +101,7 @@ export async function listOrganizations(db: Database, adminId: string, now: Date
         planName: r.plan_name,
         interval: (r.billing_interval as 'month' | 'year' | null) ?? null,
         paymentState: state,
+        editorSuspended: r.editor_suspended,
         pastDueSince: r.past_due_since,
         workspaces: r.workspaces,
         activeAccounts: r.accounts,
@@ -117,6 +122,9 @@ export interface OrganizationDetail {
   readonly status: string;
   readonly createdAt: Date;
   readonly trialEndsAt: Date | null;
+  /** En essai, sans abonnement qui ait pris le relais : l'essai peut être prolongé. */
+  readonly canExtendTrial: boolean;
+  readonly suspension: OrgSuspension | null;
   readonly stripeCustomerId: string | null;
   readonly subscription: { readonly planName: string; readonly status: string; readonly interval: string; readonly quantity: number; readonly periodEnd: Date; readonly cancelAtPeriodEnd: boolean } | null;
   readonly workspaces: readonly { readonly id: string; readonly name: string; readonly accounts: number; readonly published30d: number; readonly pending: number }[];
@@ -179,6 +187,8 @@ export async function organizationDetail(db: Database, adminId: string, orgId: s
       status: org.status,
       createdAt: org.created_at,
       trialEndsAt: org.trial_ends_at,
+      canExtendTrial: org.trial_ends_at !== null && (sub === undefined || sub.status === 'incomplete'),
+      suspension: await activeSuspension(trx, orgId),
       stripeCustomerId: org.stripe_customer_id,
       subscription:
         sub === undefined

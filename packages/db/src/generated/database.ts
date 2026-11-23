@@ -222,10 +222,14 @@ export interface DemoRequests {
   forward_error: string | null;
   forwarded_at: Timestamp | null;
   full_name: string;
+  handled_at: Timestamp | null;
+  handled_by: string | null;
   id: Generated<string>;
   message: string | null;
+  note: string | null;
   phone: string | null;
   requested_ip: string | null;
+  status: Generated<string>;
 }
 
 export interface EditorialLines {
@@ -435,6 +439,16 @@ export interface OrgMembers {
   org_id: string;
   role: string;
   user_id: string;
+}
+
+export interface OrgSuspensions {
+  id: Generated<string>;
+  lifted_at: Timestamp | null;
+  lifted_by: string | null;
+  org_id: string;
+  reason: string;
+  suspended_at: Generated<Timestamp>;
+  suspended_by: string | null;
 }
 
 export interface PageConnections {
@@ -942,6 +956,7 @@ export interface DB {
   notifications: Notifications;
   offer_items: OfferItems;
   org_members: OrgMembers;
+  org_suspensions: OrgSuspensions;
   organizations: Organizations;
   page_connections: PageConnections;
   planning_cells: PlanningCells;

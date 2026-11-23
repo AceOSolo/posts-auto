@@ -4,10 +4,17 @@ import {
   RefusedError,
   createAnnouncement,
   endAnnouncement,
+  extendTrial,
   openSupportSession,
+  reactivateOrganization,
+  relaunchGeneration,
+  retryDemoForward,
+  retryPublicationAsSupport,
   saveGalleryEntry,
   saveSiteTestimonial,
   setGalleryEntryActive,
+  suspendOrganization,
+  updateDemoRequest,
   updatePlatformSettings,
 } from '@posts-auto/services';
 import { revalidatePath } from 'next/cache';
@@ -15,6 +22,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '../../../server/admin.ts';
 import { database } from '../../../server/context.ts';
+import { demoNotifier } from '../../../server/demo.ts';
 import { setSessionCookie } from '../../../server/session.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -99,6 +107,66 @@ export async function openSupportSessionAction(grantId: string): Promise<void> {
     else throw error;
   }
   redirect(target);
+}
+
+/** Adresse de la fiche d'une organisation ; identifiant vérifié avant de s'en servir. */
+function organizationPage(orgId: string): string {
+  if (!UUID.test(orgId)) redirect('/admin');
+  return `/admin/organisations/${orgId}`;
+}
+
+export async function extendTrialAction(orgId: string, form: FormData): Promise<void> {
+  await run(organizationPage(orgId), async (adminId, now) => {
+    await extendTrial(database(), adminId, orgId, Number(form.get('jours')), now);
+    return 'essai-prolonge';
+  });
+}
+
+export async function suspendOrganizationAction(orgId: string, form: FormData): Promise<void> {
+  await run(organizationPage(orgId), async (adminId, now) => {
+    await suspendOrganization(database(), adminId, orgId, String(form.get('motif') ?? ''), now);
+    return 'organisation-suspendue';
+  });
+}
+
+export async function reactivateOrganizationAction(orgId: string): Promise<void> {
+  await run(organizationPage(orgId), async (adminId, now) => {
+    await reactivateOrganization(database(), adminId, orgId, now);
+    return 'organisation-reactivee';
+  });
+}
+
+export async function retryPublicationAction(postId: string): Promise<void> {
+  await run('/admin/supervision', async (adminId, now) => {
+    if (!UUID.test(postId)) throw new RefusedError('publication_plus_en_erreur', 'Post inconnu.');
+    await retryPublicationAsSupport(database(), adminId, postId, now);
+    return 'publication-relancee';
+  });
+}
+
+export async function relaunchGenerationAction(workspaceId: string): Promise<void> {
+  await run('/admin/supervision', async (adminId, now) => {
+    if (!UUID.test(workspaceId)) throw new RefusedError('rien_a_relancer', 'Espace inconnu.');
+    await relaunchGeneration(database(), adminId, workspaceId, now);
+    return 'redaction-relancee';
+  });
+}
+
+/** SIT-02 : suivi des demandes de démonstration. */
+export async function updateDemoAction(id: string, form: FormData): Promise<void> {
+  await run('/admin/site', async (adminId, now) => {
+    if (!UUID.test(id)) throw new RefusedError('demande_demo_inconnue', 'Demande introuvable.');
+    await updateDemoRequest(database(), adminId, id, { status: String(form.get('statut') ?? ''), note: String(form.get('note') ?? '') }, now);
+    return 'demo-suivie';
+  });
+}
+
+export async function retryDemoForwardAction(id: string): Promise<void> {
+  await run('/admin/site', async (adminId) => {
+    if (!UUID.test(id)) throw new RefusedError('demande_demo_inconnue', 'Demande introuvable.');
+    await retryDemoForward(database(), adminId, demoNotifier(), id);
+    return 'demo-transmise';
+  });
 }
 
 /** SIT-08 : témoignage client du site vitrine. */

@@ -13,7 +13,7 @@
 import { ModelError, PROMPT_VERSION, type PostBrief, type TextModel, renderBrief, writePost } from '@posts-auto/ai';
 import { type Assignment, type Subject, allocateSubjects, isoWeekNumber, lastCronOccurrence, parseCron } from '@posts-auto/core';
 import { type Database, type Tx, asSystem, weekStartOf } from '@posts-auto/db';
-import { allowanceForWorkspace } from '@posts-auto/services';
+import { allowanceForWorkspace, workspaceNotSuspended } from '@posts-auto/services';
 import type { ImageGenerator } from '@posts-auto/visuals';
 import type { MediaStore } from '../media/media-store.ts';
 import { notify } from '../notifications/recipients.ts';
@@ -464,6 +464,7 @@ export async function dueWorkspaces(db: Database, now: Date): Promise<string[]> 
           .as('last_run'),
       ])
       .where('w.status', '=', 'active')
+      .where(workspaceNotSuspended('w.id'))
       .execute(),
   );
   const due: string[] = [];

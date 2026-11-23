@@ -19,6 +19,7 @@ const MODE_LABELS: Record<BillingMode, string> = {
   trial_over: 'Pas d’abonnement en cours : la rédaction est arrêtée, les posts déjà validés partent toujours.',
   subscribed: 'Abonnement en cours.',
   suspended: 'Abonnement suspendu pour impayé : ni rédaction ni publication jusqu’au règlement.',
+  editor_suspended: 'Service suspendu par l’éditeur.',
 };
 const STATUS_LABELS: Record<string, string> = { active: 'actif', past_due: 'paiement en échec', unpaid: 'impayé', canceled: 'résilié', incomplete: 'paiement non abouti' };
 const FEATURE_LABELS: Record<string, string> = {

@@ -1,9 +1,9 @@
-import { listDemoRequests, siteTestimonial } from '@posts-auto/services';
+import { DEMO_STATUSES, listDemoRequests, siteTestimonial } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import { Flash } from '../../../../components/flash.tsx';
 import { requireAdmin } from '../../../../server/admin.ts';
 import { database } from '../../../../server/context.ts';
-import { saveTestimonialAction } from '../actions.ts';
+import { retryDemoForwardAction, saveTestimonialAction, updateDemoAction } from '../actions.ts';
 
 export const metadata: Metadata = { title: 'Site vitrine' };
 export const dynamic = 'force-dynamic';
@@ -35,6 +35,7 @@ export default async function SiteAdminPage({ searchParams }: { searchParams: Pr
                   <th scope="col">Comptes</th>
                   <th scope="col">Message</th>
                   <th scope="col">Transmise</th>
+                  <th scope="col">Suivi</th>
                 </tr>
               </thead>
               <tbody>
@@ -48,7 +49,39 @@ export default async function SiteAdminPage({ searchParams }: { searchParams: Pr
                     </td>
                     <td>{r.accounts ?? '—'}</td>
                     <td>{r.message ?? '—'}</td>
-                    <td>{r.forwardedAt ? 'oui' : r.forwardError ? `échec : ${r.forwardError}` : 'non'}</td>
+                    <td>
+                      {r.forwardedAt ? 'oui' : r.forwardError ? `échec : ${r.forwardError}` : 'non'}
+                      {!r.forwardedAt && (
+                        <form action={retryDemoForwardAction.bind(null, r.id)} className="inline-fields">
+                          <button type="submit">Renvoyer</button>
+                        </form>
+                      )}
+                    </td>
+                    <td>
+                      <form action={updateDemoAction.bind(null, r.id)} className="stack">
+                        <label>
+                          Statut
+                          <select name="statut" defaultValue={r.status}>
+                            {Object.entries(DEMO_STATUSES).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Note
+                          <textarea name="note" rows={2} maxLength={1000} defaultValue={r.note ?? ''} />
+                        </label>
+                        <button type="submit">Enregistrer</button>
+                      </form>
+                      {r.handledAt && (
+                        <p className="hint">
+                          {date.format(r.handledAt)}
+                          {r.handledBy && <> · {r.handledBy}</>}
+                        </p>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

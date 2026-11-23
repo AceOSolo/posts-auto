@@ -125,12 +125,59 @@ export async function listDemoRequests(db: Database, adminId: string) {
   await requirePlatformAdmin(db, adminId);
   return asSystem(db, (trx) =>
     trx
-      .selectFrom('demo_requests')
-      .select(['id', 'full_name as fullName', 'company', 'email', 'phone', 'accounts', 'message', 'forwarded_at as forwardedAt', 'forward_error as forwardError', 'created_at as createdAt'])
-      .orderBy('created_at', 'desc')
+      .selectFrom('demo_requests as d')
+      .leftJoin('users as u', 'u.id', 'd.handled_by')
+      .select([
+        'd.id',
+        'd.full_name as fullName',
+        'd.company',
+        'd.email',
+        'd.phone',
+        'd.accounts',
+        'd.message',
+        'd.forwarded_at as forwardedAt',
+        'd.forward_error as forwardError',
+        'd.created_at as createdAt',
+        'd.status',
+        'd.note',
+        'd.handled_at as handledAt',
+        'u.email as handledBy',
+      ])
+      .orderBy('d.created_at', 'desc')
       .limit(100)
       .execute(),
   );
+}
+
+/** Suivi commercial d'une demande de démonstration. */
+export const DEMO_STATUSES = { nouvelle: 'Nouvelle', contactee: 'Contactée', demo_faite: 'Démo faite', gagnee: 'Gagnée', perdue: 'Perdue' } as const;
+export type DemoStatus = keyof typeof DEMO_STATUSES;
+
+/** Une demande n'est liée à aucun client : la personne et la date sont gardées sur la demande. */
+export async function updateDemoRequest(db: Database, adminId: string, id: string, input: { readonly status: string; readonly note: string }, now: Date): Promise<void> {
+  await requirePlatformAdmin(db, adminId);
+  if (!Object.hasOwn(DEMO_STATUSES, input.status)) throw new RefusedError('statut_demo_invalide', 'Statut inconnu.');
+  const note = input.note.trim();
+  if (note.length > 1000) throw new RefusedError('note_demo_trop_longue', 'La note fait 1 000 caractères au plus.');
+  const updated = await asSystem(db, (trx) =>
+    trx.updateTable('demo_requests').set({ status: input.status, note: note === '' ? null : note, handled_by: adminId, handled_at: now }).where('id', '=', id).returning('id').executeTakeFirst(),
+  );
+  if (updated === undefined) throw new RefusedError('demande_demo_inconnue', 'Demande introuvable.');
+}
+
+/** Renvoie à l'éditeur (e-mail, CRM) une demande dont la transmission a échoué. */
+export async function retryDemoForward(db: Database, adminId: string, notifier: DemoNotifier, id: string): Promise<void> {
+  await requirePlatformAdmin(db, adminId);
+  const row = await asSystem(db, (trx) => trx.selectFrom('demo_requests').select(['id', 'full_name', 'company', 'email', 'phone', 'accounts', 'message', 'forwarded_at']).where('id', '=', id).executeTakeFirst());
+  if (row === undefined) throw new RefusedError('demande_demo_inconnue', 'Demande introuvable.');
+  if (row.forwarded_at !== null) throw new RefusedError('demande_deja_transmise', 'Cette demande a déjà été transmise.');
+  try {
+    await notifier.notify({ id: row.id, fullName: row.full_name, company: row.company, email: row.email, phone: row.phone, accounts: row.accounts, message: row.message });
+  } catch (error) {
+    await asSystem(db, (trx) => trx.updateTable('demo_requests').set({ forward_error: error instanceof Error ? error.message.slice(0, 300) : 'erreur' }).where('id', '=', id).execute());
+    throw new RefusedError('transmission_demo_echouee', 'La transmission a de nouveau échoué.');
+  }
+  await asSystem(db, (trx) => trx.updateTable('demo_requests').set({ forwarded_at: new Date(), forward_error: null }).where('id', '=', id).execute());
 }
 
 export interface Testimonial {
