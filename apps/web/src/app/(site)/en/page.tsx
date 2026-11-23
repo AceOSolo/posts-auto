@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   robots: { index: true, follow: true },
   alternates: { canonical: '/en', languages: { fr: '/', en: '/en' } },
-  openGraph: { title: TITLE, description: DESCRIPTION, type: 'website', locale: 'en_GB', siteName: 'Rostra' },
+  openGraph: { title: TITLE, description: DESCRIPTION, type: 'website', locale: 'en_GB', siteName: 'Rostra', url: '/en', images: [{ url: '/opengraph-image.png', width: 1200, height: 630, alt: 'Rostra: your whole team takes the floor on LinkedIn.' }] },
 };
 
 const FAQ: readonly { q: string; a: string }[] = [

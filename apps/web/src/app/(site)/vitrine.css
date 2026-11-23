@@ -1,0 +1,176 @@
+/*
+ * Pages du site vitrine : accueil, tarifs, PME et ETI, agences, confiance.
+ * Charte Rostra v1.0 : la mosaïque (tesselles, joints sombres), pensée d'abord pour le téléphone.
+ */
+.site main.vitrine { max-width: none; padding: 0; }
+.vitrine .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+.vitrine section { border-top: 0; }
+.site .vitrine section.bloc { padding: 72px 0; border-top: 0; }
+.site .vitrine section.bloc h2 { max-width: 22ch; margin-bottom: 14px; }
+.vitrine .chapo { font-size: 1.15rem; color: var(--muted); max-width: 44rem; margin: 0 0 34px; }
+.vitrine .bloc.teinte { background: var(--surface-2); }
+.vitrine .bloc.blanc { background: var(--surface); }
+
+/* Frise de tesselles */
+.frise { display: block; width: 100%; height: 22px; background: var(--nuit); }
+.frise .t-rose { fill: var(--rose); }
+.frise .t-soleil { fill: var(--soleil); }
+.frise .t-vert { fill: var(--vert); }
+.frise .t-nuit { fill: #3a3560; }
+.frise .t-marbre { fill: var(--marbre); }
+
+/* Accueil : promesse et preuves */
+.vitrine .hero { padding: 44px 0 36px; }
+.vitrine .hero h1 { margin-bottom: 30px; }
+@media (max-width: 899px) { .vitrine .post-card { left: 0; width: 100%; } }
+.preuves { list-style: none; margin: 0; padding: 22px 0; display: grid; gap: 14px 28px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.preuves li { display: flex; gap: 12px; align-items: flex-start; font-weight: 600; line-height: 1.3; }
+.preuves small { display: block; font-weight: 400; color: var(--muted); margin-top: 2px; font-size: 0.88rem; }
+.tessere { flex: none; width: 16px; height: 16px; margin-top: 3px; border-radius: 3px; background: var(--primary); transform: rotate(6deg); }
+li:nth-child(3n+2) > .tessere { background: var(--highlight); transform: rotate(-5deg); }
+li:nth-child(3n) > .tessere { background: var(--vert); transform: rotate(3deg); }
+
+/* Le problème, et ce qui change */
+.duos { display: grid; gap: 18px; list-style: none; padding: 0; margin: 0; }
+.duos > li { display: grid; border: 2px solid var(--border-strong); border-radius: 22px; overflow: hidden; background: var(--surface); }
+.site .vitrine .duos h3 { font-family: var(--font-title); font-weight: 400; font-size: 1.25rem; line-height: 1.2; }
+.duos .avant, .duos .apres { padding: 20px 22px; }
+.duos .avant p, .duos .apres p { margin: 0; }
+.duos .avant p { color: var(--muted); }
+.duos .apres { background: var(--vert-brume); color: var(--nuit); }
+.duos .apres strong { display: block; margin-bottom: 4px; color: var(--vert-fonce); }
+@media (prefers-color-scheme: dark) {
+  .duos .apres { background: var(--success-bg); color: var(--success-text); }
+  .duos .apres strong { color: #7ee0c6; }
+}
+@media (min-width: 820px) { .duos > li { grid-template-columns: 1fr 1fr; } }
+
+/* Déroulé d'une semaine */
+.semaine { list-style: none; margin: 36px 0 0; padding: 0; display: grid; gap: 0; }
+.semaine li { display: grid; grid-template-columns: 112px 1fr; gap: 16px; padding: 14px 0; border-top: 2px solid var(--border); }
+.semaine li:last-child { border-bottom: 2px solid var(--border); }
+.semaine .quand { font-family: var(--font-title); font-size: 1.05rem; line-height: 1.25; color: var(--primary); }
+.semaine p { margin: 0; color: var(--muted); }
+.semaine strong { color: var(--text); }
+
+/* Produit : texte et écran côte à côte */
+.ecrans { display: grid; gap: 56px; }
+.ecran { display: grid; gap: 24px; align-items: center; }
+.site .vitrine .ecran h3 { font-family: var(--font-title); font-weight: 400; font-size: clamp(1.4rem, 3vw, 1.9rem); line-height: 1.12; margin: 0 0 10px; }
+.ecran p { color: var(--muted); margin: 0 0 12px; }
+.coches { list-style: none; padding: 0; margin: 0; }
+.coches li { position: relative; padding: 4px 0 4px 26px; }
+.coches li::before { content: ''; position: absolute; left: 2px; top: 11px; width: 12px; height: 12px; border-radius: 3px; background: var(--vert); transform: rotate(5deg); }
+@media (min-width: 900px) {
+  .ecran { grid-template-columns: 1fr 1fr; gap: 56px; }
+  .ecran:nth-child(even) > .maquette { order: -1; }
+}
+.maquette { background: var(--surface); border: 3px solid var(--border-strong); border-radius: 22px; padding: 16px; min-width: 0; font-size: 0.92rem; }
+.maquette figcaption, .maquette .legende { color: var(--muted); font-size: 0.8rem; margin-top: 10px; }
+.maquette .tete { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.maquette .tete .badge { margin-left: auto; }
+.maquette .tete b { display: block; line-height: 1.2; }
+.maquette .tete small { color: var(--muted); }
+.maquette .boutons { display: flex; gap: 8px; margin-top: 12px; }
+.maquette .boutons span { flex: 1; text-align: center; padding: 7px 8px; border-radius: 999px; border: 2px solid var(--border-strong); font-weight: 700; }
+.maquette .boutons .off { border-style: dashed; border-color: var(--muted); color: var(--muted); }
+.grille { display: grid; grid-template-columns: 74px repeat(3, minmax(0, 1fr)); gap: 5px; font-size: 0.78rem; }
+.grille > * { padding: 6px; border-radius: 6px; min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.grille .th { font-weight: 700; padding-left: 0; }
+.grille .a-valider { background: var(--warning-bg); color: var(--warning-text); }
+.grille .valide { background: var(--info-bg); color: var(--info-text); }
+.grille .publie { background: var(--success-bg); color: var(--success-text); }
+.lignes { list-style: none; margin: 0; padding: 0; }
+.lignes li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+.lignes li:first-child { border-top: 0; }
+
+/* Garde-fous : bandeau de nuit */
+.vitrine .bloc.nuit {
+  --text: var(--marbre); --muted: #c9c3e6; --border: #3e3866; --surface: #2b2655; --link: #ff9dbb;
+  background: var(--nuit); color: var(--marbre);
+}
+@media (prefers-color-scheme: dark) { .vitrine .bloc.nuit { background: #0f0d22; } }
+.gardes { list-style: none; padding: 0; margin: 0; display: grid; gap: 28px 40px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.gardes li { display: flex; gap: 14px; }
+.gardes h3 { margin: 0 0 4px; color: var(--marbre); }
+.gardes p { margin: 0; color: var(--muted); }
+.bloc.nuit .marker { color: var(--nuit); }
+
+/* Cartes : publics, fonctionnalités, contenus */
+.cartes { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.cartes > li { background: var(--surface); border: 2px solid var(--border-strong); border-radius: 22px; padding: 22px; display: flex; flex-direction: column; }
+.site .vitrine .cartes h3 { font-family: var(--font-title); font-weight: 400; font-size: 1.3rem; line-height: 1.15; margin: 0 0 8px; }
+.cartes p { margin: 0 0 12px; color: var(--muted); }
+.cartes a { margin-top: auto; font-weight: 700; }
+.vitrine .feature-grid { gap: 8px 32px; }
+
+/* Tarifs */
+.plans { list-style: none; padding: 0; margin: 0 0 40px; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.plans > li { display: flex; flex-direction: column; background: var(--surface); border: 2px solid var(--border-strong); border-radius: 22px; padding: 24px; }
+.plans > li:nth-child(2) { background: var(--soleil-brume); color: var(--nuit); --muted: var(--nuit-douce); --text: var(--nuit); --border-strong: var(--nuit); --surface: var(--blanc); }
+.site .vitrine .plans h3 { font-family: var(--font-title); font-weight: 400; font-size: 1.5rem; margin: 0 0 4px; }
+.plans .price { font-family: var(--font-title); font-size: 1.7rem; line-height: 1.15; margin: 0; }
+.plans .price small { font-family: var(--font-text); font-size: 0.85rem; font-weight: 600; }
+.plans > li > ul { padding-left: 18px; margin: 14px 0 20px; flex: 1; }
+.plans > li > ul li { margin: 4px 0; }
+.plans .button { width: 100%; }
+.simulator { background: var(--surface); border: 2px solid var(--border-strong); border-radius: 22px; padding: 22px; }
+.simulator .inline-fields { flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 14px; }
+.simulator label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 130px; }
+.simulator input { width: 100%; }
+.simulator table { width: 100%; }
+.site .vitrine .simulator h3 { font-family: var(--font-title); font-weight: 400; font-size: 1.4rem; margin-bottom: 12px; }
+.comparatif { margin-top: 8px; }
+.comparatif table { width: 100%; }
+.comparatif td, .comparatif thead th:not(:first-child) { text-align: center; }
+
+/* Questions fréquentes */
+.faq-list { max-width: 50rem; display: grid; gap: 10px; }
+.faq-list details { background: var(--surface); border: 2px solid var(--border-strong); border-radius: 16px; padding: 4px 18px; }
+.faq-list summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; padding: 8px 0; }
+.faq-list p { margin: 0 0 14px; color: var(--muted); }
+
+/* Pages de contenu */
+.intro { background: var(--surface); }
+.intro .wrap { padding-top: 40px; padding-bottom: 44px; }
+.intro h1 { display: block; font-size: clamp(2.2rem, 6vw, 3.8rem); line-height: 1.04; max-width: 20ch; margin: 10px 0 18px; }
+.intro .lead { font-size: 1.2rem; color: var(--muted); max-width: 42rem; margin: 0; }
+.intro .actions { margin-top: 24px; }
+.crumbs { font-size: 0.9rem; color: var(--muted); }
+.crumbs a { color: var(--muted); }
+
+/* Démonstration et dernier appel */
+.demo-grille { display: grid; gap: 32px; }
+@media (min-width: 900px) { .demo-grille { grid-template-columns: 1fr 1.1fr; gap: 56px; } }
+.vitrine .bloc.final { background: var(--rose); color: var(--blanc); text-align: center; }
+.vitrine .bloc.final h2 { margin-left: auto; margin-right: auto; }
+.vitrine .bloc.final p { max-width: 38rem; margin: 0 auto; }
+.vitrine .bloc.final .actions { justify-content: center; margin-top: 24px; }
+.vitrine .bloc.final .button { background: var(--blanc); color: var(--nuit); border-color: var(--blanc); }
+.vitrine .bloc.final .button.primary { background: var(--nuit); color: var(--blanc); border-color: var(--nuit); }
+.vitrine .bloc.final .button.primary:hover { background: #2f2a5c; border-color: #2f2a5c; color: var(--blanc); }
+.vitrine .bloc.final .hint { color: var(--blanc); margin-top: 12px; }
+@media (prefers-color-scheme: dark) { .vitrine .bloc.final { background: #b0154c; } }
+
+/* Téléphone : une page plus courte, des étapes en lignes */
+@media (max-width: 760px) {
+  .site .vitrine section.bloc { padding: 48px 0; }
+  .vitrine .steps-list { gap: 10px; }
+  .vitrine .steps-list li { display: grid; grid-template-columns: 56px 1fr; column-gap: 14px; padding: 14px; transform: none; }
+  .vitrine .steps-list li:nth-child(n) { transform: none; }
+  .vitrine .steps-list img { grid-row: span 2; width: 56px; height: 56px; margin: 0; }
+  .semaine li { grid-template-columns: 88px 1fr; gap: 10px; }
+  .ecrans { gap: 40px; }
+}
+
+/* En-tête et pied de page */
+.site-header { position: sticky; top: 0; z-index: 5; }
+@media (max-width: 760px) {
+  .site-header { position: static; }
+  .site-header nav { gap: 6px 14px; font-size: 0.92rem; }
+  .site-header .nav-large { display: none; }
+}
+.site-footer .footer-colonnes { display: grid; gap: 22px 32px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 24px; }
+.site-footer .footer-colonnes nav { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.site-footer .footer-colonnes h2 { font-family: var(--font-text); font-size: 0.95rem; font-weight: 700; margin: 0 0 8px; color: var(--soleil); }
+.site-footer .footer-colonnes a { min-height: 24px; }

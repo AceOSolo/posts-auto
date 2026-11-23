@@ -6,6 +6,6 @@ export const dynamic = 'force-dynamic';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = appUrl();
-  const pages = ['', '/en', '/inscription', '/comment-fonctionne-la-redaction', '/mentions-legales', '/cgu', '/cgv', '/confidentialite', '/cookies', '/sous-traitants'];
+  const pages = ['', '/tarifs', '/pme-eti', '/agences', '/confiance', '/en', '/inscription', '/comment-fonctionne-la-redaction', '/mentions-legales', '/cgu', '/cgv', '/confidentialite', '/cookies', '/sous-traitants'];
   return pages.map((path) => ({ url: `${base}${path || '/'}`, changeFrequency: path === '' ? 'weekly' : 'monthly', priority: path === '' ? 1 : 0.5 }));
 }

@@ -43,6 +43,17 @@ test.describe('site vitrine (SIT-01 à SIT-09)', () => {
     await expectAccessible(page);
   });
 
+  test('pages tarifs, PME et ETI, agences, confiance : indexables, accessibles, sans défilement horizontal', async ({ page }) => {
+    for (const path of ['/tarifs', '/pme-eti', '/agences', '/confiance']) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', new RegExp(`${path}$`));
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /^index/);
+      await expectNoHorizontalScroll(page);
+      await expectAccessible(page);
+    }
+  });
+
   test('connexion et inscription : formulaires accessibles', async ({ page }) => {
     await page.goto('/connexion');
     await expect(page.getByLabel('Adresse e-mail professionnelle')).toBeVisible();
