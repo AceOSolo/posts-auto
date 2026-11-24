@@ -72,7 +72,7 @@ export default async function ApprovalPage({
     <main>
       <h1>Valider ce post ?</h1>
       <p className="departure">{preview.departure}</p>
-      <PostPreview accountName={preview.accountName} accountKind="profile" body={preview.body} media={[]} expanded />
+      <PostPreview accountName={preview.accountName} accountKind={preview.accountKind} body={preview.body} media={preview.media} mediaBase={`/valider/${token}/media`} expanded />
       <p className="ai-note">Texte préparé avec l’aide de l’IA : vérifiez les faits, chiffres et noms avant de valider.</p>
       {!preview.pending ? (
         <p className="flash error">{RESULTS['deja_traite']}</p>

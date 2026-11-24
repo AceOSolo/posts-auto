@@ -28,9 +28,11 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
 
   return (
     <main className="narrow">
-      <p>
-        <Link href="/">← Retour</Link>
-      </p>
+      {!status.overdue && (
+        <p className="back-link">
+          <Link href="/moi">← Mon compte</Link>
+        </p>
+      )}
       <h1>Double authentification</h1>
       <Flash code={message} />
       <p>

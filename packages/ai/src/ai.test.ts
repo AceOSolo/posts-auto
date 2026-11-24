@@ -5,7 +5,7 @@ import { AnthropicModel, toModelError } from './anthropic-model.ts';
 import { FakeModel, type FakeHandler } from './fake-model.ts';
 import { asDocument, detectInjection, neutralizeTags } from './injection.ts';
 import { interpretRequest } from './interpreter.ts';
-import { ModelError } from './model.ts';
+import { ModelError, isModelConfigured } from './model.ts';
 import { costUsd } from './pricing.ts';
 import { type AccountContextInput, renderAccountContext, renderBrief, renderReworkBrief } from './prompts.ts';
 import { DraftSchema, type WriteRequest, withReviewMarker, writePost } from './writer.ts';
@@ -197,10 +197,19 @@ describe('modèle simulé', () => {
     await expect(writePost(new FakeModel(() => ({ texte: 'x' })), request())).rejects.toThrow();
   });
 
-  it('sans clé, l’environnement donne le modèle simulé', () => {
-    expect(modelFromEnv({}).provider).toBe('simulation');
-    expect(modelFromEnv({ AI_MODE: 'anthropic' }).provider).toBe('simulation');
+  it('le modèle simulé doit être demandé explicitement', () => {
+    expect(modelFromEnv({ AI_MODE: 'fake' }).provider).toBe('simulation');
     expect(modelFromEnv({ AI_MODE: 'anthropic', ANTHROPIC_API_KEY: 'sk-test', AI_MODEL: 'claude-sonnet-5-5' }).model).toBe('claude-sonnet-5-5');
+  });
+
+  it('sans clé, aucun texte simulé : chaque appel échoue sans nouvel essai', async () => {
+    const environments = [{}, { AI_MODE: 'anthropic' }, { AI_MODE: 'anthropic', ANTHROPIC_API_KEY: '  ' }, { AI_MODE: 'autre', ANTHROPIC_API_KEY: 'sk-test' }];
+    for (const env of environments) {
+      const model = modelFromEnv(env);
+      expect(isModelConfigured(model)).toBe(false);
+      await expect(writePost(model, request())).rejects.toMatchObject({ name: 'ModelError', code: 'rejected', retryable: false });
+    }
+    expect(isModelConfigured(modelFromEnv({ AI_MODE: 'fake' }))).toBe(true);
   });
 });
 

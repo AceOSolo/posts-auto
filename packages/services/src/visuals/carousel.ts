@@ -10,6 +10,7 @@ import { galleryTemplates, renderTemplate } from '@posts-auto/visuals';
 import { PDFDocument } from 'pdf-lib';
 import { canEditPost, loadAccess } from '../access.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
+import { editablePost } from '../posts/post-media.ts';
 import { loadBranding } from './branding.ts';
 
 export const CAROUSEL_MAX_PAGES = 10;
@@ -71,6 +72,8 @@ export async function makeCarousel(db: Database, media: CarouselMedia, userId: s
   const assetId = randomUUID();
   const storageKey = `${post.workspace_id}/visuels/${assetId}.pdf`;
   await media.write(storageKey, bytes);
+  // RÈG-07, au dernier moment : le post a pu partir pendant la composition du PDF.
+  await asUser(db, userId, (trx) => editablePost(trx, userId, postId, now, 'Carrousel créé par une personne non déléguée : nouvelle validation nécessaire (RÈG-07)'));
   await asSystem(db, async (trx) => {
     await trx
       .insertInto('media_assets')

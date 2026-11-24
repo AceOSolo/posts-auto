@@ -56,4 +56,19 @@ describe('carrousel PDF (VIS-10)', () => {
     // Plus de visuel à points clés : un second carrousel n'est pas possible.
     await expect(makeCarousel(db, media, editor, postId, NOW)).rejects.toMatchObject({ code: 'carrousel_impossible' });
   });
+
+  it('un post validé repasse en validation si une personne non déléguée crée le carrousel (RÈG-07)', async () => {
+    const accountId = await createAccount(db, workspaceId);
+    const validated = await createPost(db, workspaceId, accountId, { status: 'valide', scheduled_at: new Date('2026-12-02T10:00:00Z') });
+    await asSystem(db, async (trx) => {
+      const asset = await trx
+        .insertInto('media_assets')
+        .values({ workspace_id: workspaceId, kind: 'rendered', storage_key: `${workspaceId}/visuels/w.png`, mime: 'image/png', render_content: JSON.stringify({ title: 'Titre', subtitle: null, bullets: ['Un', 'Deux'], signature: 'S' }) })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      await trx.insertInto('post_media').values({ workspace_id: workspaceId, post_id: validated, asset_id: asset.id, position: 1 }).execute();
+    });
+    await makeCarousel(db, media, editor, validated, NOW);
+    expect(await asSystem(db, (trx) => trx.selectFrom('posts').select('status').where('id', '=', validated).executeTakeFirstOrThrow())).toEqual({ status: 'a_valider' });
+  });
 });

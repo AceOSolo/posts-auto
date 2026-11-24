@@ -3,7 +3,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Flash } from '../../../components/flash.tsx';
 import { appUrl, database } from '../../../server/context.ts';
+import { AvantApres, MiniVisuel, PlanningVivant, Tesselles } from '../scenes.tsx';
 import { FaqList, type FaqItem, FinalCta, Frise, JsonLd, OG_IMAGE, PlanCards, PriceSimulator, countParam, faqSchema } from '../vitrine.tsx';
+import { EssaiValidation, Parcours, PostVivant } from '../vivant.tsx';
 import { requestDemoAction } from './actions.ts';
 
 export const dynamic = 'force-dynamic';
@@ -27,25 +29,10 @@ const PREUVES: readonly (readonly [string, string])[] = [
   ['Hébergé dans l’Union européenne', 'Export de vos données à tout moment'],
 ];
 
-const DUOS: readonly { titre: string; avant: string; apres: string; solution: string }[] = [
-  {
-    titre: 'Le dirigeant n’a jamais le temps',
-    avant: 'Le post de la semaine attend un moment calme qui n’arrive pas. Le profil reste muet pendant des mois.',
-    solution: 'Il relit, il valide',
-    apres: 'Son post l’attend sur son téléphone, déjà écrit dans son ton. Il ne lui reste qu’à le relire.',
-  },
-  {
-    titre: 'La com’ court après les validations',
-    avant: 'Des relances par e-mail, des versions qui se croisent, un tableur à jour une semaine sur deux.',
-    solution: 'Tout est au même endroit',
-    apres: 'Une vue par semaine et par compte, et des rappels automatiques avant chaque créneau.',
-  },
-  {
-    titre: 'L’IA seule sonne faux, et peut se tromper',
-    avant: 'Des textes interchangeables, parfois un chiffre sorti de nulle part, publié sous le nom de quelqu’un.',
-    solution: 'L’IA écrit, l’humain décide',
-    apres: 'Elle suit votre ligne éditoriale et la voix de chacun. Ce qu’elle ne sait pas, elle le signale au lieu de l’inventer.',
-  },
+const POINTS: readonly (readonly [string, string])[] = [
+  ['Le dirigeant n’a plus à trouver le temps', 'Son post l’attend sur son téléphone, déjà écrit dans son ton.'],
+  ['La com’ ne court plus après personne', 'Une vue par semaine, et des rappels automatiques avant chaque créneau.'],
+  ['L’IA ne parle pas à votre place', 'Ce qu’elle ne sait pas, elle le signale au lieu de l’inventer.'],
 ];
 
 const SEMAINE: readonly (readonly [string, string, string])[] = [
@@ -56,16 +43,16 @@ const SEMAINE: readonly (readonly [string, string, string])[] = [
   ['7 jours après', 'Le bilan.', 'Les statistiques remontent et nourrissent les enseignements du mois.'],
 ];
 
-const FEATURES: readonly { title: string; text: string }[] = [
-  { title: 'Planning éditorial', text: 'Une grille comptes × semaines, vos événements et vos sujets, importable depuis un tableur ou Google Sheets.' },
-  { title: 'Voix de chaque compte', text: 'Ton, sujets à éviter, exemples à imiter : l’IA apprend des corrections de chacun, et ce qu’elle a retenu reste modifiable.' },
-  { title: 'Boîte à idées', text: 'Chacun propose ses sujets, y compris à la voix. Un article peut être décliné en trois angles de posts.' },
-  { title: 'Visuels à votre charte', text: 'Vos modèles, vos photos, ou des images générées et signalées comme telles.' },
-  { title: 'Validation sur téléphone', text: 'Valider, corriger, demander une modification ou refuser, avec l’aperçu du rendu LinkedIn.' },
-  { title: 'Délégation', text: 'Un titulaire peut désigner la personne qui valide à sa place, et chaque décision reste tracée.' },
-  { title: 'Publication automatique', text: 'Sur les profils et les pages, au créneau prévu, sans doublon.' },
-  { title: 'Slack et Microsoft Teams', text: 'Posts à valider, échecs et posts publiés annoncés dans le canal de l’équipe.' },
-  { title: 'Statistiques et rapports', text: 'Meilleurs moments pour publier, enseignements du mois et rapport PDF mensuel.' },
+const FEATURES: readonly { title: string; text: string; visuel: string }[] = [
+  { visuel: 'planning', title: 'Planning éditorial', text: 'Par compte et par semaine, importable depuis un tableur.' },
+  { visuel: 'voix', title: 'Voix de chaque compte', text: 'L’IA apprend des corrections de chacun.' },
+  { visuel: 'idees', title: 'Boîte à idées', text: 'Chacun propose ses sujets, même à la voix.' },
+  { visuel: 'visuels', title: 'Visuels à votre charte', text: 'Vos modèles, vos photos, ou des images signalées comme générées.' },
+  { visuel: 'validation', title: 'Validation sur téléphone', text: 'Valider, corriger ou refuser, avec l’aperçu LinkedIn.' },
+  { visuel: 'delegation', title: 'Délégation', text: 'Quelqu’un valide à votre place, et tout reste tracé.' },
+  { visuel: 'publication', title: 'Publication automatique', text: 'Profils et pages, au créneau prévu, sans doublon.' },
+  { visuel: 'canaux', title: 'Slack et Microsoft Teams', text: 'Les posts à valider arrivent dans le canal de l’équipe.' },
+  { visuel: 'stats', title: 'Statistiques et rapports', text: 'Meilleurs moments, enseignements et rapport PDF mensuel.' },
 ];
 
 const FAQ: readonly FaqItem[] = [
@@ -148,7 +135,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               <span className="said">
                 parole
                 <svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true">
-                  <path d="M4 16C60 6 120 20 170 11S260 6 296 14" strokeWidth="9" fill="none" strokeLinecap="round" />
+                  <path d="M4 16C60 6 120 20 170 11S260 6 296 14" pathLength={1} strokeWidth="9" fill="none" strokeLinecap="round" />
                 </svg>
               </span>{' '}
               sur LinkedIn.
@@ -166,28 +153,12 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               </a>
             </div>
             <p className="hint">Sans carte bancaire. 3 comptes LinkedIn et 10 posts pendant l’essai.</p>
-            <p className="hand" aria-hidden="true">
-              ↳ rien ne part sans leur accord
-            </p>
           </div>
-          {/* Illustration : un buste romain en mosaïque prend la parole ; un post attend sa validation. Décorative. */}
+          {/* Illustration : le buste en mosaïque prend la parole ; une même actualité s'écrit dans trois voix, puis part. Décorative. */}
           <div className="hero-art" aria-hidden="true">
+            <Tesselles nombre={12} />
             <img src="/marque/buste-mosaique.svg" alt="" width={520} height={520} fetchPriority="high" />
-            <div className="post-card">
-              <header>
-                <span className="li-avatar">CM</span>
-                <span className="who">
-                  Claire M.
-                  <small>Directrice générale · mar. 8 h 30</small>
-                </span>
-                <span className="badge status-a_valider">À valider</span>
-              </header>
-              <p>Ce que trois ans de formations sur le terrain m’ont appris : la prévention se joue avant le premier geste…</p>
-              <div className="card-actions">
-                <span className="ok">Valider</span>
-                <span>Corriger</span>
-              </div>
-            </div>
+            <PostVivant />
           </div>
         </div>
         <ul className="preuves" aria-label="Nos engagements">
@@ -207,20 +178,14 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       <section className="bloc" aria-labelledby="interet">
         <div className="wrap">
           <h2 id="interet">Être présent sur LinkedIn, sans que ça repose sur une seule personne</h2>
-          <p className="chapo">
-            Vos clients, vos candidats et vos partenaires regardent qui parle au nom de l’entreprise. Vos dirigeants et vos experts ont des choses à dire. Ce qui manque, c’est le temps et
-            l’organisation pour le faire chaque semaine.
-          </p>
-          <ul className="duos">
-            {DUOS.map((d) => (
-              <li key={d.titre}>
-                <div className="avant">
-                  <h3>{d.titre}</h3>
-                  <p>{d.avant}</p>
-                </div>
-                <div className="apres">
-                  <strong>{d.solution}</strong>
-                  <p>{d.apres}</p>
+          <AvantApres />
+          <ul className="points">
+            {POINTS.map(([titre, texte]) => (
+              <li key={titre}>
+                <span className="tessere" aria-hidden="true" />
+                <div>
+                  <h3>{titre}</h3>
+                  <p>{texte}</p>
                 </div>
               </li>
             ))}
@@ -231,29 +196,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       <section id="fonctionnement" className="bloc blanc" aria-labelledby="fonctionnement-titre">
         <div className="wrap">
           <h2 id="fonctionnement-titre">Comment ça marche</h2>
-          <p className="chapo">Quatre étapes, toujours dans le même ordre. La vôtre est la troisième : relire et décider.</p>
-          <ol className="steps-list">
-            <li>
-              <img src="/marque/etape-planning.svg" alt="" width={76} height={76} loading="lazy" />
-              <h3>1. Planning</h3>
-              <p>Vous posez vos temps forts, vos événements et vos sujets ; l’IA complète avec des idées et votre veille.</p>
-            </li>
-            <li>
-              <img src="/marque/etape-redaction.svg" alt="" width={76} height={76} loading="lazy" />
-              <h3>2. Rédaction par l’IA</h3>
-              <p>Les posts des deux semaines à venir sont rédigés dans le ton de chaque compte, avec leur visuel.</p>
-            </li>
-            <li>
-              <img src="/marque/etape-validation.svg" alt="" width={76} height={76} loading="lazy" />
-              <h3>3. Validation</h3>
-              <p>Chaque titulaire valide, corrige ou refuse ; rien ne part sans son accord.</p>
-            </li>
-            <li>
-              <img src="/marque/etape-publication.svg" alt="" width={76} height={76} loading="lazy" />
-              <h3>4. Publication</h3>
-              <p>Au créneau prévu, sur LinkedIn ; vous suivez les statistiques et les enseignements du mois.</p>
-            </li>
-          </ol>
+          <Parcours />
           <h3 className="visually-hidden">Le déroulé d’un post</h3>
           <ol className="semaine">
             {SEMAINE.map(([quand, titre, texte]) => (
@@ -282,25 +225,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                   <li>Refuser avec un motif : l’IA propose un autre sujet</li>
                 </ul>
               </div>
-              <figure className="maquette" style={{ margin: 0 }} aria-label="Exemple d’un post à valider, avec une information à compléter">
-                <div className="tete">
-                  <span className="li-avatar">TR</span>
-                  <span>
-                    <b>Thomas R.</b>
-                    <small>Part demain à 12 h</small>
-                  </span>
-                  <span className="badge status-a_valider">À valider</span>
-                </div>
-                <div>
-                  Notre équipe a accompagné <mark className="marker">[À COMPLÉTER : nombre d’entreprises]</mark> entreprises cette année. Ce qui revient le plus souvent ? La peur de mal faire au
-                  premier geste.
-                </div>
-                <div className="boutons">
-                  <span className="off">Valider</span>
-                  <span>Corriger</span>
-                </div>
-                <figcaption>Exemple. Le bouton Valider reste bloqué tant que le marqueur est là.</figcaption>
-              </figure>
+              <EssaiValidation />
             </div>
             <div className="ecran">
               <div>
@@ -312,36 +237,16 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                   <li>Historique complet de chaque post</li>
                 </ul>
               </div>
-              <figure className="maquette" style={{ margin: 0 }} aria-label="Exemple de planning pour trois comptes">
-                <div className="grille">
-                  <span className="th" />
-                  <span className="th">Mar.</span>
-                  <span className="th">Jeu.</span>
-                  <span className="th">Ven.</span>
-                  <span className="th">Claire</span>
-                  <span className="publie">Publié</span>
-                  <span className="valide">Validé</span>
-                  <span className="a-valider">À valider</span>
-                  <span className="th">Thomas</span>
-                  <span className="valide">Validé</span>
-                  <span className="a-valider">À valider</span>
-                  <span />
-                  <span className="th">Page</span>
-                  <span className="publie">Publié</span>
-                  <span />
-                  <span className="valide">Validé</span>
-                </div>
-                <figcaption>Exemple de semaine pour trois comptes.</figcaption>
-              </figure>
+              <PlanningVivant />
             </div>
           </div>
         </div>
       </section>
 
       <section className="bloc nuit" aria-labelledby="garde-fous">
+        <Tesselles nombre={22} />
         <div className="wrap">
           <h2 id="garde-fous">L’IA écrit. Vous gardez la parole.</h2>
-          <p className="chapo">Un post publié engage la personne qui le signe. Rostra est construit autour de cette règle.</p>
           <ul className="gardes">
             <li>
               <span className="tessere" aria-hidden="true" />
@@ -405,11 +310,14 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       <section className="bloc blanc" aria-labelledby="fonctionnalites">
         <div className="wrap">
           <h2 id="fonctionnalites">Tout ce qu’il faut, de l’idée au post publié</h2>
-          <ul className="feature-grid">
+          <ul className="bento">
             {FEATURES.map((f) => (
               <li key={f.title}>
-                <h3>{f.title}</h3>
-                <p>{f.text}</p>
+                <MiniVisuel type={f.visuel} />
+                <div>
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                </div>
               </li>
             ))}
           </ul>

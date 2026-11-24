@@ -1,7 +1,7 @@
 import { type Database, asSystem, asUser } from '@posts-auto/db';
 import { addMember, closeTestDatabase, createAccount, createOrganization, createPost, createUser, openTestDatabase } from '@posts-auto/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { allowanceForWorkspace } from '../billing/allowance.ts';
+import { allowanceForWorkspace, isUnpaidSuspended, workspaceNotBlockedByPayment } from '../billing/allowance.ts';
 import { applyBillingEvent, purgeExpiredSuspensions } from '../billing/subscriptions.ts';
 import { ForbiddenError } from '../errors.ts';
 import { retryPublication } from '../posts/post-actions.ts';
@@ -135,6 +135,52 @@ describe('suspension par l’éditeur', () => {
     await expect(retryPublication(db, holder, post, NOW)).rejects.toMatchObject({ code: 'organisation_suspendue' });
     await reactivateOrganization(db, admin, org.orgId, NOW);
     await expect(retryPublication(db, holder, post, NOW)).resolves.toBe('en_publication');
+  });
+});
+
+describe('relance par le client', () => {
+  async function clientPost(values: Parameters<typeof createPost>[3] = {}) {
+    const org = await createOrganization(db);
+    const ws = org.workspaceIds[0] as string;
+    const holder = await createUser(db, 'titulaire');
+    await addMember(db, ws, holder, 'contributor');
+    const account = await createAccount(db, ws, { holder_user_id: holder, status: 'connected' });
+    const post = await createPost(db, ws, account, { status: 'erreur', scheduled_at: hours(-1), ...values });
+    return { org, ws, holder, post };
+  }
+  const setSub = (orgId: string, status: string, since: Date | null) =>
+    asSystem(db, (trx) => trx.updateTable('subscriptions').set({ status, past_due_since: since }).where('org_id', '=', orgId).execute());
+
+  it('est refusée pendant un impayé, reste possible avant J+14 et après le règlement', async () => {
+    const { org, holder, post } = await clientPost();
+    await subscribe(org.orgId, 'evt_client_retry', 'past_due');
+    await setSub(org.orgId, 'past_due', days(-14));
+    await expect(retryPublication(db, holder, post, NOW)).rejects.toMatchObject({ code: 'organisation_suspendue' });
+    await setSub(org.orgId, 'past_due', days(-13));
+    await expect(retryPublication(db, holder, post, NOW)).resolves.toBe('en_publication');
+  });
+
+  it('est refusée quand l’organisation est suspendue pour impayé', async () => {
+    const { org, holder, post } = await clientPost();
+    await asSystem(db, (trx) => trx.updateTable('organizations').set({ status: 'suspended' }).where('id', '=', org.orgId).execute());
+    await expect(retryPublication(db, holder, post, NOW)).rejects.toMatchObject({ code: 'organisation_suspendue' });
+  });
+
+  it('est refusée après l’événement, et le post reste en erreur', async () => {
+    const { holder, post } = await clientPost({ must_publish_by: hours(-1) });
+    await expect(retryPublication(db, holder, post, NOW)).rejects.toMatchObject({ code: 'evenement_passe' });
+    expect((await asSystem(db, (trx) => trx.selectFrom('posts').select('status').where('id', '=', post).executeTakeFirstOrThrow())).status).toBe('erreur');
+  });
+
+  it('le filtre des tâches de fond suit la même règle que le calcul des droits', async () => {
+    const { org, ws } = await clientPost();
+    await subscribe(org.orgId, 'evt_filter_rule', 'active');
+    const cases: [string, Date | null][] = [['active', null], ['past_due', days(-13)], ['past_due', days(-14)], ['unpaid', days(-1)], ['canceled', null], ['canceled', days(-1)], ['incomplete', null]];
+    for (const [status, since] of cases) {
+      await setSub(org.orgId, status, since);
+      const free = await asSystem(db, (trx) => trx.selectFrom('workspaces as w').select('w.id').where('w.id', '=', ws).where(workspaceNotBlockedByPayment('w.id', NOW)).executeTakeFirst());
+      expect([status, since, free !== undefined]).toEqual([status, since, !isUnpaidSuspended({ status, past_due_since: since }, NOW)]);
+    }
   });
 });
 

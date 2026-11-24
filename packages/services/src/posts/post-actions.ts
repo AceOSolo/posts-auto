@@ -24,6 +24,7 @@ import { type DB, type Database, type Tx, asUser, calendarOf, slotRulesOf, weekS
 import type { Updateable } from 'kysely';
 import { type Access, canEditPost, canReschedulePost, loadAccess } from '../access.ts';
 import { isOrgSuspended } from '../admin/suspension.ts';
+import { isPublicationBlockedByPayment } from '../billing/allowance.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 
 const MAX_BODY_LENGTH = 3000;
@@ -329,7 +330,13 @@ export async function retryPublication(db: Database, userId: string, postId: str
     const post = await loadPost(trx, postId);
     const access = await loadAccess(trx, userId, post.workspace_id, post.account_id);
     const workspace = await trx.selectFrom('workspaces').select('org_id').where('id', '=', post.workspace_id).executeTakeFirstOrThrow();
-    if (await isOrgSuspended(trx, workspace.org_id)) throw new RefusedError('organisation_suspendue', 'Le service est suspendu : la publication est arrêtée.');
+    if ((await isOrgSuspended(trx, workspace.org_id)) || (await isPublicationBlockedByPayment(trx, workspace.org_id, now))) {
+      throw new RefusedError('organisation_suspendue', 'Le service est suspendu : la publication est arrêtée.');
+    }
+    // RÈG-11 : jamais après l'événement.
+    if (post.status === 'erreur' && post.must_publish_by !== null && post.must_publish_by.getTime() < now.getTime()) {
+      throw new RefusedError('evenement_passe', 'L’événement annoncé par ce post est passé : il ne peut plus être publié.');
+    }
     const status = await applyAndRecord(trx, post, access, { type: 'retry' }, now, {
       publish_retries_left: 3,
       next_publish_attempt_at: now,

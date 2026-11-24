@@ -132,6 +132,15 @@ describe('refaire le visuel (VIS-13)', () => {
     expect(await asSystem(db, (trx) => trx.selectFrom('visual_tasks').select('post_id').where('post_id', '=', post.id).execute())).toEqual([]);
   });
 
+  it('un nouveau visuel sur un post validé le renvoie en validation : personne ne l’a encore vu', async () => {
+    const post = await createPost(db, workspaceId, jp, { status: 'valide', scheduled_at: new Date('2026-12-03T11:00:00Z'), week_start: '2026-11-30' });
+    await asSystem(db, (trx) => trx.insertInto('visual_tasks').values({ post_id: post, workspace_id: workspaceId, reason: 'new', photo_mode: 'none', requested_by: holder }).execute());
+    expect((await runVisualTick({ db, model: new FakeModel(), media, images, clock: () => LATER })).done).toEqual([post]);
+    expect(await asSystem(db, (trx) => trx.selectFrom('posts').select('status').where('id', '=', post).executeTakeFirstOrThrow())).toEqual({ status: 'a_valider' });
+    const history = await asSystem(db, (trx) => trx.selectFrom('post_status_history').select(['from_status', 'to_status', 'actor_kind']).where('post_id', '=', post).where('to_status', '=', 'a_valider').where('from_status', '=', 'valide').execute());
+    expect(history).toEqual([{ from_status: 'valide', to_status: 'a_valider', actor_kind: 'system' }]);
+  });
+
   it('abandonne la tâche d’un post déjà publié', async () => {
     const published = await createPost(db, workspaceId, jp, {
       status: 'publie',

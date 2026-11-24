@@ -15,6 +15,7 @@ import { sql } from 'kysely';
 import { requirePlatformAdmin } from '../admin/platform.ts';
 import { normalizeEmail } from '../auth/auth.ts';
 import { RefusedError } from '../errors.ts';
+import { ConsoleMailer, type Mailer } from '../mail/mailer.ts';
 
 export interface PublicPlan {
   readonly key: string;
@@ -79,6 +80,51 @@ export interface DemoRequestInput {
 
 export interface DemoNotifier {
   notify(request: { readonly id: string; readonly fullName: string; readonly company: string; readonly email: string; readonly phone: string | null; readonly accounts: number | null; readonly message: string | null }): Promise<void>;
+}
+
+/**
+ * SIT-02 : transmission à l'éditeur, par e-mail à SALES_EMAIL (à défaut SUPPORT_EMAIL) et, si
+ * DEMO_WEBHOOK_URL est défini, en JSON au CRM, signé par l'en-tête X-Demo-Secret. Sans aucun
+ * canal réel, elle échoue : la demande reste « à transmettre » dans le back-office.
+ */
+export function demoNotifierFromEnv(mailer: Mailer, env: Readonly<Record<string, string | undefined>> = process.env, fetcher: typeof fetch = fetch): DemoNotifier {
+  return {
+    async notify(request) {
+      const to = env['SALES_EMAIL']?.trim() || env['SUPPORT_EMAIL']?.trim();
+      const webhook = env['DEMO_WEBHOOK_URL']?.trim();
+      if (!webhook && (!to || mailer instanceof ConsoleMailer)) {
+        throw new Error('Aucun destinataire : configurer Brevo avec SALES_EMAIL ou SUPPORT_EMAIL, ou DEMO_WEBHOOK_URL.');
+      }
+      const lines = [
+        `Nom : ${request.fullName}`,
+        `Entreprise : ${request.company}`,
+        `E-mail : ${request.email}`,
+        `Téléphone : ${request.phone ?? '—'}`,
+        `Comptes LinkedIn : ${request.accounts ?? '—'}`,
+        `Message : ${request.message ?? '—'}`,
+      ];
+      if (to) {
+        const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        await mailer.send({
+          to: { email: to },
+          subject: `Demande de démonstration : ${request.company}`,
+          text: lines.join('\n'),
+          html: `<p>${lines.map(escape).join('<br>')}</p>`,
+          tag: 'demande_demo',
+        });
+      }
+      if (webhook) {
+        const secret = env['DEMO_WEBHOOK_SECRET'];
+        const response = await fetcher(webhook, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...(secret && { 'x-demo-secret': secret }) },
+          body: JSON.stringify({ type: 'demande_demo', ...request }),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!response.ok) throw new Error(`CRM : HTTP ${response.status}`);
+      }
+    },
+  };
 }
 
 /** SIT-02 : enregistre la demande, puis la transmet (e-mail, CRM) ; renvoie son identifiant. */

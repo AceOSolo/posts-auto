@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { confirmLogin } from '../actions.ts';
+import { AuthShell } from '../auth-shell.tsx';
+import styles from '../connexion.module.css';
 
 export const metadata: Metadata = { title: 'Connexion' };
 
@@ -12,15 +14,13 @@ export default async function LoginLinkPage({ searchParams }: { searchParams: Pr
   const { jeton } = await searchParams;
   if (typeof jeton !== 'string' || jeton.length < 20) redirect('/connexion?message=lien');
   return (
-    <main className="narrow">
-      <h1>Connexion</h1>
-      <p>Cliquez pour ouvrir votre session sur cet appareil.</p>
-      <form action={confirmLogin}>
+    <AuthShell title="Plus qu’un clic" intro="Cliquez pour ouvrir votre session sur cet appareil.">
+      <form action={confirmLogin} className={styles.formulaire}>
         <input type="hidden" name="jeton" value={jeton} />
         <button type="submit" className="primary">
           Se connecter
         </button>
       </form>
-    </main>
+    </AuthShell>
   );
 }

@@ -9,7 +9,7 @@
  * elle est marquée en échec et l'erreur s'affiche sur le post.
  */
 import { ModelError, type TextModel } from '@posts-auto/ai';
-import { addMinutes } from '@posts-auto/core';
+import { addMinutes, applyPostCommand } from '@posts-auto/core';
 import { type Database, asSystem } from '@posts-auto/db';
 import type { ImageGenerator } from '@posts-auto/visuals';
 import type { MediaStore } from '../media/media-store.ts';
@@ -21,6 +21,7 @@ export const VISUAL_TASK_LEASE_MINUTES = 10;
 const BATCH = 5;
 /** Statuts où le visuel d'un post peut encore changer. */
 export const VISUAL_EDITABLE_STATUSES = ['brouillon', 'a_valider', 'modif', 'valide'] as const;
+const NEW_VISUAL_REASON = 'Nouveau visuel préparé : nouvelle validation nécessaire';
 
 export interface VisualJobDeps {
   readonly db: Database;
@@ -119,6 +120,18 @@ async function processTask(deps: VisualJobDeps, postId: string, clock: () => Dat
       }
       await storeVisual(trx, prepared, { workspaceId: task.workspace_id, accountId: task.account_id, postId, runId: null, usdToEur: deps.usdToEur ?? 0.86, replacesAssetId: previous?.assetId ?? null }, clock());
       await trx.deleteFrom('visual_tasks').where('post_id', '=', postId).execute();
+      // Personne n'a encore vu ce visuel : un post validé ne part pas avec lui sans nouvelle validation.
+      if (current.status === 'valide') {
+        const at = clock();
+        const result = applyPostCommand({ status: 'valide', hasBlockingMarkers: false }, { type: 'withdraw', reason: NEW_VISUAL_REASON }, { kind: 'system' }, at);
+        if (result.ok) {
+          await trx.updateTable('posts').set({ status: result.status }).where('id', '=', postId).execute();
+          await trx
+            .insertInto('post_status_history')
+            .values({ workspace_id: task.workspace_id, post_id: postId, from_status: 'valide', to_status: result.status, actor_kind: 'system', reason: NEW_VISUAL_REASON, at })
+            .execute();
+        }
+      }
       return true;
     });
     return stored ? 'done' : 'dropped';

@@ -56,8 +56,9 @@ try {
   });
 
   // --- IA ---
-  if (env['AI_MODE'] !== 'anthropic') skip('Anthropic', 'AI_MODE n’est pas « anthropic » : IA simulée');
-  else if (!env['ANTHROPIC_API_KEY']) ko('Anthropic', 'ANTHROPIC_API_KEY absente');
+  if (env['AI_MODE'] === 'fake') skip('Anthropic', 'AI_MODE=fake : IA simulée');
+  else if (env['AI_MODE'] !== 'anthropic') ko('Anthropic', 'AI_MODE doit valoir « anthropic » : sans cela, la rédaction est à l’arrêt');
+  else if (!env['ANTHROPIC_API_KEY']?.trim()) ko('Anthropic', 'ANTHROPIC_API_KEY absente : la rédaction est à l’arrêt');
   else
     await check('Anthropic : clé et modèle', async () => {
       const model = await verifyAnthropicModel(env['ANTHROPIC_API_KEY'] as string, env['AI_MODEL'] || 'claude-opus-5-5');

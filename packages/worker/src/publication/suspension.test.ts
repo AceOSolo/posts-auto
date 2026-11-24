@@ -1,10 +1,12 @@
 /** Suspension décidée par l'éditeur : aucun envoi à LinkedIn tant qu'elle dure. */
 import { randomBytes } from 'node:crypto';
+import { FakeModel } from '@posts-auto/ai';
 import { type Database, asSystem } from '@posts-auto/db';
 import { closeTestDatabase, createAccount, createOrganization, createPost, createUser, openTestDatabase } from '@posts-auto/db/testing';
 import { FakeLinkedIn } from '@posts-auto/linkedin';
 import { reactivateOrganization, suspendOrganization } from '@posts-auto/services';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { runReworkTick } from '../generation/reworks.ts';
 import { dueWorkspaces } from '../generation/weekly.ts';
 import { MemoryMediaStore } from '../media/media-store.ts';
 import { TokenCipher } from '../secrets/token-cipher.ts';
@@ -66,5 +68,46 @@ describe('suspension de l’éditeur', () => {
     expect(await dueWorkspaces(db, NOON)).toContain(s.workspaceId);
     await suspendOrganization(db, admin, s.orgId, 'Contrôle en cours', NOON);
     expect(await dueWorkspaces(db, NOON)).not.toContain(s.workspaceId);
+  });
+});
+
+describe('impayé', () => {
+  const setOrgStatus = (orgId: string, status: 'active' | 'suspended') => asSystem(db, (trx) => trx.updateTable('organizations').set({ status }).where('id', '=', orgId).execute());
+
+  it('retient une nouvelle tentative, qui repart après le règlement', async () => {
+    const s = await connected();
+    const deps = { db, linkedin: new FakeLinkedIn(), media: new MemoryMediaStore(), cipher, clock: () => NOON };
+    const retrying = await createPost(db, s.workspaceId, s.accountId, { status: 'en_publication', scheduled_at: new Date(NOON.getTime() - 60_000), next_publish_attempt_at: NOON, publish_retries_left: 2 });
+    await setOrgStatus(s.orgId, 'suspended');
+    expect((await runPublicationTick(deps)).published).toEqual([]);
+    expect(await statusOf(retrying)).toBe('en_publication');
+    await setOrgStatus(s.orgId, 'active');
+    expect((await runPublicationTick(deps)).published).toEqual([retrying]);
+  });
+
+  it('n’appelle pas l’IA pour une reprise, qui repart après le règlement', async () => {
+    const s = await connected();
+    const post = await createPost(db, s.workspaceId, s.accountId, { body: 'Texte d’origine.', source_note: 'Sujet', scheduled_at: new Date(NOON.getTime() + 2 * 86_400_000) });
+    await asSystem(db, (trx) => trx.updateTable('posts').set({ status: 'modif', decision_note: 'Plus court', decided_by: admin, decided_at: NOON }).where('id', '=', post).execute());
+    const model = new FakeModel();
+    await setOrgStatus(s.orgId, 'suspended');
+    expect((await runReworkTick({ db, model, clock: () => NOON })).reworked).toEqual([]);
+    expect(model.calls).toHaveLength(0);
+    expect(await statusOf(post)).toBe('modif');
+    await setOrgStatus(s.orgId, 'active');
+    expect((await runReworkTick({ db, model, clock: () => NOON })).reworked).toEqual([post]);
+    expect(model.calls.length).toBeGreaterThan(0);
+  });
+});
+
+describe('événement passé (RÈG-11)', () => {
+  it('une tentative retenue ne part pas après l’événement : le post passe en erreur', async () => {
+    const s = await connected();
+    const deps = { db, linkedin: new FakeLinkedIn(), media: new MemoryMediaStore(), cipher, clock: () => NOON };
+    const post = await createPost(db, s.workspaceId, s.accountId, { status: 'en_publication', scheduled_at: new Date(NOON.getTime() - 300_000), must_publish_by: new Date(NOON.getTime() - 60_000), next_publish_attempt_at: NOON, publish_retries_left: 2 });
+    const report = await runPublicationTick(deps);
+    expect(report.published).toEqual([]);
+    expect(report.failed).toEqual([post]);
+    expect(await statusOf(post)).toBe('erreur');
   });
 });

@@ -104,7 +104,7 @@ export function appUrl(): string {
   return (process.env['APP_URL'] ?? 'http://localhost:3000').replace(/\/$/, '');
 }
 
-/** Modèle d'IA (AI_MODE, ANTHROPIC_API_KEY, AI_MODEL) ; simulé sans configuration. */
+/** Modèle d'IA (AI_MODE, ANTHROPIC_API_KEY, AI_MODEL) ; simulé seulement avec AI_MODE=fake. */
 export function model(): TextModel {
   resources.model ??= modelFromEnv(process.env);
   return resources.model;

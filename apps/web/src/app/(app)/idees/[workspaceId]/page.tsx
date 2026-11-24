@@ -2,6 +2,7 @@ import { type Idea, type IdeaStatus, NotFoundError, inboundConfigFromEnv, inboun
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DictationButton } from '../../../../components/dictation-button.tsx';
 import { Flash } from '../../../../components/flash.tsx';
 import { PageHeader } from '../../../../components/page-header.tsx';
 import { StatusBadge } from '../../../../components/status-badge.tsx';
@@ -31,6 +32,7 @@ function IdeaFields({ idea, accounts }: { idea?: Idea; accounts: readonly { id: 
       <input id={`titre-${p}`} name="titre" required maxLength={300} defaultValue={idea?.title ?? ''} />
       <label htmlFor={`details-${p}`}>Détails (ce qu’il faut savoir pour écrire)</label>
       <textarea id={`details-${p}`} name="details" rows={3} maxLength={4000} defaultValue={idea?.details ?? ''} />
+      <DictationButton targetId={`details-${p}`} />
       <label htmlFor={`lien-${p}`}>Lien</label>
       <input id={`lien-${p}`} name="lien" type="url" maxLength={1000} defaultValue={idea?.link ?? ''} />
       <div className="inline-fields">

@@ -1,6 +1,7 @@
 import { FakeModel } from '@posts-auto/ai';
 import { type Database, asSystem } from '@posts-auto/db';
 import { closeTestDatabase, createAccount, createOrganization, createPost, createUser, openTestDatabase } from '@posts-auto/db/testing';
+import { usableLearnedSummary } from '@posts-auto/services';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runLearningTick } from './learning.ts';
 
@@ -32,6 +33,11 @@ async function refused(accountId: string, reason: string): Promise<void> {
   );
 }
 
+const grantLearning = (accountId: string) =>
+  asSystem(db, (trx) =>
+    trx.insertInto('account_consents').values({ workspace_id: workspaceId, account_id: accountId, user_id: holder, kind: 'ai_learning', text_version: 'test', granted_at: new Date('2026-10-01T00:00:00Z') }).execute(),
+  );
+
 beforeAll(async () => {
   db = await openTestDatabase();
   workspaceId = (await createOrganization(db)).workspaceIds[0] as string;
@@ -42,6 +48,7 @@ afterAll(() => closeTestDatabase(db));
 describe('apprentissage des préférences (EDI-06)', () => {
   it('à partir de 3 signaux, le résumé est mis à jour en partant de l’actuel ; rien de plus sans nouveau signal', async () => {
     const account = await createAccount(db, workspaceId, { display_name: 'Jean-Pierre', holder_user_id: holder });
+    await grantLearning(account);
     await asSystem(db, (trx) => trx.insertInto('learned_preferences').values({ account_id: account, workspace_id: workspaceId, summary: 'Pas d’emoji.', edited_by: holder }).execute());
     await correctedPost(account, 'Nous sommes ravis de vous annoncer une formidable nouvelle !', 'Une nouvelle formation ouvre en janvier.');
     await correctedPost(account, 'Il convient de souligner que la prévention est essentielle.', 'La prévention, c’est essentiel.');
@@ -70,5 +77,20 @@ describe('apprentissage des préférences (EDI-06)', () => {
     await refused(account, 'deja_traite');
     const model = new FakeModel(() => ({ summary: 'x', changes: [] }));
     expect((await runLearningTick({ db, model, clock: () => NOW })).updated).not.toContain(account);
+  });
+
+  it('sans l’accord du titulaire, rien n’est appris ni réutilisé ; ce qu’il a écrit lui-même reste (LNK-09)', async () => {
+    const account = await createAccount(db, workspaceId, { display_name: 'Sans accord', holder_user_id: holder });
+    await correctedPost(account, 'Texte proposé un.', 'Texte corrigé un.');
+    await correctedPost(account, 'Texte proposé deux.', 'Texte corrigé deux.');
+    await refused(account, 'ton_inadapte : trop long');
+    const model = new FakeModel(() => ({ summary: 'Appris', changes: [] }));
+    expect((await runLearningTick({ db, model, clock: () => NOW })).updated).not.toContain(account);
+    expect(model.calls.filter((c) => c.context.includes('Sans accord'))).toEqual([]);
+
+    await asSystem(db, (trx) => trx.insertInto('learned_preferences').values({ account_id: account, workspace_id: workspaceId, summary: 'Appris avant le retrait', edited_by: null }).execute());
+    expect(await asSystem(db, (trx) => usableLearnedSummary(trx, account))).toBe('');
+    await asSystem(db, (trx) => trx.updateTable('learned_preferences').set({ summary: 'Écrit par la personne', edited_by: holder }).where('account_id', '=', account).execute());
+    expect(await asSystem(db, (trx) => usableLearnedSummary(trx, account))).toBe('Écrit par la personne');
   });
 });

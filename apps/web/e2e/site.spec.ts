@@ -29,6 +29,20 @@ test.describe('site vitrine (SIT-01 à SIT-09)', () => {
     await expect(page.getByText(/votre demande est envoyée/)).toBeVisible();
   });
 
+  test('démonstration de validation : bloquée sans l’information, puis publiée', async ({ page }) => {
+    await page.goto('/');
+    const essai = page.getByRole('figure', { name: /Démonstration : valider un post/ });
+    const champ = essai.getByLabel('Nombre d’entreprises');
+    await expect(champ).toBeEnabled();
+    await essai.getByRole('button', { name: 'Valider' }).click();
+    await expect(essai.getByRole('status')).toContainText('Bloqué');
+    await champ.fill('40');
+    await essai.getByRole('button', { name: 'Valider' }).click();
+    await expect(essai.getByRole('status')).toHaveText('Publié.');
+    await essai.getByRole('button', { name: 'Recommencer' }).click();
+    await expect(champ).toHaveValue('');
+  });
+
   test('version anglaise et pages légales', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'English' }).click();

@@ -26,6 +26,7 @@ import {
   latestInsightsGuidance,
   offerItems,
   referencePostsOf,
+  usableLearnedSummary,
 } from '@posts-auto/services';
 import { sql } from 'kysely';
 
@@ -146,7 +147,7 @@ export async function loadAccounts(trx: Tx, workspaceId: string, now: Date, acco
   for (const row of rows) {
     const profile = await accountProfileForSystem(trx, row.id);
     if (profile === null) continue;
-    const learned = await trx.selectFrom('learned_preferences').select('summary').where('account_id', '=', row.id).executeTakeFirst();
+    const learned = await usableLearnedSummary(trx, row.id);
     const recent = await trx
       .selectFrom('posts as p')
       .innerJoin('post_versions as v', 'v.id', 'p.current_version_id')
@@ -162,7 +163,7 @@ export async function loadAccounts(trx: Tx, workspaceId: string, now: Date, acco
       holderUserId: row.holder_user_id,
       examples: await referencePostsOf(trx, row.id),
       // SUI-04 : enseignements du mois écoulé, réinjectés dans la rédaction.
-      learned: [learned?.summary ?? '', insights === '' ? '' : `Enseignements du mois dernier : ${insights}`].filter((x) => x !== '').join('\n'),
+      learned: [learned, insights === '' ? '' : `Enseignements du mois dernier : ${insights}`].filter((x) => x !== '').join('\n'),
       recent: recent.map((r) => ({ date: r.scheduled_at.toISOString().slice(0, 10), text: r.body })),
     });
   }

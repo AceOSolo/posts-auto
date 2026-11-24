@@ -1,0 +1,44 @@
+/* Mon compte : trois réglages, une ligne chacun. */
+.list {
+  margin: 0 0 12px;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding: 14px 16px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+
+.text {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.text h2 {
+  margin: 0 0 2px;
+  font-family: var(--font-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.text p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.row form {
+  margin: 0;
+}

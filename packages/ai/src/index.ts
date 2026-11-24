@@ -1,6 +1,6 @@
 import { AnthropicModel } from './anthropic-model.ts';
 import { FakeModel } from './fake-model.ts';
-import type { TextModel } from './model.ts';
+import { type TextModel, UnconfiguredModel } from './model.ts';
 
 export * from './anthropic-model.ts';
 export * from './editorial-proposal.ts';
@@ -18,12 +18,14 @@ export * from './writer.ts';
 
 /**
  * Modèle selon l'environnement : AI_MODE=anthropic avec ANTHROPIC_API_KEY pour le vrai
- * modèle (AI_MODEL pour en changer, ADM-04) ; sinon le modèle simulé.
+ * modèle (AI_MODEL pour en changer, ADM-04) ; AI_MODE=fake pour le modèle simulé, qui doit
+ * être demandé explicitement. Dans tous les autres cas, aucun modèle n'est disponible.
  */
 export function modelFromEnv(env: Readonly<Record<string, string | undefined>> = process.env): TextModel {
-  const key = env['ANTHROPIC_API_KEY'];
-  if (env['AI_MODE'] === 'anthropic' && key !== undefined && key !== '') {
+  if (env['AI_MODE'] === 'fake') return new FakeModel();
+  const key = env['ANTHROPIC_API_KEY']?.trim();
+  if (env['AI_MODE'] === 'anthropic' && key) {
     return new AnthropicModel({ apiKey: key, ...(env['AI_MODEL'] && { model: env['AI_MODEL'] }) });
   }
-  return new FakeModel();
+  return new UnconfiguredModel();
 }

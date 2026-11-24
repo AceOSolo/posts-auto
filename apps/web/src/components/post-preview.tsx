@@ -42,12 +42,15 @@ export function PostPreview({
   accountKind,
   body: rawBody,
   media,
+  mediaBase = '/media',
   expanded = false,
 }: {
   accountName: string;
   accountKind: 'profile' | 'page';
   body: string;
   media: readonly PostMedia[];
+  /** Adresse des images : `/media` avec une session, le lien de validation sinon (VAL-06). */
+  mediaBase?: string;
   expanded?: boolean;
 }) {
   // PUB-08 : une mention s'affiche comme sur LinkedIn, « @Nom de la page ».
@@ -86,13 +89,13 @@ export function PostPreview({
             <figure key={item.assetId} className={index === 0 ? 'cover' : undefined}>
               {item.isDocument ? (
                 // VIS-10 : carrousel PDF, ouvert dans un nouvel onglet.
-                <a href={`/media/${item.assetId}`} target="_blank" rel="noopener noreferrer" className="document-link">
+                <a href={`${mediaBase}/${item.assetId}`} target="_blank" rel="noopener noreferrer" className="document-link">
                   Carrousel PDF : {item.altText ?? 'document'}
                 </a>
               ) : (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element -- images privées servies par /media */}
-                  <img src={`/media/${item.assetId}`} alt={item.altText ?? `Photo ${index + 1}`} loading="lazy" />
+                  <img src={`${mediaBase}/${item.assetId}`} alt={item.altText ?? `Photo ${index + 1}`} loading="lazy" />
                 </>
               )}
               {index === 4 && media.length > 5 && <span className="more">+{media.length - 5}</span>}

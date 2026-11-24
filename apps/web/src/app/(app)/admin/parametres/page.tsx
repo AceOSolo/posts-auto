@@ -1,4 +1,4 @@
-import { EDITORIAL_PROPOSAL_SYSTEM, INSPECTOR_SYSTEM, INTERPRETER_SYSTEM, PROMPT_VERSION, VERIFIER_SYSTEM, VISUAL_SYSTEM, WRITER_SYSTEM } from '@posts-auto/ai';
+import { EDITORIAL_PROPOSAL_SYSTEM, INSPECTOR_SYSTEM, INTERPRETER_SYSTEM, PROMPT_VERSION, VERIFIER_SYSTEM, VISUAL_SYSTEM, WRITER_SYSTEM, isModelConfigured } from '@posts-auto/ai';
 import { PLATFORM_SETTINGS, PLATFORM_SETTING_KEYS, aiModelsInUse, loadPlatformSettings } from '@posts-auto/services';
 import { asSystem } from '@posts-auto/db';
 import type { Metadata } from 'next';
@@ -52,7 +52,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <section aria-labelledby="ia">
         <h2 id="ia">Modèles d’IA</h2>
         <p>
-          Application web : <strong>{current.provider === 'simulation' ? 'IA simulée (développement)' : `${current.provider} · ${current.model}`}</strong>. Consignes en vigueur : version{' '}
+          Application web : <strong>{current.provider === 'simulation' ? 'IA simulée (développement)' : isModelConfigured(current) ? `${current.provider} · ${current.model}` : 'IA non configurée : rédaction à l’arrêt'}</strong>. Consignes en vigueur : version{' '}
           <strong>{PROMPT_VERSION}</strong>.
         </p>
         <h3>Utilisés ces 30 derniers jours</h3>

@@ -12,6 +12,7 @@ import { type Database, type Tx, asSystem, asUser } from '@posts-auto/db';
 import { sql } from 'kysely';
 import { PDFDocument, type PDFFont, type PDFPage, StandardFonts, rgb } from 'pdf-lib';
 import { canManageContent, workspaceRole } from '../access.ts';
+import { learningConsented } from '../accounts/learning-consent.ts';
 import { ForbiddenError, NotFoundError } from '../errors.ts';
 
 export interface Insight {
@@ -32,6 +33,8 @@ export interface MonthlyPostRow {
   readonly reactions: number | null;
   readonly comments: number | null;
   readonly shares: number | null;
+  /** LNK-09 : false si le titulaire du profil n'a pas accepté que ses statistiques servent à la rédaction. */
+  readonly learningAllowed?: boolean;
 }
 
 export interface MonthlyReportData {
@@ -164,6 +167,7 @@ export async function monthlyReportData(trx: Tx, workspaceId: string, monthStart
       'v.body',
       sql<boolean>`exists (select 1 from post_media m where m.post_id = p.id)`.as('with_image'),
       sql<Record<string, number | null> | null>`(select to_jsonb(s) from post_stats s where s.post_id = p.id and s.available order by s.day_offset desc limit 1)`.as('stats'),
+      learningConsented('a').as('learning_allowed'),
     ])
     .where('p.workspace_id', '=', workspaceId)
     .where('p.status', '=', 'publie')
@@ -182,6 +186,7 @@ export async function monthlyReportData(trx: Tx, workspaceId: string, monthStart
     reactions: r.stats?.['reactions'] ?? null,
     comments: r.stats?.['comments'] ?? null,
     shares: r.stats?.['shares'] ?? null,
+    learningAllowed: r.learning_allowed,
   }));
   const byAccount = new Map<string, number>();
   for (const p of posts) byAccount.set(p.accountName, (byAccount.get(p.accountName) ?? 0) + 1);
@@ -203,22 +208,28 @@ export async function monthlyReportData(trx: Tx, workspaceId: string, monthStart
     .execute();
 
   const decisions = await trx
-    .selectFrom('post_status_history')
-    .select(['to_status', 'reason'])
-    .where('workspace_id', '=', workspaceId)
-    .where('to_status', 'in', ['valide', 'refuse'])
-    .where('actor_kind', '=', 'user')
-    .where('at', '>=', monthStart)
-    .where('at', '<', monthEnd)
+    .selectFrom('post_status_history as h')
+    .innerJoin('posts as dp', 'dp.id', 'h.post_id')
+    .innerJoin('social_accounts as da', 'da.id', 'dp.account_id')
+    .select(['h.to_status', 'h.reason', learningConsented('da').as('learning_allowed')])
+    .where('h.workspace_id', '=', workspaceId)
+    .where('h.to_status', 'in', ['valide', 'refuse'])
+    .where('h.actor_kind', '=', 'user')
+    .where('h.at', '>=', monthStart)
+    .where('h.at', '<', monthEnd)
     .execute();
-  const refusalCounts = new Map<string, number>();
-  for (const d of decisions.filter((x) => x.to_status === 'refuse')) {
-    const key = (d.reason ?? 'autre').split(' : ')[0] as keyof typeof REFUSAL_REASONS;
-    const label = REFUSAL_REASONS[key] ?? 'Autre';
-    refusalCounts.set(label, (refusalCounts.get(label) ?? 0) + 1);
-  }
-  const refusals = [...refusalCounts.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count);
-  const base = { posts, refusals };
+  const countRefusals = (rows: typeof decisions) => {
+    const counts = new Map<string, number>();
+    for (const d of rows.filter((x) => x.to_status === 'refuse')) {
+      const key = (d.reason ?? 'autre').split(' : ')[0] as keyof typeof REFUSAL_REASONS;
+      const label = REFUSAL_REASONS[key] ?? 'Autre';
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count);
+  };
+  const refusals = countRefusals(decisions);
+  // LNK-09 : les enseignements sont réinjectés dans la rédaction, ils n'utilisent que les comptes qui l'acceptent.
+  const base = { posts: posts.filter((p) => p.learningAllowed !== false), refusals: countRefusals(decisions.filter((d) => d.learning_allowed)) };
   return {
     workspaceName: ws.name,
     orgName: ws.org,

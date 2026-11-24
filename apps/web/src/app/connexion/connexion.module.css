@@ -1,0 +1,216 @@
+/* Écrans de connexion : formulaire à gauche, mosaïque de la marque à droite. */
+
+.page {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--bg);
+}
+
+.colonne {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100dvh;
+  padding: 24px 16px;
+}
+
+.marque {
+  align-self: flex-start;
+  border-radius: 6px;
+}
+
+.marque svg {
+  display: block;
+  height: 36px;
+  width: auto;
+}
+
+.contenu {
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+  padding: 40px 0;
+}
+
+.titre {
+  margin: 0;
+  font-size: clamp(2.4rem, 5vw, 3.25rem);
+  line-height: 1.05;
+}
+
+.intro {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.5;
+}
+
+.pied {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.pied p {
+  margin: 0;
+}
+
+.pied a {
+  font-weight: 700;
+}
+
+/* Formulaire */
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.formulaire input:not([type='hidden']) {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 18px;
+  font-size: 1.05rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+}
+
+.formulaire input:hover {
+  border-color: var(--muted);
+}
+
+.formulaire input:focus-visible {
+  border-color: var(--border-strong);
+}
+
+.formulaire input::placeholder {
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.formulaire button {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 8px;
+  font-size: 1.05rem;
+}
+
+.champCode input:not([type='hidden']) {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+/* Autres moyens de connexion */
+
+.separateur {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 26px 0 16px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.separateur::before,
+.separateur::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.sso {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.sso a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.actionSecondaire {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 20px;
+  text-align: center;
+}
+
+/* Panneau de la marque, affiché à partir du format tablette paysage */
+
+.scene {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .page {
+    grid-template-columns: minmax(460px, 5fr) minmax(0, 6fr);
+  }
+
+  .colonne {
+    padding: 32px clamp(32px, 5vw, 72px);
+  }
+
+  .scene {
+    --scene-texte: #fff4e2;
+    position: sticky;
+    top: 0;
+    display: block;
+    height: 100dvh;
+    overflow: hidden;
+    background: #1e1a45;
+  }
+
+  .signature {
+    position: absolute;
+    z-index: 1;
+    top: clamp(36px, 7vh, 72px);
+    left: clamp(36px, 5vw, 72px);
+    margin: 0;
+    color: var(--scene-texte);
+    font-family: var(--font-title);
+    font-size: clamp(3rem, 5.6vw, 5.5rem);
+    line-height: 1;
+  }
+
+  .signature span {
+    color: #ffc93c;
+  }
+
+  .buste {
+    position: absolute;
+    right: 5%;
+    bottom: -1%;
+    width: min(80%, 70vh);
+    height: auto;
+  }
+}

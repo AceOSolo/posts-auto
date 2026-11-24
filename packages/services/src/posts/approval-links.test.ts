@@ -2,7 +2,7 @@ import { type Database, asSystem } from '@posts-auto/db';
 import { addMember, closeTestDatabase, createAccount, createOrganization, createPost, createUser, openTestDatabase } from '@posts-auto/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { hashToken } from '../auth/auth.ts';
-import { confirmApprovalLink, createApprovalLink, previewApprovalLink } from './approval-links.ts';
+import { approvalLinkMedia, confirmApprovalLink, createApprovalLink, previewApprovalLink } from './approval-links.ts';
 
 let db: Database;
 let workspaceId: string;
@@ -81,6 +81,31 @@ describe('validation depuis l’e-mail (VAL-06, REC-14)', () => {
     const token = await createApprovalLink(db, postId, editor, NOW);
     expect(await confirmApprovalLink(db, token, NOW)).toEqual({ ok: false, reason: 'plus_autorise' });
     expect((await status(postId)).status).toBe('a_valider');
+  });
+
+  it('montre les visuels du post, et seulement ceux-là, tant que le lien vit', async () => {
+    const postId = await newPost();
+    const other = await newPost();
+    const [asset, foreign] = await asSystem(db, async (trx) => {
+      const add = async (id: string, key: string) => {
+        const row = await trx.insertInto('media_assets').values({ workspace_id: workspaceId, kind: 'generated', ai_generated: true, storage_key: `${workspaceId}/${key}.png`, mime: 'image/png' }).returning('id').executeTakeFirstOrThrow();
+        await trx.insertInto('post_media').values({ workspace_id: workspaceId, post_id: id, asset_id: row.id, position: 1 }).execute();
+        return row.id;
+      };
+      return [await add(postId, 'lien-a'), await add(other, 'lien-b')];
+    });
+    const token = await createApprovalLink(db, postId, holder, NOW);
+    expect((await previewApprovalLink(db, token, NOW))?.media).toEqual([expect.objectContaining({ assetId: asset, aiGenerated: true })]);
+    expect(await approvalLinkMedia(db, token, asset as string, NOW)).toEqual({ storageKey: `${workspaceId}/lien-a.png`, mime: 'image/png' });
+    expect(await approvalLinkMedia(db, token, foreign as string, NOW)).toBeNull();
+    await confirmApprovalLink(db, token, NOW);
+    expect(await approvalLinkMedia(db, token, asset as string, NOW)).toBeNull();
+  });
+
+  it('une personne qui n’est plus titulaire ni déléguée ne lit plus rien par le lien', async () => {
+    const postId = await newPost({ body: 'Texte confidentiel.' });
+    const token = await createApprovalLink(db, postId, editor, NOW);
+    expect(await previewApprovalLink(db, token, NOW)).toBeNull();
   });
 
   it('un jeton inventé ou mal formé est refusé', async () => {

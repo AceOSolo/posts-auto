@@ -1,10 +1,12 @@
-import { revokeAllSessions } from '@posts-auto/services';
+import { mfaStatus, revokeAllSessions } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Flash } from '../../../components/flash.tsx';
+import { PageHeader } from '../../../components/page-header.tsx';
 import { database } from '../../../server/context.ts';
 import { clearSessionCookie, requireUserId } from '../../../server/session.ts';
+import styles from './moi.module.css';
 
 export const metadata: Metadata = { title: 'Mon compte' };
 
@@ -16,40 +18,45 @@ async function signOutEverywhere(): Promise<void> {
   redirect('/connexion');
 }
 
-/** Mes données (RGPD, section 10.2) et mes sessions (SEC-03). */
+/** Sécurité (SEC-03, SEC-04) et mes données (RGPD, section 10.2). */
 export default async function MePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requireUserId();
+  const userId = await requireUserId();
   const { message } = await searchParams;
+  const mfa = await mfaStatus(database(), userId, new Date());
   return (
     <>
-      <h1>Mon compte</h1>
+      <PageHeader title="Mon compte" />
       <Flash code={message} />
-      <section className="card">
-        <h2>Mes données</h2>
-        <p>
-          Téléchargez une archive de toutes les données vous concernant : profil, espaces, comptes LinkedIn, posts et leurs images, décisions,
-          consentements, notifications, sessions et journal de vos actions.
-        </p>
-        <p>
+      <ul className={styles.list}>
+        <li className={styles.row}>
+          <div className={styles.text}>
+            <h2>Double authentification</h2>
+            <p>{mfa.enabled ? 'Activée : un code vous est demandé à chaque connexion.' : 'Non activée : ajoutez un code sur votre téléphone pour protéger votre compte.'}</p>
+          </div>
+          <Link href="/securite" className={mfa.enabled ? 'button' : 'button primary'}>
+            {mfa.enabled ? 'Gérer' : 'Activer'}
+          </Link>
+        </li>
+        <li className={styles.row}>
+          <div className={styles.text}>
+            <h2>Mes appareils</h2>
+            <p>Un téléphone perdu ou un ordinateur partagé ? Fermez toutes vos sessions.</p>
+          </div>
+          <form action={signOutEverywhere}>
+            <button type="submit">Déconnecter tous mes appareils</button>
+          </form>
+        </li>
+        <li className={styles.row}>
+          <div className={styles.text}>
+            <h2>Mes données</h2>
+            <p>Une archive de tout ce qui vous concerne : profil, posts, images, décisions et consentements.</p>
+          </div>
           <a href="/moi/export" className="button" download>
             Télécharger mes données
           </a>
-        </p>
-        <p className="hint">Pour faire supprimer votre compte, adressez-vous à l’administrateur de votre espace.</p>
-      </section>
-      <section className="card">
-        <h2>Sécurité</h2>
-        <p>
-          <Link href="/securite">Double authentification</Link> : un code demandé par votre téléphone à chaque connexion, en plus du lien reçu par e-mail.
-        </p>
-        <p>Vous avez perdu un téléphone, ou vous vous êtes connecté sur un ordinateur partagé ?</p>
-        <form action={signOutEverywhere}>
-          <button type="submit">Déconnecter tous mes appareils</button>
-        </form>
-      </section>
-      <p>
-        <Link href="/notifications">Régler mes notifications</Link>
-      </p>
+        </li>
+      </ul>
+      <p className="hint">Pour faire supprimer votre compte, adressez-vous à l’administrateur de votre espace.</p>
     </>
   );
 }

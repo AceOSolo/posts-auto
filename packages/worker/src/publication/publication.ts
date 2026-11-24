@@ -31,7 +31,7 @@ import {
 } from '@posts-auto/linkedin';
 import { createHmac } from 'node:crypto';
 import type { MediaStore } from '../media/media-store.ts';
-import { enqueueTeamChat, workspaceNotSuspended } from '@posts-auto/services';
+import { enqueueTeamChat, workspaceNotBlockedByPayment, workspaceNotSuspended } from '@posts-auto/services';
 import { alertRecipients, notify } from '../notifications/recipients.ts';
 import type { TokenCipher } from '../secrets/token-cipher.ts';
 
@@ -88,6 +88,7 @@ export async function runPublicationTick(deps: PublicationDeps): Promise<Publica
   const report = emptyReport();
   await recoverInterruptedSends(deps, clock(), report);
   await startDuePosts(deps, clock(), report);
+  await stopRetriesAfterEvent(deps, clock(), report);
   for (let i = 0; i < ATTEMPTS_PER_TICK; i += 1) {
     const processed = await processNextAttempt(deps, clock, report);
     if (!processed) break;
@@ -227,6 +228,7 @@ async function startDuePosts(deps: PublicationDeps, now: Date, report: Publicati
       .where('p.status', '=', 'valide')
       .where('p.scheduled_at', '<=', now)
       .where(workspaceNotSuspended('p.workspace_id'))
+      .where(workspaceNotBlockedByPayment('p.workspace_id', now))
       .orderBy('p.scheduled_at')
       .limit(START_BATCH)
       .forUpdate('p')
@@ -340,6 +342,40 @@ async function sendForManualPublication(
 // 3. Tentatives
 // ---------------------------------------------------------------------------
 
+const EVENT_PASSED_MESSAGE = 'L’événement annoncé par ce post est passé : la publication est arrêtée.';
+
+/**
+ * RÈG-11 : une nouvelle tentative ne part jamais après l'événement, y compris quand elle a
+ * attendu la fin d'une suspension. Elle est programmée, donc aucun envoi n'est en cours.
+ */
+async function stopRetriesAfterEvent(deps: PublicationDeps, now: Date, report: PublicationReport) {
+  await asSystem(deps.db, async (trx) => {
+    const expired = await trx
+      .selectFrom('posts')
+      .select(['id', 'workspace_id', 'account_id', 'status'])
+      .where('status', '=', 'en_publication')
+      .where('next_publish_attempt_at', '<=', now)
+      .where('must_publish_by', '<', now)
+      .where((eb) => eb.or([eb('publish_lease_until', 'is', null), eb('publish_lease_until', '<', now)]))
+      .where(workspaceNotSuspended('posts.workspace_id'))
+      .where(workspaceNotBlockedByPayment('posts.workspace_id', now))
+      .forUpdate()
+      .skipLocked()
+      .execute();
+    for (const post of expired) {
+      await transition(trx, post, { type: 'markFailed', message: EVENT_PASSED_MESSAGE }, now, {
+        publish_lease_until: null,
+        next_publish_attempt_at: null,
+        last_error: EVENT_PASSED_MESSAGE,
+      });
+      const recipients = await alertRecipients(trx, post.workspace_id, post.account_id);
+      await notify(trx, recipients, post.workspace_id, 'publication_erreur', { postId: post.id, message: EVENT_PASSED_MESSAGE, uncertain: false }, ['email', 'in_app']);
+      await audit(trx, post.workspace_id, 'post.publication_echec', post.id, { cause: 'evenement_passe' }, now);
+      report.failed.push(post.id);
+    }
+  });
+}
+
 interface ClaimedAttempt {
   readonly attemptId: string;
   readonly post: PostRef & { readonly account_id: string };
@@ -363,6 +399,9 @@ async function claimNextAttempt(deps: PublicationDeps, now: Date): Promise<Claim
       .where((eb) => eb.or([eb('publish_lease_until', 'is', null), eb('publish_lease_until', '<', now)]))
       // Suspension de l'éditeur : les nouvelles tentatives attendent la réactivation.
       .where(workspaceNotSuspended('posts.workspace_id'))
+      // FAC-06 : idem pendant un impayé. RÈG-11 : jamais après l'événement.
+      .where(workspaceNotBlockedByPayment('posts.workspace_id', now))
+      .where((eb) => eb.or([eb('must_publish_by', 'is', null), eb('must_publish_by', '>=', now)]))
       .orderBy('next_publish_attempt_at')
       .limit(1)
       .forUpdate()

@@ -23,7 +23,8 @@
  * - DATABASE_URL, MEDIA_ROOT, TOKEN_ENCRYPTION_KEYS, TOKEN_ENCRYPTION_KEY_ID ;
  * - LINKEDIN_MODE : « api » (par défaut) ou « fake » (développement : rien ne part chez LinkedIn) ;
  * - LINKEDIN_API_VERSION : version AAAAMM de l'API LinkedIn (par défaut 202610) ;
- * - AI_MODE (« anthropic » ou « fake »), ANTHROPIC_API_KEY, AI_MODEL, AI_USD_TO_EUR ;
+ * - AI_MODE (« anthropic » ou « fake »), ANTHROPIC_API_KEY, AI_MODEL, AI_USD_TO_EUR. Sans IA
+ *   configurée, les tâches qui en dépendent attendent sans rien consommer ; le reste tourne ;
  * - IMAGE_MODE : « fake » (images simulées) ; absent, pas d'image générée ;
  * - BILLING_MODE=fake (paiement simulé) ou STRIPE_SECRET_KEY.
  *
@@ -31,7 +32,7 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { modelFromEnv } from '@posts-auto/ai';
+import { isModelConfigured, modelFromEnv } from '@posts-auto/ai';
 import { DEFAULT_DATABASE_URL, createDatabase } from '@posts-auto/db';
 import {
   FakeLinkedIn,
@@ -83,6 +84,7 @@ const appUrl = (env['APP_URL'] ?? 'http://localhost:3000').replace(/\/$/, '');
 const redirectUri = `${appUrl}/comptes/connecter/retour`;
 const mailer = mailerFromEnv(env);
 const model = modelFromEnv(env);
+const aiReady = isModelConfigured(model);
 const usdToEur = Number.parseFloat(env['AI_USD_TO_EUR'] ?? '0.86');
 const images = imageGeneratorFromEnv(env);
 const billing: BillingProvider | null =
@@ -104,11 +106,12 @@ const oauth: LinkedInOAuth | null = fake
 
 log('info', 'demarrage', {
   linkedin: env['LINKEDIN_MODE'] === 'fake' ? 'faux (développement)' : 'API',
-  ia: model.provider === 'simulation' ? 'simulée (développement)' : model.model,
+  ia: model.provider === 'simulation' ? 'simulée (développement)' : aiReady ? model.model : 'non configurée',
   images: images === null ? 'aucune image générée' : images.provider,
   paiement: billing === null ? 'non configuré' : billing.name,
   cle: cipher.currentKeyId,
 });
+if (!aiReady) log('error', 'ia_non_configuree', { effet: 'rédaction, demandes, reprises, visuels et apprentissage en attente', action: 'renseigner AI_MODE=anthropic et ANTHROPIC_API_KEY' });
 
 const scheduler = startScheduler(
   [
@@ -119,15 +122,20 @@ const scheduler = startScheduler(
     { name: 'rappels', intervalMs: 15 * 60_000, run: () => runValidationReminders({ db }) },
     { name: 'e-mails', intervalMs: 60_000, run: () => runEmailDispatch({ db, mailer, appUrl, media }) },
     { name: 'messagerie', intervalMs: 60_000, run: () => runChatDispatch({ db, cipher, appUrl }) },
-    { name: 'redaction', intervalMs: 5 * 60_000, run: () => runGenerationTick(writing) },
-    { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick(writing) },
-    { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick(writing) },
-    { name: 'visuels', intervalMs: 60_000, run: () => runVisualTick(writing) },
+    // Sans IA, ces tâches attendent : les lancer marquerait demandes et reprises en échec définitif.
+    ...(aiReady
+      ? [
+          { name: 'redaction', intervalMs: 5 * 60_000, run: () => runGenerationTick(writing) },
+          { name: 'demandes', intervalMs: 5 * 60_000, run: () => runRequestTick(writing) },
+          { name: 'reprises', intervalMs: 5 * 60_000, run: () => runReworkTick(writing) },
+          { name: 'visuels', intervalMs: 60_000, run: () => runVisualTick(writing) },
+          { name: 'apprentissage', intervalMs: 24 * 3_600_000, run: () => runLearningTick({ db, model, usdToEur }) },
+        ]
+      : []),
     { name: 'facturation', intervalMs: 60 * 60_000, run: () => runBillingTick({ db, provider: billing, media }) },
     { name: 'statistiques', intervalMs: 6 * 3_600_000, run: () => runStatsTick({ db, stats: linkedinStats, cipher }) },
     { name: 'bilan-mensuel', intervalMs: 6 * 3_600_000, run: () => runMonthlyTick({ db }) },
     { name: 'veille', intervalMs: 60 * 60_000, run: () => runSourcesTick({ db }) },
-    { name: 'apprentissage', intervalMs: 24 * 3_600_000, run: () => runLearningTick({ db, model, usdToEur }) },
     { name: 'evenements', intervalMs: 24 * 3_600_000, run: async () => ({ crees: await materializeRecurringEvents(db, new Date()) }) },
   ],
   { info: (event, details) => log('info', event, details), error: (event, details) => log('error', event, details) },

@@ -195,6 +195,11 @@ describe('publication, erreurs, abandon', () => {
     });
   });
 
+  it('refuse de relancer un post en erreur tant qu’un marqueur bloquant reste dans le texte (VAL-03)', () => {
+    expect(applyPostCommand(post('erreur', true), { type: 'retry' }, holder, at)).toEqual({ ok: false, error: 'blocking_markers' });
+    expect(applyPostCommand(post('erreur', true), { type: 'retry' }, admin, at)).toEqual({ ok: false, error: 'blocking_markers' });
+  });
+
   it('permet d’abandonner un post à valider (RÈG-10, RÈG-11), absent du tableau 6.1 de la v1.1', () => {
     const result = applyPostCommand(post('a_valider'), { type: 'abandon', reason: 'trop_de_replanifications' }, system, at);
     expect(result).toMatchObject({ ok: true, status: 'abandonne', change: { reason: 'trop_de_replanifications' } });
@@ -225,6 +230,13 @@ describe('correction du texte (RÈG-07, VAL-08)', () => {
       allowed: true,
       statusChange: { from: 'valide', to: 'a_valider', actor: editor },
     });
+  });
+
+  it('renvoie en validation un post en erreur corrigé par une personne non déléguée', () => {
+    expect(onTextEdited(post('erreur'), admin, at)).toMatchObject({ allowed: true, statusChange: { from: 'erreur', to: 'a_valider', actor: admin } });
+    expect(onTextEdited(post('erreur'), editor, at)).toMatchObject({ allowed: true, statusChange: { from: 'erreur', to: 'a_valider', actor: editor } });
+    expect(onTextEdited(post('erreur'), holder, at)).toEqual({ allowed: true, statusChange: null });
+    expect(onTextEdited(post('erreur'), delegate, at)).toEqual({ allowed: true, statusChange: null });
   });
 
   it('ne change rien au statut quand le post n’était pas encore validé', () => {

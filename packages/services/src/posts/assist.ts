@@ -20,10 +20,12 @@ import {
   renderHooksTask,
   writePost,
 } from '@posts-auto/ai';
+import { hasBlockingMarkers } from '@posts-auto/core';
 import { type Database, type Tx, asSystem, asUser } from '@posts-auto/db';
 import { sql } from 'kysely';
 import { z } from 'zod';
 import { canEditPost, loadAccess } from '../access.ts';
+import { usableLearnedSummary } from '../accounts/learning-consent.ts';
 import { audit } from '../audit.ts';
 import { accountProfileForSystem, referencePostsOf } from '../editorial/account-profiles.ts';
 import { currentEditorialLine, offerItems } from '../editorial/editorial-line.ts';
@@ -83,7 +85,7 @@ async function contextFor(trx: Tx, workspaceId: string, accountId: string): Prom
   const offer = await offerItems(trx, workspaceId);
   const profile = await accountProfileForSystem(trx, accountId);
   if (profile === null) throw new NotFoundError('Compte');
-  const learned = await trx.selectFrom('learned_preferences').select('summary').where('account_id', '=', accountId).executeTakeFirst();
+  const learned = await usableLearnedSummary(trx, accountId);
   const examples = await referencePostsOf(trx, accountId);
   const context = renderAccountContext({
     workspaceName: workspace.name,
@@ -91,7 +93,7 @@ async function contextFor(trx: Tx, workspaceId: string, accountId: string): Prom
     rules: editorial.rules,
     offer: offer.map((o) => ({ name: o.name, description: o.description, status: o.status, pricing: o.pricing })),
     account: { name: profile.displayName ?? 'Compte', kind: profile.kind, voice: profile.voice, tenor: profile.tenor, sensitivity: profile.sensitivity, avoid: profile.avoid },
-    learnedPreferences: learned?.summary ?? '',
+    learnedPreferences: learned,
     examples: examples.map((e) => ({ label: e.label, body: e.body, note: e.note })),
     recentPosts: [],
   });
@@ -241,6 +243,8 @@ export async function applyHook(db: Database, userId: string, postId: string, in
   if (hook === undefined) throw new RefusedError('accroche_expiree', 'Cette proposition n’est plus disponible : redemandez des accroches.');
   const post = await loadEditable(db, userId, postId);
   const paragraphs = post.body.split(/\n\s*\n/);
+  // VAL-03 : une accroche ne doit pas faire disparaître un marqueur sans que la personne l'ait traité.
+  if (hasBlockingMarkers(paragraphs[0] ?? '')) throw new RefusedError('blocking_markers', 'Le premier paragraphe contient [À COMPLÉTER] ou [À VÉRIFIER] : traitez-le avant de changer l’accroche.');
   const body = [hook, ...paragraphs.slice(1)].join('\n\n');
   await asUser(db, userId, async (trx) => {
     const version = await trx

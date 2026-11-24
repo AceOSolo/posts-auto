@@ -10,10 +10,12 @@
  *   si elle n'est plus titulaire ni déléguée, ou si le post a changé, le lien échoue.
  */
 import { type DepartureInput, departureSentence } from '@posts-auto/core';
-import { type Database, asSystem } from '@posts-auto/db';
+import { type Database, asSystem, asUser } from '@posts-auto/db';
+import { loadAccess } from '../access.ts';
 import { hashToken, newToken } from '../auth/auth.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 import { decidePost } from './post-actions.ts';
+import { type PostMedia, mediaOfPost } from './post-queries.ts';
 
 export const APPROVAL_LINK_MAX_DAYS = 7;
 
@@ -35,7 +37,10 @@ export async function createApprovalLink(db: Database, postId: string, userId: s
 export interface ApprovalPreview {
   readonly postId: string;
   readonly accountName: string;
+  readonly accountKind: 'profile' | 'page';
   readonly body: string;
+  /** Les visuels partent avec le post : ils se relisent avant de valider. */
+  readonly media: readonly PostMedia[];
   readonly departure: string;
   readonly hasBlockingMarkers: boolean;
   /** Le post attend encore une décision (sinon le lien n'a plus d'objet). */
@@ -57,11 +62,14 @@ async function loadLink(db: Database, token: string, now: Date) {
         'l.user_id',
         'l.expires_at',
         'l.used_at',
+        'p.workspace_id',
+        'p.account_id',
         'p.status',
         'p.scheduled_at',
         'p.original_scheduled_at',
         'p.reschedule_count',
         'a.display_name',
+        'a.kind as account_kind',
         'w.timezone',
         'v.body',
         'v.has_blocking_markers',
@@ -74,10 +82,17 @@ async function loadLink(db: Database, token: string, now: Date) {
   });
 }
 
+/** Le destinataire est-il toujours titulaire ou délégué ? Sinon le lien ne montre plus rien. */
+async function stillDecides(db: Database, link: { readonly user_id: string; readonly workspace_id: string; readonly account_id: string }): Promise<boolean> {
+  const access = await asUser(db, link.user_id, (trx) => loadAccess(trx, link.user_id, link.workspace_id, link.account_id));
+  return access.relation !== 'none';
+}
+
 /** Page ouverte depuis l'e-mail : montre le post, ne consomme rien. */
 export async function previewApprovalLink(db: Database, token: string, now: Date): Promise<ApprovalPreview | null> {
   const link = await loadLink(db, token, now);
-  if (link === null) return null;
+  if (link === null || !(await stillDecides(db, link))) return null;
+  const media = await asSystem(db, (trx) => mediaOfPost(trx, link.post_id));
   const departure: DepartureInput = {
     status: link.status,
     scheduledAt: link.scheduled_at,
@@ -87,11 +102,29 @@ export async function previewApprovalLink(db: Database, token: string, now: Date
   return {
     postId: link.post_id,
     accountName: link.display_name ?? 'Compte LinkedIn',
+    accountKind: link.account_kind as 'profile' | 'page',
     body: link.body ?? '',
+    media,
     departure: departureSentence(departure, now, link.timezone),
     hasBlockingMarkers: link.has_blocking_markers ?? true,
     pending: link.status === 'a_valider',
   };
+}
+
+/** Image d'un post, pour la page ouverte depuis l'e-mail : seulement celles de ce post, tant que le lien vit. */
+export async function approvalLinkMedia(db: Database, token: string, assetId: string, now: Date): Promise<{ storageKey: string; mime: string } | null> {
+  const link = await loadLink(db, token, now);
+  if (link === null || !(await stillDecides(db, link))) return null;
+  const row = await asSystem(db, (trx) =>
+    trx
+      .selectFrom('post_media as pm')
+      .innerJoin('media_assets as m', 'm.id', 'pm.asset_id')
+      .select(['m.storage_key', 'm.mime'])
+      .where('pm.post_id', '=', link.post_id)
+      .where('pm.asset_id', '=', assetId)
+      .executeTakeFirst(),
+  );
+  return row === undefined ? null : { storageKey: row.storage_key, mime: row.mime };
 }
 
 export type ApprovalOutcome =

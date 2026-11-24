@@ -9,6 +9,7 @@
  */
 import { asDocument, costUsd } from '@posts-auto/ai';
 import { asSystem } from '@posts-auto/db';
+import { learningConsented } from '@posts-auto/services';
 import { z } from 'zod';
 import { ACTIVE_ACCOUNT_STATUSES } from './load.ts';
 import type { GenerationDeps } from './weekly.ts';
@@ -48,6 +49,8 @@ export async function runLearningTick(deps: GenerationDeps): Promise<LearningRep
       .leftJoin('learned_preferences as l', 'l.account_id', 'a.id')
       .select(['a.id', 'a.workspace_id', 'a.display_name', 'l.summary', 'l.learned_until'])
       .where('a.status', 'in', [...ACTIVE_ACCOUNT_STATUSES])
+      // LNK-09 : rien n'est appris d'un profil sans l'accord de son titulaire.
+      .where(learningConsented('a'))
       .execute(),
   );
   const report = { updated: [] as string[], skipped: 0 };

@@ -56,6 +56,41 @@ const TRIAL_LIMIT = `Limite de l’essai gratuit atteinte (${TRIAL_MAX_POSTS} po
 const QUOTA_PACKS = 'Quota de posts du mois atteint : achetez un pack pour continuer, ou attendez le mois de quota suivant.';
 const QUOTA_SUSPEND = 'Quota de posts du mois atteint : la rédaction reprendra au début du mois de quota suivant.';
 
+/** FAC-06 : l'abonnement est-il suspendu pour impayé à cette date ? */
+export function isUnpaidSuspended(sub: { readonly status: string; readonly past_due_since: Date | null }, now: Date): boolean {
+  if (sub.status === 'incomplete') return false;
+  // Résilié pour impayé : la suspension continue jusqu'au règlement.
+  if (sub.status === 'canceled') return sub.past_due_since !== null;
+  if (sub.status === 'unpaid') return true;
+  return sub.past_due_since !== null && (now.getTime() - sub.past_due_since.getTime()) / 86_400_000 >= UNPAID_SUSPENSION_DAYS;
+}
+
+/** FAC-06, côté action d'une personne : l'impayé interdit-il de publier ? */
+export async function isPublicationBlockedByPayment(trx: Tx, orgId: string, now: Date): Promise<boolean> {
+  const org = await trx.selectFrom('organizations').select('status').where('id', '=', orgId).executeTakeFirstOrThrow();
+  if (org.status !== 'active' && org.status !== 'past_due') return true;
+  const sub = await trx.selectFrom('subscriptions').select(['status', 'past_due_since']).where('org_id', '=', orgId).executeTakeFirst();
+  return sub !== undefined && isUnpaidSuspended(sub, now);
+}
+
+/** FAC-06, côté tâches de fond : même règle que `isUnpaidSuspended`, dans la requête. */
+export function workspaceNotBlockedByPayment(column: string, now: Date) {
+  const limit = new Date(now.getTime() - UNPAID_SUSPENSION_DAYS * 86_400_000);
+  return sql<boolean>`exists (
+    select 1 from workspaces bw
+    join organizations bo on bo.id = bw.org_id
+    left join subscriptions bs on bs.org_id = bo.id
+    where bw.id = ${sql.ref(column)}
+      and bo.status in ('active', 'past_due')
+      and (
+        bs.org_id is null
+        or bs.status = 'incomplete'
+        or (bs.status = 'canceled' and bs.past_due_since is null)
+        or (bs.status in ('active', 'past_due') and (bs.past_due_since is null or bs.past_due_since > ${limit}))
+      )
+  )`;
+}
+
 /** Comptes facturés : tous sauf ceux en pause (LNK-07) ou déconnectés. */
 export const BILLABLE_ACCOUNT_STATUSES = ['connected', 'expiring', 'expired'] as const;
 
@@ -113,9 +148,8 @@ export async function allowanceForWorkspace(trx: Tx, workspaceId: string, now: D
   }
 
   if (sub !== undefined && sub.status !== 'canceled' && sub.status !== 'incomplete') {
-    const unpaidFor = sub.past_due_since === null ? 0 : (now.getTime() - sub.past_due_since.getTime()) / 86_400_000;
     const { start: periodStart, end: periodEnd } = quotaWindow(sub.current_period_start, sub.current_period_end, now);
-    if (sub.status === 'unpaid' || unpaidFor >= UNPAID_SUSPENSION_DAYS) {
+    if (isUnpaidSuspended(sub, now)) {
       return {
         ...base,
         mode: 'suspended',

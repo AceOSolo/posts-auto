@@ -47,7 +47,7 @@ npm run start -w @posts-auto/worker  # tâches de fond : publication, rédaction
 
 En développement :
 - `LINKEDIN_MODE=fake` simule LinkedIn (connexion et publication) ;
-- `AI_MODE=fake` (par défaut) simule l'IA, avec des textes de démonstration marqués comme tels ;
+- `AI_MODE=fake` simule l'IA, avec des textes de démonstration marqués comme tels. Ce réglage est obligatoire pour simuler : sans lui ni clé Anthropic, la rédaction reste à l'arrêt ;
 - `IMAGE_MODE=fake` simule le générateur d'images ; sans ce réglage, aucune image n'est générée et les visuels prennent une photo de la médiathèque ou sont des visuels texte.
 
 Les tâches de fond exigent `TOKEN_ENCRYPTION_KEYS` et `TOKEN_ENCRYPTION_KEY_ID` (voir `.env.example`).

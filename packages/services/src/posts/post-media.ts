@@ -31,7 +31,13 @@ interface EditablePost {
 }
 
 /** Charge le post, vérifie le droit de le modifier, applique RÈG-07 si besoin (photos et visuels). */
-export async function editablePost(trx: Tx, userId: string, postId: string, now: Date): Promise<{ post: EditablePost; access: Access }> {
+export async function editablePost(
+  trx: Tx,
+  userId: string,
+  postId: string,
+  now: Date,
+  reason = 'Photos modifiées par une personne non déléguée : nouvelle validation nécessaire (RÈG-07)',
+): Promise<{ post: EditablePost; access: Access }> {
   const post = await trx.selectFrom('posts').select(['id', 'workspace_id', 'account_id', 'status']).where('id', '=', postId).forUpdate().executeTakeFirst();
   if (post === undefined) throw new NotFoundError('Post');
   const access = await loadAccess(trx, userId, post.workspace_id, post.account_id);
@@ -49,7 +55,7 @@ export async function editablePost(trx: Tx, userId: string, postId: string, now:
         to_status: edit.statusChange.to,
         actor_kind: 'user',
         actor_user_id: userId,
-        reason: 'Photos modifiées par une personne non déléguée : nouvelle validation nécessaire (RÈG-07)',
+        reason,
         at: now,
       })
       .execute();

@@ -222,6 +222,7 @@ function guard(post: PostSnapshot, command: PostCommand): CommandError | null {
   switch (command.type) {
     case 'validate':
     case 'autoValidate':
+    case 'retry':
       return post.hasBlockingMarkers ? 'blocking_markers' : null;
     case 'requestChanges':
       return nonEmpty(command.note) ? null : 'note_required';
@@ -326,18 +327,19 @@ export type TextEditOutcome =
 /**
  * Correction du texte d'un post (une « révision », GEN-07).
  * RÈG-07 : un post validé puis corrigé reste validé si la correction vient du
- * titulaire ou d'un délégué ; sinon il repasse « à valider ».
+ * titulaire ou d'un délégué ; sinon il repasse « à valider ». De même pour un post en
+ * erreur : sa relance publierait un texte que le titulaire n'a pas vu.
  * Le droit de corriger (rôle éditeur, admin, titulaire) est vérifié en amont.
  */
 export function onTextEdited(post: PostSnapshot, actor: Actor, at: Date): TextEditOutcome {
   if (!EDITABLE_STATUSES.has(post.status)) return { allowed: false };
 
   const editedByOutsider = actor.kind === 'user' && actor.accountRelation === 'none';
-  if (post.status === 'valide' && editedByOutsider) {
+  if ((post.status === 'valide' || post.status === 'erreur') && editedByOutsider) {
     return {
       allowed: true,
       statusChange: {
-        from: 'valide',
+        from: post.status,
         to: 'a_valider',
         actor,
         at,

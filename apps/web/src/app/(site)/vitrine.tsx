@@ -7,6 +7,7 @@ import type { publicPlans, simulatePrice } from '@posts-auto/services';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { type ReactNode, useId } from 'react';
+import { Tesselles } from './scenes.tsx';
 
 type Plans = Awaited<ReturnType<typeof publicPlans>>;
 type Simulation = ReturnType<typeof simulatePrice>;
@@ -71,16 +72,18 @@ export function Frise() {
   }));
   // Motif à taille réelle, répété : les tesselles restent entières quelle que soit la largeur de l'écran.
   return (
-    <svg className="frise" width="100%" height="22" aria-hidden="true" focusable="false">
-      <defs>
-        <pattern id={id} patternUnits="userSpaceOnUse" width={1800} height={22}>
-          {tiles.map((t) => (
-            <rect key={t.x} className={`t-${t.tone}`} x={t.x} y={3} width={17} height={16} rx={2.5} transform={`rotate(${t.rotate} ${t.x + 8.5} 11)`} />
-          ))}
-        </pattern>
-      </defs>
-      <rect width="100%" height="22" fill={`url(#${id})`} />
-    </svg>
+    <div className="frise" aria-hidden="true">
+      <svg height="22" focusable="false">
+        <defs>
+          <pattern id={id} patternUnits="userSpaceOnUse" width={1800} height={22}>
+            {tiles.map((t) => (
+              <rect key={t.x} className={`t-${t.tone}`} x={t.x} y={3} width={17} height={16} rx={2.5} transform={`rotate(${t.rotate} ${t.x + 8.5} 11)`} />
+            ))}
+          </pattern>
+        </defs>
+        <rect width="100%" height="22" fill={`url(#${id})`} />
+      </svg>
+    </div>
   );
 }
 
@@ -227,6 +230,7 @@ export function FaqList({ items }: { items: readonly FaqItem[] }) {
 export function FinalCta({ title, text }: { title: string; text: string }) {
   return (
     <section className="bloc final" aria-labelledby="final-titre">
+      <Tesselles nombre={18} />
       <div className="wrap">
         <h2 id="final-titre">{title}</h2>
         <p>{text}</p>

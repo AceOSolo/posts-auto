@@ -1,5 +1,6 @@
 export * from './access.ts';
 export * from './accounts/accounts.ts';
+export * from './accounts/learning-consent.ts';
 export * from './accounts/pages.ts';
 export * from './auth/auth.ts';
 export * from './auth/sso.ts';

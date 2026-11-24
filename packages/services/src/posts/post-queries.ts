@@ -9,12 +9,14 @@ import {
   availableCommands,
   departureSentence,
   findBlockingMarkers,
+  hasBlockingMarkers,
   type MarkerSpan,
 } from '@posts-auto/core';
 import { type Database, type Tx, asSystem, asUser } from '@posts-auto/db';
 import { canEditPost, canReschedulePost, loadAccess } from '../access.ts';
 import { ForbiddenError, NotFoundError, RefusedError } from '../errors.ts';
 import type { VisualTaskState } from '../visuals/visual-requests.ts';
+import { editablePost } from './post-media.ts';
 
 export interface PostMedia {
   readonly assetId: string;
@@ -106,6 +108,11 @@ async function mediaOf(trx: Tx, postIds: readonly string[]): Promise<Map<string,
   return map;
 }
 
+/** Médias d'un post pour la page de validation par e-mail (VAL-06), une fois le lien contrôlé. */
+export async function mediaOfPost(trx: Tx, postId: string): Promise<readonly PostMedia[]> {
+  return (await mediaOf(trx, [postId])).get(postId) ?? [];
+}
+
 function baseQuery(trx: Tx) {
   return trx
     .selectFrom('posts as p')
@@ -160,7 +167,8 @@ function toCard(row: BaseRow, media: PostMedia[], isMine: boolean, now: Date): P
     ),
     media,
     isMine,
-    lastError: row.last_error,
+    // Un post revenu en validation n'est plus en échec : l'ancienne erreur ne s'affiche plus.
+    lastError: row.status === 'a_valider' ? null : row.last_error,
   };
 }
 
@@ -473,12 +481,16 @@ export async function setManualPostUrl(db: Database, userId: string, postId: str
 export async function setFirstComment(db: Database, userId: string, postId: string, rawText: string, now: Date): Promise<void> {
   const text = rawText.replace(/\r\n/g, '\n').trim();
   if (text.length > 1250) throw new RefusedError('commentaire_trop_long', 'Le commentaire doit faire 1 250 caractères au plus.');
+  // VAL-03 : le commentaire part sur LinkedIn comme le texte, sans passage à compléter.
+  if (hasBlockingMarkers(text)) throw new RefusedError('blocking_markers', 'Le commentaire contient [À COMPLÉTER] ou [À VÉRIFIER] : complétez-le d’abord.');
   const post = await asUser(db, userId, async (trx) => {
-    const row = await trx.selectFrom('posts').select(['workspace_id', 'account_id', 'status']).where('id', '=', postId).executeTakeFirst();
+    const row = await trx.selectFrom('posts').select(['workspace_id', 'account_id', 'status', 'first_comment']).where('id', '=', postId).executeTakeFirst();
     if (row === undefined) throw new NotFoundError('Post');
     const access = await loadAccess(trx, userId, row.workspace_id, row.account_id);
     if (!canEditPost(access)) throw new ForbiddenError('firstComment');
     if (!['brouillon', 'a_valider', 'modif', 'valide', 'erreur'].includes(row.status)) throw new RefusedError('post_parti', 'Ce post est déjà publié ou en cours de publication.');
+    // RÈG-07 : un commentaire changé par une personne non déléguée demande une nouvelle validation.
+    if ((row.first_comment ?? '') !== text) await editablePost(trx, userId, postId, now, 'Premier commentaire modifié par une personne non déléguée : nouvelle validation nécessaire (RÈG-07)');
     return row;
   });
   await asSystem(db, async (trx) => {

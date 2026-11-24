@@ -80,6 +80,14 @@ describe('retouches à la demande (GEN-08)', () => {
     expect(await pendingHooks(db, holder, postId, NOW)).toEqual([]);
     await expect(applyHook(db, holder, postId, 0, NOW)).rejects.toMatchObject({ code: 'accroche_expiree' });
   });
+
+  it('une accroche ne peut pas effacer un marqueur bloquant (VAL-03)', async () => {
+    const body = '[À VÉRIFIER : 87 %] Une accroche à vérifier.\n\nDeuxième paragraphe.';
+    const postId = await newPost({ body });
+    await proposeHooks(db, new FakeModel(() => ({ hooks: ['Accroche sans marqueur'] })), holder, postId, NOW);
+    await expect(applyHook(db, holder, postId, 0, NOW)).rejects.toMatchObject({ code: 'blocking_markers' });
+    expect((await versions(postId)).at(-1)?.body).toBe(body);
+  });
 });
 
 describe('coût des retouches', () => {

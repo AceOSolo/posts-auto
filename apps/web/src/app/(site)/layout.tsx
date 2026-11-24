@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Logo } from '../../components/logo.tsx';
 import { appUrl } from '../../server/context.ts';
 import './vitrine.css';
+import './vivant.css';
 
 // L'adresse du site (APP_URL) n'est connue qu'au lancement : les pages sont rendues à la demande.
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export function generateMetadata(): Metadata {
   return { metadataBase: new URL(appUrl()) };
 }
 
-/** Site vitrine et pages légales (SIT-01, SIT-04) : rendu serveur, sans JavaScript ni cookie. */
+/** Site vitrine et pages légales (SIT-01, SIT-04) : rendu serveur, lisible sans JavaScript, sans cookie. */
 export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
     <div className="site">

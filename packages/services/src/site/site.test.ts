@@ -1,7 +1,8 @@
 import { type Database, asSystem } from '@posts-auto/db';
 import { closeTestDatabase, createUser, openTestDatabase } from '@posts-auto/db/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DEMO_REQUESTS_PER_IP_PER_HOUR, type DemoNotifier, createDemoRequest, publicPlans, saveSiteTestimonial, simulatePrice, siteTestimonial } from './site.ts';
+import { ConsoleMailer, type Mailer } from '../mail/mailer.ts';
+import { DEMO_REQUESTS_PER_IP_PER_HOUR, type DemoNotifier, createDemoRequest, demoNotifierFromEnv, publicPlans, saveSiteTestimonial, simulatePrice, siteTestimonial } from './site.ts';
 
 let db: Database;
 let admin: string;
@@ -38,6 +39,40 @@ describe('site vitrine', () => {
     const id = await createDemoRequest(db, failing, input, NOW, '198.51.100.1');
     const row = await asSystem(db, (trx) => trx.selectFrom('demo_requests').select(['forwarded_at', 'forward_error']).where('id', '=', id as string).executeTakeFirstOrThrow());
     expect(row).toEqual({ forwarded_at: null, forward_error: 'CRM : HTTP 500' });
+  });
+
+  describe('SIT-02 : transmission réelle à l’éditeur', () => {
+    const request = { id: 'd1', fullName: 'Prospect', company: 'Prospect SAS', email: 'prospect@exemple.fr', phone: null, accounts: 4, message: null };
+    const realMailer = () => {
+      const to: string[] = [];
+      const mailer: Mailer = { send: async (message) => void to.push(message.to.email) };
+      return { mailer, to };
+    };
+
+    it('une adresse commerciale vide retombe sur l’adresse du support', async () => {
+      const { mailer, to } = realMailer();
+      await demoNotifierFromEnv(mailer, { SALES_EMAIL: '', SUPPORT_EMAIL: 'support@rostra.test' }).notify(request);
+      expect(to).toEqual(['support@rostra.test']);
+    });
+
+    it('sans destinataire ou sans Brevo, la demande n’est pas marquée comme transmise', async () => {
+      const silent = [demoNotifierFromEnv(realMailer().mailer, { SALES_EMAIL: '', SUPPORT_EMAIL: '' }), demoNotifierFromEnv(new ConsoleMailer(), { SALES_EMAIL: 'ventes@rostra.test' })];
+      for (const candidate of silent) {
+        const id = await createDemoRequest(db, candidate, input, NOW);
+        const row = await asSystem(db, (trx) => trx.selectFrom('demo_requests').select(['forwarded_at', 'forward_error']).where('id', '=', id as string).executeTakeFirstOrThrow());
+        expect(row.forwarded_at).toBeNull();
+        expect(row.forward_error).toContain('Aucun destinataire');
+      }
+    });
+
+    it('le CRM seul suffit, et son refus est une erreur', async () => {
+      const calls: string[] = [];
+      const fetcher = (async (url: string | URL | Request) => (calls.push(String(url)), new Response(null, { status: 200 }))) as typeof fetch;
+      await demoNotifierFromEnv(new ConsoleMailer(), { DEMO_WEBHOOK_URL: 'https://crm.exemple.fr/demo' }, fetcher).notify(request);
+      expect(calls).toEqual(['https://crm.exemple.fr/demo']);
+      const refusing = (async () => new Response(null, { status: 500 })) as typeof fetch;
+      await expect(demoNotifierFromEnv(realMailer().mailer, { DEMO_WEBHOOK_URL: 'https://crm.exemple.fr/demo' }, refusing).notify(request)).rejects.toThrow('CRM : HTTP 500');
+    });
   });
 
   it('SIT-08 : témoignage seulement avec la date de l’accord écrit', async () => {

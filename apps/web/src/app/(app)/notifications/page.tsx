@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Flash } from '../../../components/flash.tsx';
+import { PageHeader } from '../../../components/page-header.tsx';
 import { database } from '../../../server/context.ts';
 import { requireUserId } from '../../../server/session.ts';
 
@@ -33,13 +34,17 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   return (
     <>
-      <h1>Notifications</h1>
+      <PageHeader
+        title="Notifications"
+        action={
+          unread > 0 ? (
+            <form action={markAllRead}>
+              <button type="submit">Tout marquer comme lu ({unread})</button>
+            </form>
+          ) : undefined
+        }
+      />
       <Flash code={message} />
-      {unread > 0 && (
-        <form action={markAllRead}>
-          <button type="submit">Tout marquer comme lu ({unread})</button>
-        </form>
-      )}
       {items.length === 0 ? (
         <p className="muted">Aucune notification.</p>
       ) : (
@@ -53,8 +58,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         </ul>
       )}
 
-      <section aria-labelledby="reglages">
-        <h2 id="reglages">E-mails que je reçois</h2>
+      <details id="reglages" open={message === 'preferences-enregistrees'}>
+        <summary>E-mails que je reçois</summary>
         <form action={savePreferences} className="stack">
           {preferences.map((preference) => (
             <label key={preference.kind} className="check">
@@ -64,7 +69,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           <p className="hint">Les notifications restent visibles ici même quand l’e-mail est désactivé.</p>
           <button type="submit">Enregistrer mes réglages</button>
         </form>
-      </section>
+      </details>
     </>
   );
 }

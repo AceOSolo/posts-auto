@@ -71,3 +71,21 @@ export class ModelError extends Error {
 }
 
 export const NO_USAGE: ModelUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+
+const UNCONFIGURED_PROVIDER = 'non-configure';
+
+/**
+ * Aucun modèle utilisable (clé absente, AI_MODE vide ou inconnu) : chaque appel échoue. Un
+ * texte de démonstration ne doit jamais être présenté à un client comme un vrai post.
+ */
+export class UnconfiguredModel implements TextModel {
+  readonly provider = UNCONFIGURED_PROVIDER;
+  readonly model = 'non configuré';
+  async call<T>(_request: ModelCall<T>): Promise<ModelResult<T>> {
+    throw new ModelError('rejected', 'IA non configurée : renseigner AI_MODE=anthropic et ANTHROPIC_API_KEY.');
+  }
+}
+
+export function isModelConfigured(model: TextModel): boolean {
+  return model.provider !== UNCONFIGURED_PROVIDER;
+}
